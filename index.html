@@ -3429,38 +3429,58 @@
         function switchRanch(ranchId) {
             if (ranchId === currentRanch) return;
             
-            // Confirm if there's unsaved work
-            if (currentLote.animales.length > 0 || currentVenta.animales.length > 0) {
-                if (!confirm('Hay datos sin guardar. ¿Cambiar de finca de todas formas?')) {
-                    return;
+            try {
+                // Check for unsaved work
+                const hasUnsavedWork = currentLote && currentLote.animales && currentLote.animales.length > 0 || 
+                                     currentVenta && currentVenta.animales && currentVenta.animales.length > 0;
+                
+                // Confirm if there's unsaved work
+                if (hasUnsavedWork) {
+                    if (!confirm('Hay datos sin guardar. ¿Cambiar de finca de todas formas?')) {
+                        return;
+                    }
                 }
+                
+                // Save current ranch data before switching
+                saveData();
+                
+                // Reset lote/venta workflows
+                currentLote = { numero: null, vendedor: null, precioKilo: null, fecha: null, cantidadEsperada: 0, animales: [] };
+                currentVenta = { comprador: null, precioKilo: null, fecha: null, cantidadEsperada: 0, animales: [], esTransferencia: false, fincaDestino: null };
+                
+                // Switch to new ranch
+                currentRanch = ranchId;
+                localStorage.setItem('ganadoFinca_lastRanch', ranchId);
+                
+                // Apply new theme and update UI
+                applyRanchTheme();
+                
+                // Load new ranch data
+                loadData();
+                
+                // Update all views
+                updateAllViews();
+                initConfigValues();
+                
+                // Reset any open forms
+                document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
+                
+                // Hide form containers
+                const formContainers = ['saludFormContainer', 'potreroFormContainer', 'moverAnimalesFormContainer'];
+                formContainers.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                
+                // Show confirmation
+                const ranch = RANCHES[ranchId];
+                showToast(`${ranch.icon} Cambiado a ${ranch.name}`, 'success');
+                
+                console.log('Ranch switched successfully to:', ranchId);
+            } catch (error) {
+                console.error('Error switching ranch:', error);
+                showToast('Error al cambiar de finca. Recargue la página.', 'error');
             }
-            
-            // Save current ranch data before switching
-            saveData();
-            
-            // Switch to new ranch
-            currentRanch = ranchId;
-            localStorage.setItem('ganadoFinca_lastRanch', ranchId);
-            
-            // Apply new theme
-            applyRanchTheme();
-            
-            // Load new ranch data
-            loadData();
-            updateAllViews();
-            initConfigValues();
-            
-            // Reset any open forms
-            document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
-            
-            // Reset lote/venta workflows
-            currentLote = { numero: null, vendedor: null, precioKilo: null, fecha: null, cantidadEsperada: 0, animales: [] };
-            currentVenta = { comprador: null, precioKilo: null, fecha: null, cantidadEsperada: 0, animales: [] };
-            
-            // Show confirmation
-            const ranch = RANCHES[ranchId];
-            showToast(`${ranch.icon} Cambiado a ${ranch.name}`, 'success');
         }
         
         function applyRanchTheme() {
@@ -5198,9 +5218,12 @@
         function updateFilters() {
             // Vendedor filter
             const vendedores = [...new Set(data.entradas.filter(e => !e.numeroVaca).map(e => e.vendedor))];
-            document.getElementById('inventarioVendedorFilter').innerHTML = 
-                '<option value="">Todos los vendedores</option>' +
-                vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+            const inventarioVendedorFilter = document.getElementById('inventarioVendedorFilter');
+            if (inventarioVendedorFilter) {
+                inventarioVendedorFilter.innerHTML = 
+                    '<option value="">Todos los vendedores</option>' +
+                    vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+            }
             
             // Year filters
             const years = [...new Set([
@@ -5209,8 +5232,16 @@
             ])].sort((a, b) => b - a);
             
             const yearOptions = '<option value="">Todos los años</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
-            document.getElementById('entradasYearFilter').innerHTML = yearOptions;
-            document.getElementById('salidasYearFilter').innerHTML = yearOptions;
+            
+            const entradasYearSelect = document.getElementById('entradasYearSelect');
+            if (entradasYearSelect) {
+                entradasYearSelect.innerHTML = yearOptions;
+            }
+            
+            const salidasYearSelect = document.getElementById('salidasYearSelect');
+            if (salidasYearSelect) {
+                salidasYearSelect.innerHTML = yearOptions;
+            }
         }
         
         // ==================== FILTERS ====================
