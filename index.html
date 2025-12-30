@@ -3907,6 +3907,118 @@
                 </div>
             </div>
 
+            <!-- Calibration Card - NEW! -->
+            <div class="card" style="border: 3px solid #10b981; margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <span style="font-size: 1.5rem;">⚙️</span>
+                    <span>Calibración del Sistema</span>
+                </div>
+                <div class="card-body">
+                    <!-- Calibration Status -->
+                    <div id="calibrationStatusDisplay" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #10b981; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <strong style="color: #166534;">🐄 Estado de Calibración</strong>
+                            <span id="calibrationPoints" style="background: #dcfce7; color: #166534; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                                0 puntos
+                            </span>
+                        </div>
+                        <div style="color: #15803d; font-size: 0.9rem;">
+                            <div>Precisión actual: <strong id="calibrationRatio">1.35</strong> ± <span id="calibrationStdDev">0.00</span></div>
+                            <div style="margin-top: 0.25rem; font-size: 0.85rem; color: #166534;">
+                                💡 <span id="calibrationMessage">Agrega medidas reales para mejorar la precisión</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- How to Calibrate Instructions -->
+                    <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #1e40af; font-size: 0.95rem;">📋 Cómo Calibrar</h4>
+                        <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #1e3a8a; line-height: 1.6;">
+                            <li>Toma fotos del animal con la IA (arriba)</li>
+                            <li>Pesa el animal en báscula real</li>
+                            <li>Ingresa el peso real aquí abajo</li>
+                            <li>El sistema ajustará automáticamente las estimaciones</li>
+                        </ol>
+                    </div>
+
+                    <!-- Calibrate Form -->
+                    <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; padding: 1.25rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #374151;">➕ Agregar Peso Real</h4>
+                        
+                        <form id="calibrationForm" onsubmit="submitCalibration(event)">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Animal (Chapeta)</label>
+                                    <input type="text" class="form-input" id="calibAnimalId" required placeholder="ej: 101">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Peso Real (kg) <span class="required">*</span></label>
+                                    <input type="number" class="form-input" id="calibPesoReal" required min="50" max="800" step="0.1" placeholder="ej: 235.5" style="font-size: 1.1rem; font-weight: 600;">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Largo (cm) <span class="required">*</span></label>
+                                    <input type="number" class="form-input" id="calibLargo" required min="80" max="200" placeholder="de fotos IA">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Altura (cm) <span class="required">*</span></label>
+                                    <input type="number" class="form-input" id="calibAltura" required min="70" max="160" placeholder="de fotos IA">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Ancho (cm)</label>
+                                    <input type="number" class="form-input" id="calibAncho" min="30" max="90" placeholder="opcional">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1rem;">
+                                <button type="submit" class="btn btn-success" style="width: 100%; padding: 0.75rem; font-size: 1rem;">
+                                    ✅ Agregar Calibración
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Calibration History -->
+                    <div style="margin-top: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h4 style="margin: 0; color: #374151;">📊 Historial de Calibración</h4>
+                            <button class="btn btn-secondary" onclick="exportCalibration()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                                💾 Exportar
+                            </button>
+                        </div>
+                        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Animal</th>
+                                        <th>Fecha</th>
+                                        <th class="text-right">Peso Real</th>
+                                        <th class="text-right">Ratio</th>
+                                        <th class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calibrationHistoryTable">
+                                    <tr><td colspan="5" class="text-center" style="color: #9ca3af;">Sin calibraciones aún</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">
+                        <button class="btn btn-danger" onclick="resetCalibrationConfirm()" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                            🔄 Reiniciar Calibración
+                        </button>
+                        <span style="font-size: 0.8rem; color: #6b7280; margin-left: 0.5rem;">
+                            (volver a valores iniciales de 3 animales)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Weight History -->
             <div class="card">
                 <div class="card-header">
