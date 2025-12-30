@@ -2,7 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ganado Finca">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2e7d32">
+    <meta name="description" content="Sistema de Gestión Ganadera para Fincas">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%232e7d32' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🐂</text></svg>">
     <title>Ganado Finca - Sistema de Gestión</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -830,6 +838,69 @@
             cursor: pointer;
         }
         
+        /* AI Analytics Styles */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+        
+        #aiResponseContent {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        #aiResponseContent h3 {
+            color: #9c27b0;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        #aiResponseContent ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        #aiResponseContent li {
+            margin: 0.3rem 0;
+        }
+        
+        #aiResponseContent strong {
+            color: #2e7d32;
+        }
+        
+        #aiResponseContent code {
+            background: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        /* AI Provider Button Styles */
+        .ai-provider-btn {
+            padding: 0.75rem 1rem;
+            border: 2px solid #ddd;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .ai-provider-btn:hover {
+            border-color: #999;
+        }
+        
+        .ai-provider-btn.active {
+            border-color: #4285f4;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1565c0;
+        }
+        
+        #btnProviderAnthropic.active {
+            border-color: #9c27b0;
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #7b1fa2;
+        }
+        
         /* Ranch Selector Styles */
         .ranch-selector-bar {
             background: linear-gradient(135deg, #37474f, #263238);
@@ -914,6 +985,18 @@
             box-shadow: 0 4px 12px rgba(25, 118, 210, 0.5);
         }
         
+        /* La Vega - Green Theme */
+        .ranch-vega {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            color: white;
+            border-color: #4caf50;
+        }
+        
+        .ranch-vega.active {
+            border-color: #fff;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
+        }
+        
         /* Dynamic header themes */
         .header.theme-coruna {
             background: linear-gradient(135deg, #ff9800, #e65100) !important;
@@ -921,6 +1004,10 @@
         
         .header.theme-catalina {
             background: linear-gradient(135deg, #1976d2, #0d47a1) !important;
+        }
+        
+        .header.theme-vega {
+            background: linear-gradient(135deg, #4caf50, #1b5e20) !important;
         }
         
         /* Active tab indicator color change */
@@ -1271,6 +1358,10 @@
                     <span class="ranch-icon">⛪</span>
                     <span class="ranch-name">Santa Catalina</span>
                 </button>
+                <button class="ranch-btn ranch-vega" onclick="switchRanch('la_vega')" id="btnRanchVega">
+                    <span class="ranch-icon">🌾</span>
+                    <span class="ranch-name">La Vega</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1336,6 +1427,10 @@
             <button class="nav-tab" data-tab="fotos">
                 <span class="nav-tab-icon">📷</span>
                 <span>Fotos</span>
+            </button>
+            <button class="nav-tab" data-tab="analytics">
+                <span class="nav-tab-icon">🤖</span>
+                <span>Análisis IA</span>
             </button>
             <button class="nav-tab" data-tab="config">
                 <span class="nav-tab-icon">⚙️</span>
@@ -1918,16 +2013,29 @@
                     <span>📥 Historial de Entradas (Compras + Nacimientos)</span>
                 </div>
                 <div class="card-body">
-                    <div class="filters">
+                    <div class="filters" style="flex-wrap: wrap;">
                         <input type="text" class="form-input" id="entradasSearch" placeholder="Buscar..." oninput="filterEntradas()">
                         <select class="form-select" id="entradasTipoFilter" onchange="filterEntradas()">
                             <option value="">Todos los tipos</option>
                             <option value="compra">Compras</option>
                             <option value="nacimiento">Nacimientos</option>
                         </select>
-                        <select class="form-select" id="entradasYearFilter" onchange="filterEntradas()">
-                            <option value="">Todos los años</option>
+                        <select class="form-select" id="entradasPeriodoFilter" onchange="handleEntradasPeriodoChange()" style="min-width: 150px;">
+                            <option value="">Todos los registros</option>
+                            <option value="ano_actual">📅 Año en curso</option>
+                            <option value="ultimo_mes">📆 Último mes</option>
+                            <option value="ultimo_lote">📦 Último lote</option>
+                            <option value="ano_especifico">🗓️ Año específico</option>
+                            <option value="rango_fechas">📊 Rango de fechas</option>
                         </select>
+                        <select class="form-select" id="entradasYearSelect" style="display:none; min-width: 100px;" onchange="filterEntradas()">
+                            <option value="">Seleccionar año</option>
+                        </select>
+                        <div id="entradasDateRange" style="display:none; display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="date" class="form-input" id="entradasDateFrom" onchange="filterEntradas()" style="width: auto;">
+                            <span>a</span>
+                            <input type="date" class="form-input" id="entradasDateTo" onchange="filterEntradas()" style="width: auto;">
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="entradasTableContainer">
@@ -1962,16 +2070,28 @@
                     <span>📤 Historial de Salidas (Ventas + Muertes)</span>
                 </div>
                 <div class="card-body">
-                    <div class="filters">
+                    <div class="filters" style="flex-wrap: wrap;">
                         <input type="text" class="form-input" id="salidasSearch" placeholder="Buscar..." oninput="filterSalidas()">
                         <select class="form-select" id="salidasTipoFilter" onchange="filterSalidas()">
                             <option value="">Todos los tipos</option>
                             <option value="venta">Ventas</option>
                             <option value="muerte">Muertes</option>
                         </select>
-                        <select class="form-select" id="salidasYearFilter" onchange="filterSalidas()">
-                            <option value="">Todos los años</option>
+                        <select class="form-select" id="salidasPeriodoFilter" onchange="handleSalidasPeriodoChange()" style="min-width: 150px;">
+                            <option value="">Todos los registros</option>
+                            <option value="ano_actual">📅 Año en curso</option>
+                            <option value="ultimo_mes">📆 Último mes</option>
+                            <option value="ano_especifico">🗓️ Año específico</option>
+                            <option value="rango_fechas">📊 Rango de fechas</option>
                         </select>
+                        <select class="form-select" id="salidasYearSelect" style="display:none; min-width: 100px;" onchange="filterSalidas()">
+                            <option value="">Seleccionar año</option>
+                        </select>
+                        <div id="salidasDateRange" style="display:none; display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="date" class="form-input" id="salidasDateFrom" onchange="filterSalidas()" style="width: auto;">
+                            <span>a</span>
+                            <input type="date" class="form-input" id="salidasDateTo" onchange="filterSalidas()" style="width: auto;">
+                        </div>
                     </div>
                     <div class="table-container">
                         <table id="salidasTableContainer">
@@ -2862,12 +2982,12 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr style="background: #e3f2fd;">
+                                <tr style="background: #ffebee;">
                                     <td>🌧️ <strong>Lluvias Fuertes</strong></td>
                                     <td>Abril - Mayo</td>
-                                    <td class="text-right"><strong>0.42 kg/día</strong></td>
-                                    <td><span class="badge badge-success">Excelente</span></td>
-                                    <td>Máximo crecimiento, pasto abundante</td>
+                                    <td class="text-right"><strong>0.22 kg/día</strong></td>
+                                    <td><span class="badge badge-danger">Escaso</span></td>
+                                    <td>Considerar suplementación</td>
                                 </tr>
                                 <tr>
                                     <td>🌧️ <strong>Lluvias</strong></td>
@@ -2876,19 +2996,19 @@
                                     <td><span class="badge badge-success">Bueno</span></td>
                                     <td>Buen crecimiento</td>
                                 </tr>
-                                <tr style="background: #fff8e1;">
+                                <tr style="background: #e3f2fd;">
                                     <td>🌤️ <strong>Veranillo</strong></td>
                                     <td>Junio - Agosto</td>
+                                    <td class="text-right"><strong>0.42 kg/día</strong></td>
+                                    <td><span class="badge badge-success">Excelente</span></td>
+                                    <td>Máximo crecimiento, pasto abundante</td>
+                                </tr>
+                                <tr style="background: #fff8e1;">
+                                    <td>☀️ <strong>Seco/Verano</strong></td>
+                                    <td>Dic - Marzo</td>
                                     <td class="text-right"><strong>0.30 kg/día</strong></td>
                                     <td><span class="badge badge-warning">Regular</span></td>
                                     <td>Crecimiento moderado</td>
-                                </tr>
-                                <tr style="background: #ffebee;">
-                                    <td>☀️ <strong>Seco/Verano</strong></td>
-                                    <td>Dic - Marzo</td>
-                                    <td class="text-right"><strong>0.22 kg/día</strong></td>
-                                    <td><span class="badge badge-danger">Escaso</span></td>
-                                    <td>Considerar suplementación</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -2900,8 +3020,231 @@
             </div>
         </div>
         
+        <!-- Tab: Analytics IA -->
+        <div id="tab-analytics" class="tab-content">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                    <span>🤖 Análisis con Inteligencia Artificial</span>
+                </div>
+                <div class="card-body">
+                    <!-- API Provider Selection -->
+                    <div id="apiKeySetup" class="card" style="border: 2px solid #9c27b0; margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                            <span>🔑 Configurar Proveedor de IA</span>
+                        </div>
+                        <div class="card-body">
+                            <!-- Provider Selection -->
+                            <div class="form-group">
+                                <label class="form-label">Seleccionar Proveedor</label>
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                    <button type="button" class="btn ai-provider-btn active" id="btnProviderGoogle" onclick="selectAIProvider('google')" style="flex: 1;">
+                                        <span style="font-size: 1.2rem;">🔵</span> Google Gemini
+                                    </button>
+                                    <button type="button" class="btn ai-provider-btn" id="btnProviderAnthropic" onclick="selectAIProvider('anthropic')" style="flex: 1;">
+                                        <span style="font-size: 1.2rem;">🟠</span> Anthropic Claude
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Google Gemini Config -->
+                            <div id="googleConfig">
+                                <p style="margin-bottom: 1rem; color: #666;">
+                                    Usa tu cuenta de Google para obtener una API Key gratuita de Gemini.
+                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #4285f4;">Obtener API Key de Google →</a>
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">API Key de Google Gemini</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" class="form-input" id="googleApiKey" placeholder="AIza...">
+                                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: #4285f4;">
+                                            💾 Guardar
+                                        </button>
+                                    </div>
+                                    <div class="form-hint">💡 Google ofrece un nivel gratuito generoso</div>
+                                </div>
+                                <div id="googleApiKeyStatus" style="margin-top: 0.5rem;"></div>
+                            </div>
+                            
+                            <!-- Anthropic Claude Config -->
+                            <div id="anthropicConfig" style="display: none;">
+                                <p style="margin-bottom: 1rem; color: #666;">
+                                    Para usar Claude, necesitas una API Key de Anthropic.
+                                    <a href="https://console.anthropic.com/" target="_blank" style="color: #9c27b0;">Obtener API Key de Anthropic →</a>
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">API Key de Anthropic</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" class="form-input" id="anthropicApiKey" placeholder="sk-ant-...">
+                                        <button class="btn btn-primary" onclick="saveAnthropicApiKey()" style="background: #9c27b0;">
+                                            💾 Guardar
+                                        </button>
+                                    </div>
+                                    <div class="form-hint">Los análisis cuestan ~$0.01-0.05 cada uno</div>
+                                </div>
+                                <div id="anthropicApiKeyStatus" style="margin-top: 0.5rem;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats Summary -->
+                    <div class="summary-grid" style="margin-bottom: 1.5rem;">
+                        <div class="summary-box" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
+                            <div class="summary-box-icon">📊</div>
+                            <div class="summary-box-value" id="aiTotalAnimales">0</div>
+                            <div class="summary-box-label">En Inventario</div>
+                        </div>
+                        <div class="summary-box" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
+                            <div class="summary-box-icon">💰</div>
+                            <div class="summary-box-value" id="aiValorTotal">$0</div>
+                            <div class="summary-box-label">Valor Estimado</div>
+                        </div>
+                        <div class="summary-box" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+                            <div class="summary-box-icon">📈</div>
+                            <div class="summary-box-value" id="aiGDPPromedio">0</div>
+                            <div class="summary-box-label">GDP Promedio</div>
+                        </div>
+                        <div class="summary-box" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
+                            <div class="summary-box-icon">⚖️</div>
+                            <div class="summary-box-value" id="aiPesoPromedio">0</div>
+                            <div class="summary-box-label">Peso Prom. Est.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Analysis Buttons -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header">
+                            <span>⚡ Análisis Rápidos</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+                                <button class="btn btn-secondary" onclick="quickAnalysis('resumen')">
+                                    📋 Resumen General
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('listos_venta')">
+                                    💵 Animales Listos para Venta
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('mejor_gdp')">
+                                    🏆 Mejor Rendimiento (GDP)
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('rentabilidad')">
+                                    💰 Análisis de Rentabilidad
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('vendedores')">
+                                    👥 Evaluación de Vendedores
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('compradores')">
+                                    🛒 Análisis de Compradores
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('salud')">
+                                    💉 Estado de Salud del Hato
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('potreros')">
+                                    🌿 Eficiencia de Potreros
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('proyeccion')">
+                                    📅 Proyección 30/60/90 días
+                                </button>
+                                <button class="btn btn-secondary" onclick="quickAnalysis('recomendaciones')">
+                                    💡 Recomendaciones
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Question Input -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                            <span>💬 Pregunta Personalizada</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">Escribe tu pregunta sobre los datos del ganado:</label>
+                                <textarea class="form-input" id="aiCustomQuestion" rows="3" placeholder="Ejemplos:
+- ¿Cuáles animales tienen el mejor GDP y por qué?
+- ¿Cuál es el margen de ganancia promedio por animal?
+- ¿Qué vendedor me ha dado los animales más rentables?
+- ¿Cuánto dinero generaré si vendo todos los animales listos?"></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="askCustomQuestion()" style="width: 100%; background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                                🤖 Analizar con IA
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- AI Response Area -->
+                    <div class="card" id="aiResponseCard" style="display: none;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #4caf50, #388e3c);">
+                            <span>📊 Resultado del Análisis</span>
+                            <button class="btn btn-secondary" onclick="copyAnalysis()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                                📋 Copiar
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="aiResponseContent" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading Indicator -->
+                    <div id="aiLoading" style="display: none; text-align: center; padding: 2rem;">
+                        <div style="font-size: 3rem; animation: pulse 1s infinite;">🤖</div>
+                        <p style="color: #666; margin-top: 1rem;" id="aiLoadingText">Analizando datos con IA...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Tab: Configuración -->
         <div id="tab-config" class="tab-content">
+            <!-- Weather Condition Selector -->
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #2196F3, #1565C0);">
+                    <span>🌦️ Condiciones Climáticas Actuales</span>
+                </div>
+                <div class="card-body">
+                    <div class="form-hint" style="margin-bottom: 1rem; font-size: 0.95rem;">
+                        Selecciona las condiciones climáticas actuales de la finca. Esto afecta el GDP (Ganancia Diaria de Peso) usado para estimar el peso actual de los animales.
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <label class="weather-option" style="display: flex; flex-direction: column; padding: 1rem; background: #fff; border: 3px solid #ddd; border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                            <input type="radio" name="currentWeather" value="lluvias_fuertes" onchange="updateWeatherCondition()" style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 2rem; margin-bottom: 0.5rem;">🌧️</span>
+                            <strong>Lluvias Fuertes</strong>
+                            <span style="color: var(--gray); font-size: 0.85rem;">Abril - Mayo</span>
+                            <span style="color: var(--danger); font-weight: bold; margin-top: 0.5rem;">0.22 kg/día</span>
+                        </label>
+                        
+                        <label class="weather-option" style="display: flex; flex-direction: column; padding: 1rem; background: #fff; border: 3px solid #ddd; border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                            <input type="radio" name="currentWeather" value="lluvias" onchange="updateWeatherCondition()" style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 2rem; margin-bottom: 0.5rem;">🌧️</span>
+                            <strong>Lluvias</strong>
+                            <span style="color: var(--gray); font-size: 0.85rem;">Sept - Nov</span>
+                            <span style="color: var(--success); font-weight: bold; margin-top: 0.5rem;">0.36 kg/día</span>
+                        </label>
+                        
+                        <label class="weather-option" style="display: flex; flex-direction: column; padding: 1rem; background: #fff; border: 3px solid #ddd; border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                            <input type="radio" name="currentWeather" value="veranillo" onchange="updateWeatherCondition()" style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 2rem; margin-bottom: 0.5rem;">🌤️</span>
+                            <strong>Veranillo</strong>
+                            <span style="color: var(--gray); font-size: 0.85rem;">Junio - Agosto</span>
+                            <span style="color: var(--success); font-weight: bold; margin-top: 0.5rem;">0.42 kg/día</span>
+                        </label>
+                        
+                        <label class="weather-option" style="display: flex; flex-direction: column; padding: 1rem; background: #fff; border: 3px solid #ddd; border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                            <input type="radio" name="currentWeather" value="seco" onchange="updateWeatherCondition()" style="margin-bottom: 0.5rem;">
+                            <span style="font-size: 2rem; margin-bottom: 0.5rem;">☀️</span>
+                            <strong>Seco/Verano</strong>
+                            <span style="color: var(--gray); font-size: 0.85rem;">Dic - Marzo</span>
+                            <span style="color: var(--warning); font-weight: bold; margin-top: 0.5rem;">0.30 kg/día</span>
+                        </label>
+                    </div>
+                    
+                    <div id="weatherChangeInfo" style="padding: 1rem; background: #e3f2fd; border-radius: 8px; display: none;">
+                        <strong>📅 Último cambio:</strong> <span id="lastWeatherChange">-</span>
+                    </div>
+                </div>
+            </div>
+            
             <div class="card">
                 <div class="card-header">
                     <span>⚙️ Configuración de la Finca</span>
@@ -2910,8 +3253,8 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">GDP Promedio (kg/día)</label>
-                            <input type="number" class="form-input" id="configGDP" value="0.31" step="0.01" min="0.1" max="1">
-                            <div class="form-hint">Ganancia diaria promedio para estimar peso actual</div>
+                            <input type="number" class="form-input" id="configGDP" value="0.31" step="0.01" min="0.1" max="1" readonly style="background: #f5f5f5;">
+                            <div class="form-hint">Calculado automáticamente según condiciones climáticas</div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Precio Venta Estimado ($/kg)</label>
@@ -2971,6 +3314,13 @@
                 icon: '⛪',
                 theme: 'catalina',
                 storageKey: 'ganadoFinca_SantaCatalina'
+            },
+            la_vega: {
+                id: 'la_vega',
+                name: 'La Vega',
+                icon: '🌾',
+                theme: 'vega',
+                storageKey: 'ganadoFinca_LaVega'
             }
         };
         
@@ -2986,12 +3336,20 @@
             potreros: [], // Paddocks/pastures
             rotaciones: [], // Paddock rotation history
             animalPotreros: {}, // Map of animal number -> current potrero
+            weatherHistory: [], // Track weather condition changes over time
             config: {
-                gdp: 0.31,
+                gdp: 0.31, // Default/average GDP
                 precioVenta: 9000,
                 pesoObjetivo: 450,
                 pesoMinimo: 380,
-                fotoIntervalo: 90 // Days between recommended photos
+                fotoIntervalo: 90, // Days between recommended photos
+                currentWeather: 'lluvias', // Current weather condition
+                gdpByWeather: {
+                    'lluvias_fuertes': 0.22,
+                    'lluvias': 0.36,
+                    'veranillo': 0.42,
+                    'seco': 0.30
+                }
             }
         };
         
@@ -3078,7 +3436,12 @@
             
             // Update ranch buttons
             document.querySelectorAll('.ranch-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(currentRanch === 'la_coruna' ? 'btnRanchCoruna' : 'btnRanchCatalina').classList.add('active');
+            const btnIds = {
+                'la_coruna': 'btnRanchCoruna',
+                'santa_catalina': 'btnRanchCatalina',
+                'la_vega': 'btnRanchVega'
+            };
+            document.getElementById(btnIds[currentRanch]).classList.add('active');
             
             // Update header
             const header = document.getElementById('mainHeader');
@@ -3099,6 +3462,81 @@
             document.getElementById('configPesoObjetivo').value = data.config.pesoObjetivo || 450;
             document.getElementById('configPesoMinimo').value = data.config.pesoMinimo || 380;
             document.getElementById('configFotoIntervalo').value = data.config.fotoIntervalo || 90;
+            
+            // Initialize weather selector
+            const currentWeather = data.config.currentWeather || 'lluvias';
+            const weatherRadio = document.querySelector(`input[name="currentWeather"][value="${currentWeather}"]`);
+            if (weatherRadio) {
+                weatherRadio.checked = true;
+                updateWeatherVisuals();
+            }
+            
+            // Show last weather change info if available
+            if (data.weatherHistory && data.weatherHistory.length > 0) {
+                const lastChange = data.weatherHistory[data.weatherHistory.length - 1];
+                document.getElementById('weatherChangeInfo').style.display = 'block';
+                document.getElementById('lastWeatherChange').textContent = `${getTemporadaDisplay(lastChange.to)} - ${formatDate(lastChange.fecha)}`;
+            }
+        }
+        
+        function updateWeatherCondition() {
+            const selectedWeather = document.querySelector('input[name="currentWeather"]:checked')?.value;
+            if (!selectedWeather) return;
+            
+            const oldWeather = data.config.currentWeather;
+            
+            // Update config
+            data.config.currentWeather = selectedWeather;
+            data.config.gdp = data.config.gdpByWeather[selectedWeather];
+            
+            // Record weather change in history
+            if (!data.weatherHistory) data.weatherHistory = [];
+            if (oldWeather !== selectedWeather) {
+                data.weatherHistory.push({
+                    fecha: new Date().toISOString().split('T')[0],
+                    from: oldWeather,
+                    to: selectedWeather,
+                    gdp: data.config.gdp
+                });
+                
+                // Show last change info
+                document.getElementById('weatherChangeInfo').style.display = 'block';
+                document.getElementById('lastWeatherChange').textContent = `${getTemporadaDisplay(selectedWeather)} - ${formatDate(new Date().toISOString().split('T')[0])}`;
+            }
+            
+            // Update GDP field
+            document.getElementById('configGDP').value = data.config.gdp;
+            
+            // Update visual selection
+            updateWeatherVisuals();
+            
+            // Save and refresh views
+            saveData();
+            
+            const weatherNames = {
+                'lluvias_fuertes': 'Lluvias Fuertes (0.22 kg/día)',
+                'lluvias': 'Lluvias (0.36 kg/día)',
+                'veranillo': 'Veranillo (0.42 kg/día)',
+                'seco': 'Seco (0.30 kg/día)'
+            };
+            
+            showToast(`🌦️ Condiciones actualizadas: ${weatherNames[selectedWeather]}`, 'success');
+        }
+        
+        function updateWeatherVisuals() {
+            // Update visual styling of weather cards
+            document.querySelectorAll('.weather-option').forEach(label => {
+                const radio = label.querySelector('input[type="radio"]');
+                if (radio && radio.checked) {
+                    label.style.background = 'linear-gradient(135deg, #e8f5e9, #c8e6c9)';
+                    label.style.borderColor = 'var(--success)';
+                    label.style.transform = 'scale(1.05)';
+                } else {
+                    label.style.background = '#fff';
+                    label.style.borderColor = '#ddd';
+                    label.style.transform = 'scale(1)';
+                }
+            });
         }
         
         function loadData() {
@@ -3112,8 +3550,24 @@
                 if (!data.potreros) data.potreros = [];
                 if (!data.rotaciones) data.rotaciones = [];
                 if (!data.animalPotreros) data.animalPotreros = {};
-                // Ensure config has all fields
+                if (!data.weatherHistory) data.weatherHistory = [];
+                
+                // Ensure config has all fields including new weather-related fields
+                if (!data.config) data.config = {};
                 if (!data.config.fotoIntervalo) data.config.fotoIntervalo = 90;
+                if (!data.config.gdpByWeather) {
+                    data.config.gdpByWeather = {
+                        'lluvias_fuertes': 0.22,
+                        'lluvias': 0.36,
+                        'veranillo': 0.42,
+                        'seco': 0.30
+                    };
+                }
+                if (!data.config.currentWeather) data.config.currentWeather = 'lluvias';
+                if (!data.config.gdp) data.config.gdp = data.config.gdpByWeather[data.config.currentWeather];
+                if (!data.config.precioVenta) data.config.precioVenta = 9000;
+                if (!data.config.pesoObjetivo) data.config.pesoObjetivo = 450;
+                if (!data.config.pesoMinimo) data.config.pesoMinimo = 380;
             } else {
                 // Initialize with empty data for this ranch
                 data = {
@@ -3124,12 +3578,20 @@
                     potreros: [],
                     rotaciones: [],
                     animalPotreros: {},
+                    weatherHistory: [],
                     config: {
                         gdp: 0.31,
                         precioVenta: 9000,
                         pesoObjetivo: 450,
                         pesoMinimo: 380,
-                        fotoIntervalo: 90
+                        fotoIntervalo: 90,
+                        currentWeather: 'lluvias',
+                        gdpByWeather: {
+                            'lluvias_fuertes': 0.22,
+                            'lluvias': 0.36,
+                            'veranillo': 0.42,
+                            'seco': 0.30
+                        }
                     }
                 };
             }
@@ -4625,19 +5087,108 @@
             });
         }
         
+        function handleEntradasPeriodoChange() {
+            const periodo = document.getElementById('entradasPeriodoFilter').value;
+            const yearSelect = document.getElementById('entradasYearSelect');
+            const dateRange = document.getElementById('entradasDateRange');
+            
+            // Hide all extra controls first
+            yearSelect.style.display = 'none';
+            dateRange.style.display = 'none';
+            
+            // Show appropriate controls based on selection
+            if (periodo === 'ano_especifico') {
+                yearSelect.style.display = 'block';
+                // Populate years if empty
+                if (yearSelect.options.length <= 1) {
+                    const years = [...new Set(data.entradas.map(e => new Date(e.fechaEntrada).getFullYear()))].sort((a, b) => b - a);
+                    yearSelect.innerHTML = '<option value="">Seleccionar año</option>' + 
+                        years.map(y => `<option value="${y}">${y}</option>`).join('');
+                }
+            } else if (periodo === 'rango_fechas') {
+                dateRange.style.display = 'flex';
+            }
+            
+            // Apply filter
+            filterEntradas();
+        }
+        
         function filterEntradas() {
             const search = document.getElementById('entradasSearch').value.toLowerCase();
             const tipo = document.getElementById('entradasTipoFilter').value;
-            const year = document.getElementById('entradasYearFilter').value;
+            const periodo = document.getElementById('entradasPeriodoFilter').value;
+            const yearSelect = document.getElementById('entradasYearSelect').value;
+            const dateFrom = document.getElementById('entradasDateFrom').value;
+            const dateTo = document.getElementById('entradasDateTo').value;
             
             const rows = document.querySelectorAll('#entradasTable tr');
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth();
+            
             rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length === 0) return; // Skip header or empty rows
+                
                 const text = row.textContent.toLowerCase();
                 const matchSearch = !search || text.includes(search);
                 const matchTipo = !tipo || text.includes(tipo);
-                const matchYear = !year || text.includes(year);
                 
-                row.style.display = matchSearch && matchTipo && matchYear ? '' : 'none';
+                // Get the fecha from the row (assuming it's in column 9 - Fecha)
+                const fechaCell = cells[8]?.textContent.trim();
+                let matchPeriodo = true;
+                
+                if (periodo && fechaCell) {
+                    const [day, month, year] = fechaCell.split('/').map(Number);
+                    if (day && month && year) {
+                        // Note: month is 1-12 in display, but Date uses 0-11
+                        const fechaEntrada = new Date(year, month - 1, day);
+                        
+                        switch(periodo) {
+                            case 'ano_actual':
+                                matchPeriodo = fechaEntrada.getFullYear() === currentYear;
+                                break;
+                            case 'ultimo_mes':
+                                const lastMonth = new Date(today);
+                                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                                matchPeriodo = fechaEntrada >= lastMonth;
+                                break;
+                            case 'ultimo_lote':
+                                // Find the most recent lote
+                                const lotes = data.entradas.map(e => ({
+                                    lote: e.lote,
+                                    fecha: new Date(e.fechaEntrada)
+                                }));
+                                if (lotes.length > 0) {
+                                    lotes.sort((a, b) => b.fecha - a.fecha);
+                                    const ultimoLote = lotes[0].lote;
+                                    const loteCell = cells[2]?.textContent.trim();
+                                    matchPeriodo = loteCell === ultimoLote;
+                                }
+                                break;
+                            case 'ano_especifico':
+                                if (yearSelect) {
+                                    matchPeriodo = fechaEntrada.getFullYear() === parseInt(yearSelect);
+                                }
+                                break;
+                            case 'rango_fechas':
+                                if (dateFrom && dateTo) {
+                                    const from = new Date(dateFrom);
+                                    const to = new Date(dateTo);
+                                    matchPeriodo = fechaEntrada >= from && fechaEntrada <= to;
+                                } else if (dateFrom) {
+                                    const from = new Date(dateFrom);
+                                    matchPeriodo = fechaEntrada >= from;
+                                } else if (dateTo) {
+                                    const to = new Date(dateTo);
+                                    matchPeriodo = fechaEntrada <= to;
+                                }
+                                break;
+                        }
+                    }
+                }
+                
+                row.style.display = matchSearch && matchTipo && matchPeriodo ? '' : 'none';
             });
         }
         
@@ -6767,6 +7318,409 @@
                 closeAnimalProfile();
             }
         });
+        
+        // ==================== AI ANALYTICS MODULE ====================
+        
+        let currentAIProvider = 'google'; // 'google' or 'anthropic'
+        
+        function selectAIProvider(provider) {
+            currentAIProvider = provider;
+            localStorage.setItem('aiProvider', provider);
+            
+            // Update UI
+            document.getElementById('btnProviderGoogle').classList.toggle('active', provider === 'google');
+            document.getElementById('btnProviderAnthropic').classList.toggle('active', provider === 'anthropic');
+            
+            document.getElementById('googleConfig').style.display = provider === 'google' ? 'block' : 'none';
+            document.getElementById('anthropicConfig').style.display = provider === 'anthropic' ? 'block' : 'none';
+        }
+        
+        function saveGoogleApiKey() {
+            const apiKey = document.getElementById('googleApiKey').value.trim();
+            if (!apiKey) {
+                showToast('Ingrese una API Key válida', 'error');
+                return;
+            }
+            
+            localStorage.setItem('googleApiKey', apiKey);
+            document.getElementById('googleApiKeyStatus').innerHTML = '<span style="color: #4caf50;">✅ API Key de Google guardada correctamente</span>';
+            showToast('API Key de Google guardada', 'success');
+        }
+        
+        function saveAnthropicApiKey() {
+            const apiKey = document.getElementById('anthropicApiKey').value.trim();
+            if (!apiKey) {
+                showToast('Ingrese una API Key válida', 'error');
+                return;
+            }
+            
+            localStorage.setItem('anthropicApiKey', apiKey);
+            document.getElementById('anthropicApiKeyStatus').innerHTML = '<span style="color: #4caf50;">✅ API Key de Anthropic guardada correctamente</span>';
+            showToast('API Key de Anthropic guardada', 'success');
+        }
+        
+        function loadApiKeys() {
+            // Load provider preference
+            const savedProvider = localStorage.getItem('aiProvider') || 'google';
+            selectAIProvider(savedProvider);
+            
+            // Load Google API Key - with default key pre-configured
+            let googleKey = localStorage.getItem('googleApiKey');
+            if (!googleKey) {
+                // Pre-configure with provided API key
+                googleKey = 'AIzaSyA4y3nCiv79TevLUfRGEx4gDfRFEVYCaac';
+                localStorage.setItem('googleApiKey', googleKey);
+            }
+            if (googleKey) {
+                document.getElementById('googleApiKey').value = googleKey;
+                document.getElementById('googleApiKeyStatus').innerHTML = '<span style="color: #4caf50;">✅ API Key configurada y lista para usar</span>';
+            }
+            
+            // Load Anthropic API Key
+            const anthropicKey = localStorage.getItem('anthropicApiKey');
+            if (anthropicKey) {
+                document.getElementById('anthropicApiKey').value = anthropicKey;
+                document.getElementById('anthropicApiKeyStatus').innerHTML = '<span style="color: #4caf50;">✅ API Key configurada</span>';
+            }
+        }
+        
+        function getDataSummaryForAI() {
+            const inventario = getInventario();
+            const today = new Date();
+            const gdp = data.config.gdp || 0.31;
+            const precioVenta = data.config.precioVenta || 9000;
+            
+            let totalPesoInicial = 0;
+            let totalPesoEstimado = 0;
+            let totalInversion = 0;
+            let totalValorActual = 0;
+            
+            const animalDetails = inventario.map(a => {
+                const dias = Math.floor((today - new Date(a.fechaEntrada)) / (1000 * 60 * 60 * 24));
+                const pesoEst = a.peso + (dias * gdp);
+                const costo = a.costoTotal || (a.peso * a.precioKilo) || 0;
+                const valorActual = pesoEst * precioVenta;
+                const ganancia = valorActual - costo;
+                const margen = costo > 0 ? ((ganancia / costo) * 100) : 0;
+                
+                totalPesoInicial += a.peso;
+                totalPesoEstimado += pesoEst;
+                totalInversion += costo;
+                totalValorActual += valorActual;
+                
+                return {
+                    numero: a.numero,
+                    lote: a.lote || 'N/A',
+                    sexo: a.sexo,
+                    raza: a.raza || 'No especificada',
+                    vendedor: a.vendedor || 'Nacimiento',
+                    pesoInicial: a.peso,
+                    pesoEstimado: Math.round(pesoEst),
+                    diasEnFinca: dias,
+                    gdpReal: dias > 0 ? ((pesoEst - a.peso) / dias).toFixed(3) : gdp,
+                    costo: costo,
+                    valorActual: Math.round(valorActual),
+                    gananciaEstimada: Math.round(ganancia),
+                    margenPorcentaje: margen.toFixed(1),
+                    listoParaVenta: pesoEst >= (data.config.pesoObjetivo || 450),
+                    enRetiro: typeof isAnimalInRetiro === 'function' ? isAnimalInRetiro(a.numero) : false,
+                    potrero: data.animalPotreros && data.animalPotreros[a.numero] ? 
+                        (data.potreros.find(p => p.id === data.animalPotreros[a.numero])?.nombre || 'Desconocido') : 'Sin asignar'
+                };
+            });
+            
+            const vendedorStats = {};
+            inventario.forEach(a => {
+                const v = a.vendedor || 'Nacimiento';
+                if (!vendedorStats[v]) vendedorStats[v] = { count: 0, totalPeso: 0, totalCosto: 0 };
+                vendedorStats[v].count++;
+                vendedorStats[v].totalPeso += a.peso;
+                vendedorStats[v].totalCosto += a.costoTotal || (a.peso * a.precioKilo) || 0;
+            });
+            
+            const ventasRecientes = data.salidas.filter(s => s.comprador !== 'MUERTE').slice(-20).map(s => ({
+                numero: s.numero,
+                peso: s.peso,
+                fecha: s.fechaSalida,
+                precioKg: s.precioKiloVenta,
+                comprador: s.comprador,
+                total: s.costoVenta || (s.peso * s.precioKiloVenta)
+            }));
+            
+            const saludResumen = {
+                totalEventos: data.saludEventos ? data.saludEventos.length : 0,
+                ultimasVacunas: data.saludEventos ? data.saludEventos.filter(e => e.tipo === 'vacuna').slice(-5) : [],
+                animalesEnRetiro: inventario.filter(a => typeof isAnimalInRetiro === 'function' ? isAnimalInRetiro(a.numero) : false).length
+            };
+            
+            const potreroResumen = data.potreros ? data.potreros.map(p => {
+                const animalesEnPotrero = Object.values(data.animalPotreros || {}).filter(pId => pId === p.id).length;
+                return {
+                    nombre: p.nombre,
+                    area: p.area,
+                    capacidad: p.capacidad,
+                    animalesActuales: animalesEnPotrero,
+                    estado: p.estado,
+                    tipoPasto: p.tipoPasto
+                };
+            }) : [];
+            
+            return {
+                fecha: today.toISOString().split('T')[0],
+                finca: RANCHES[currentRanch].name,
+                config: {
+                    gdpConfigurado: gdp,
+                    precioVentaKg: precioVenta,
+                    pesoObjetivo: data.config.pesoObjetivo || 450
+                },
+                resumenGeneral: {
+                    totalAnimales: inventario.length,
+                    machos: inventario.filter(a => a.sexo === 'MACHO').length,
+                    hembras: inventario.filter(a => a.sexo === 'HEMBRA').length,
+                    totalPesoInicial: Math.round(totalPesoInicial),
+                    totalPesoEstimado: Math.round(totalPesoEstimado),
+                    pesoPromedioEstimado: inventario.length > 0 ? Math.round(totalPesoEstimado / inventario.length) : 0,
+                    inversionTotal: Math.round(totalInversion),
+                    valorActualTotal: Math.round(totalValorActual),
+                    gananciaEstimadaTotal: Math.round(totalValorActual - totalInversion),
+                    animalesListosVenta: animalDetails.filter(a => a.listoParaVenta && !a.enRetiro).length
+                },
+                animales: animalDetails,
+                vendedores: vendedorStats,
+                ventasRecientes: ventasRecientes,
+                totalVentas: data.salidas.filter(s => s.comprador !== 'MUERTE').length,
+                totalMuertes: data.salidas.filter(s => s.comprador === 'MUERTE').length,
+                salud: saludResumen,
+                potreros: potreroResumen
+            };
+        }
+        
+        function updateAIStats() {
+            const inventario = getInventario();
+            const today = new Date();
+            const gdp = data.config.gdp || 0.31;
+            const precioVenta = data.config.precioVenta || 9000;
+            
+            let totalPesoEst = 0;
+            let totalValor = 0;
+            
+            inventario.forEach(a => {
+                const dias = Math.floor((today - new Date(a.fechaEntrada)) / (1000 * 60 * 60 * 24));
+                const pesoEst = a.peso + (dias * gdp);
+                totalPesoEst += pesoEst;
+                totalValor += pesoEst * precioVenta;
+            });
+            
+            document.getElementById('aiTotalAnimales').textContent = inventario.length;
+            document.getElementById('aiValorTotal').textContent = formatCurrency(totalValor);
+            document.getElementById('aiGDPPromedio').textContent = gdp.toFixed(2) + ' kg/día';
+            document.getElementById('aiPesoPromedio').textContent = inventario.length > 0 ? 
+                Math.round(totalPesoEst / inventario.length) + ' kg' : '0 kg';
+        }
+        
+        function getSystemPrompt(dataSummary) {
+            return `Eres un experto en ganadería bovina colombiana, especializado en cría y ceba de ganado grass-fed en zonas tropicales. 
+Analizas datos de fincas ganaderas y proporcionas insights accionables.
+
+DATOS ACTUALES DE LA FINCA "${dataSummary.finca}":
+${JSON.stringify(dataSummary, null, 2)}
+
+INSTRUCCIONES:
+- Responde en español
+- Usa formato claro con secciones cuando sea apropiado
+- Incluye números específicos de los datos
+- Da recomendaciones prácticas y accionables
+- Considera el contexto de ganadería colombiana (clima tropical, pastos, mercado local)
+- Usa emojis para hacer el análisis más visual
+- Cuando menciones valores monetarios, usa formato colombiano ($ con separador de miles)`;
+        }
+        
+        // ========== GOOGLE GEMINI API ==========
+        async function callGoogleGeminiAPI(prompt) {
+            const apiKey = localStorage.getItem('googleApiKey');
+            if (!apiKey) {
+                showToast('Configure su API Key de Google primero', 'error');
+                document.getElementById('apiKeySetup').scrollIntoView({ behavior: 'smooth' });
+                return null;
+            }
+            
+            const dataSummary = getDataSummaryForAI();
+            const systemPrompt = getSystemPrompt(dataSummary);
+            
+            const fullPrompt = `${systemPrompt}\n\n---\n\nSOLICITUD DEL USUARIO:\n${prompt}`;
+            
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: fullPrompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 0.7,
+                            maxOutputTokens: 2048
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'Error en la API de Google');
+                }
+                
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0] && result.candidates[0].content) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error('Respuesta inesperada de Google Gemini');
+                }
+            } catch (error) {
+                console.error('Google API Error:', error);
+                showToast('Error: ' + error.message, 'error');
+                return null;
+            }
+        }
+        
+        // ========== ANTHROPIC CLAUDE API ==========
+        async function callAnthropicAPI(prompt) {
+            const apiKey = localStorage.getItem('anthropicApiKey');
+            if (!apiKey) {
+                showToast('Configure su API Key de Anthropic primero', 'error');
+                document.getElementById('apiKeySetup').scrollIntoView({ behavior: 'smooth' });
+                return null;
+            }
+            
+            const dataSummary = getDataSummaryForAI();
+            const systemPrompt = getSystemPrompt(dataSummary);
+            
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2000,
+                        messages: [
+                            { role: 'user', content: prompt }
+                        ],
+                        system: systemPrompt
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || 'Error en la API de Anthropic');
+                }
+                
+                const result = await response.json();
+                return result.content[0].text;
+            } catch (error) {
+                console.error('Anthropic API Error:', error);
+                showToast('Error: ' + error.message, 'error');
+                return null;
+            }
+        }
+        
+        // ========== UNIFIED AI CALL ==========
+        async function callAI(prompt) {
+            const providerName = currentAIProvider === 'google' ? 'Google Gemini' : 'Anthropic Claude';
+            document.getElementById('aiLoadingText').textContent = `Analizando con ${providerName}...`;
+            
+            if (currentAIProvider === 'google') {
+                return await callGoogleGeminiAPI(prompt);
+            } else {
+                return await callAnthropicAPI(prompt);
+            }
+        }
+        
+        async function quickAnalysis(type) {
+            const prompts = {
+                'resumen': 'Genera un resumen ejecutivo completo del estado actual de la finca. Incluye: inventario, valor, rentabilidad, y 3 puntos clave de atención.',
+                'listos_venta': 'Analiza qué animales están listos para venta (peso >= objetivo y sin período de retiro). Lista los animales con su peso estimado, valor, y días en finca. Calcula el ingreso total potencial si se venden todos.',
+                'mejor_gdp': 'Identifica los 10 animales con mejor rendimiento (GDP más alto). Analiza qué tienen en común (vendedor, lote, raza, etc.) y qué podemos aprender para futuras compras.',
+                'rentabilidad': 'Realiza un análisis de rentabilidad detallado: margen por animal, ROI, costo por kg producido, y comparación entre lotes. Identifica los animales más y menos rentables.',
+                'vendedores': 'Evalúa el desempeño de cada vendedor: número de animales, peso promedio de entrada, costo promedio por kg, y calidad general. ¿De qué vendedor conviene seguir comprando?',
+                'compradores': 'Analiza el historial de ventas por comprador: volumen, precios pagados, frecuencia. ¿Quiénes son los mejores compradores y cómo podemos fortalecer esas relaciones?',
+                'salud': 'Evalúa el estado de salud del hato: vacunaciones al día, tratamientos recientes, animales en retiro. ¿Qué acciones sanitarias se necesitan próximamente?',
+                'potreros': 'Analiza la eficiencia de uso de potreros: ocupación, rotación, días de descanso. ¿Están bien distribuidos los animales? ¿Hay potreros subutilizados?',
+                'proyeccion': 'Genera una proyección a 30, 60 y 90 días: cuántos animales llegarán al peso objetivo, ingreso estimado por ventas, y recomendaciones de timing para maximizar ganancias.',
+                'recomendaciones': 'Basándote en todos los datos, genera las 5 recomendaciones más importantes para mejorar la rentabilidad de la finca en los próximos 3 meses.'
+            };
+            
+            const prompt = prompts[type];
+            if (!prompt) return;
+            
+            showAILoading(true);
+            const response = await callAI(prompt);
+            showAILoading(false);
+            
+            if (response) {
+                showAIResponse(response);
+            }
+        }
+        
+        async function askCustomQuestion() {
+            const question = document.getElementById('aiCustomQuestion').value.trim();
+            if (!question) {
+                showToast('Escribe una pregunta primero', 'error');
+                return;
+            }
+            
+            showAILoading(true);
+            const response = await callAI(question);
+            showAILoading(false);
+            
+            if (response) {
+                showAIResponse(response);
+            }
+        }
+        
+        function showAILoading(show) {
+            document.getElementById('aiLoading').style.display = show ? 'block' : 'none';
+            if (show) {
+                document.getElementById('aiResponseCard').style.display = 'none';
+            }
+        }
+        
+        function showAIResponse(response) {
+            document.getElementById('aiResponseCard').style.display = 'block';
+            document.getElementById('aiResponseContent').innerHTML = formatAIResponse(response);
+            document.getElementById('aiResponseCard').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function formatAIResponse(text) {
+            let html = text
+                .replace(/^### (.*$)/gim, '<h4 style="color: #9c27b0; margin-top: 1rem;">$1</h4>')
+                .replace(/^## (.*$)/gim, '<h3 style="color: #9c27b0; margin-top: 1.2rem;">$1</h3>')
+                .replace(/^# (.*$)/gim, '<h2 style="color: #9c27b0; margin-top: 1.5rem;">$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^\- (.*$)/gim, '• $1<br>')
+                .replace(/^\* (.*$)/gim, '• $1<br>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+            
+            return html;
+        }
+        
+        function copyAnalysis() {
+            const content = document.getElementById('aiResponseContent').innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                showToast('Análisis copiado al portapapeles', 'success');
+            }).catch(() => {
+                showToast('Error al copiar', 'error');
+            });
+        }
         
         // ==================== UTILITIES ====================
         function formatCurrency(value) {
