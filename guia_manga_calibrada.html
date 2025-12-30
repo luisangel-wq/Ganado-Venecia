@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía: Manga Calibrada para Estimación de Peso</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm;
+            margin: 0 auto;
+            background: white;
+            page-break-after: always;
+        }
+        
+        .page:last-child {
+            page-break-after: avoid;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .page {
+                margin: 0;
+                padding: 12mm;
+                width: 100%;
+                min-height: auto;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2e7d32;
+            font-size: 22pt;
+            margin-bottom: 0.5rem;
+            border-bottom: 3px solid #2e7d32;
+            padding-bottom: 0.5rem;
+        }
+        
+        h2 {
+            color: #1565c0;
+            font-size: 14pt;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: #e3f2fd;
+            border-left: 4px solid #1565c0;
+        }
+        
+        h3 {
+            color: #ef6c00;
+            font-size: 12pt;
+            margin-top: 0.8rem;
+            margin-bottom: 0.4rem;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .intro-box {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .intro-box h3 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.5rem 0;
+            font-size: 10pt;
+        }
+        
+        th, td {
+            border: 1px solid #ccc;
+            padding: 0.4rem 0.6rem;
+            text-align: left;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .highlight-row {
+            background: #fff3e0;
+        }
+        
+        .materials-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin: 0.5rem 0;
+        }
+        
+        .material-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #f5f5f5;
+            border-radius: 6px;
+        }
+        
+        .material-icon {
+            font-size: 20pt;
+        }
+        
+        .step-container {
+            counter-reset: step;
+        }
+        
+        .step {
+            display: flex;
+            gap: 0.8rem;
+            margin: 0.6rem 0;
+            padding: 0.6rem;
+            background: #fafafa;
+            border-radius: 6px;
+            border-left: 3px solid #1565c0;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            background: #1565c0;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .diagram-box {
+            background: #fff;
+            border: 2px solid #666;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.8rem 0;
+            font-family: monospace;
+            font-size: 9pt;
+            line-height: 1.2;
+        }
+        
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 0.6rem;
+            margin: 0.5rem 0;
+            font-size: 10pt;
+        }
+        
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 0.6rem;
+            margin: 0.5rem 0;
+            font-size: 10pt;
+        }
+        
+        .color-sample {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #333;
+            vertical-align: middle;
+            margin-right: 0.3rem;
+        }
+        
+        .red { background: #d32f2f; }
+        .white { background: #ffffff; }
+        .orange { background: #ff9800; }
+        .yellow { background: #ffeb3b; }
+        .blue { background: #1976d2; }
+        
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .checklist li {
+            padding: 0.3rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .checklist li::before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 14pt;
+        }
+        
+        .photo-positions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+        
+        .photo-position {
+            text-align: center;
+            padding: 0.5rem;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+        }
+        
+        .photo-position.recommended {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .ruler {
+            margin: 0.5rem 0;
+            border: 1px solid #333;
+            padding: 0.3rem;
+        }
+        
+        .ruler-scale {
+            display: flex;
+            height: 30px;
+            background: repeating-linear-gradient(
+                to right,
+                #fff 0px,
+                #fff 9.5mm,
+                #333 9.5mm,
+                #333 10mm
+            );
+            border: 1px solid #333;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 9pt;
+            color: #666;
+            margin-top: 1rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #ccc;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .print-btn {
+            background: #2e7d32;
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 14pt;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            margin: 1rem auto;
+        }
+        
+        .print-btn:hover {
+            background: #1b5e20;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background: #333; color: white; padding: 1rem; text-align: center;">
+        <button class="print-btn" onclick="window.print()">🖨️ Imprimir Guía (3 páginas)</button>
+    </div>
+
+    <!-- PAGE 1: Overview and Materials -->
+    <div class="page">
+        <h1>🚧 Guía: Manga Calibrada</h1>
+        <p class="subtitle">Sistema de Referencia para Estimación de Peso por IA</p>
+        
+        <div class="intro-box">
+            <h3>¿Por qué calibrar la manga?</h3>
+            <p>Las barras de la manga proporcionan una <strong>referencia permanente y precisa</strong> para que la inteligencia artificial pueda calcular las dimensiones reales del animal en las fotos. Al marcar alturas conocidas en las barras, la IA puede:</p>
+            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                <li>Calcular altura real del animal</li>
+                <li>Estimar largo del cuerpo</li>
+                <li>Determinar perímetro torácico</li>
+                <li>Predecir peso con ±5% de precisión</li>
+            </ul>
+        </div>
+        
+        <h2>📦 Materiales Necesarios</h2>
+        <div class="materials-grid">
+            <div class="material-item">
+                <span class="material-icon">🎨</span>
+                <div>
+                    <strong>Pintura para exteriores</strong><br>
+                    <small>Roja, blanca, naranja (500ml c/u)</small>
+                </div>
+            </div>
+            <div class="material-item">
+                <span class="material-icon">🖌️</span>
+                <div>
+                    <strong>Brochas 2" y 4"</strong><br>
+                    <small>Para líneas y franjas</small>
+                </div>
+            </div>
+            <div class="material-item">
+                <span class="material-icon">📏</span>
+                <div>
+                    <strong>Cinta métrica (5m)</strong><br>
+                    <small>Para medir alturas</small>
+                </div>
+            </div>
+            <div class="material-item">
+                <span class="material-icon">📐</span>
+                <div>
+                    <strong>Nivel</strong><br>
+                    <small>Para líneas horizontales</small>
+                </div>
+            </div>
+            <div class="material-item">
+                <span class="material-icon">✏️</span>
+                <div>
+                    <strong>Tiza o marcador</strong><br>
+                    <small>Para marcar antes de pintar</small>
+                </div>
+            </div>
+            <div class="material-item">
+                <span class="material-icon">🎭</span>
+                <div>
+                    <strong>Cinta de enmascarar</strong><br>
+                    <small>Para bordes limpios</small>
+                </div>
+            </div>
+        </div>
+        
+        <table>
+            <tr>
+                <th>Material</th>
+                <th>Cantidad</th>
+                <th>Costo Aprox.</th>
+            </tr>
+            <tr>
+                <td>Pintura roja exterior</td>
+                <td>500ml</td>
+                <td>$25,000</td>
+            </tr>
+            <tr>
+                <td>Pintura blanca exterior</td>
+                <td>500ml</td>
+                <td>$25,000</td>
+            </tr>
+            <tr>
+                <td>Pintura naranja exterior</td>
+                <td>500ml</td>
+                <td>$25,000</td>
+            </tr>
+            <tr>
+                <td>Brochas (2" y 4")</td>
+                <td>2 unidades</td>
+                <td>$15,000</td>
+            </tr>
+            <tr>
+                <td>Cinta de enmascarar</td>
+                <td>1 rollo</td>
+                <td>$10,000</td>
+            </tr>
+            <tr class="highlight-row">
+                <td><strong>TOTAL</strong></td>
+                <td></td>
+                <td><strong>~$100,000 COP</strong></td>
+            </tr>
+        </table>
+        
+        <h2>📐 Sistema de Marcas de Altura</h2>
+        <table>
+            <tr>
+                <th>Altura</th>
+                <th>Color</th>
+                <th>Propósito</th>
+            </tr>
+            <tr>
+                <td><strong>150 cm</strong></td>
+                <td><span class="color-sample red"></span> Rojo</td>
+                <td>Referencia superior - sobre el lomo del ganado</td>
+            </tr>
+            <tr>
+                <td><strong>100 cm</strong></td>
+                <td><span class="color-sample white"></span> Blanco</td>
+                <td>Altura típica del lomo - referencia principal</td>
+            </tr>
+            <tr>
+                <td><strong>50 cm</strong></td>
+                <td><span class="color-sample orange"></span> Naranja</td>
+                <td>Nivel del vientre/patas - referencia inferior</td>
+            </tr>
+        </table>
+        
+        <div class="success-box">
+            <strong>💡 Tip:</strong> Use colores brillantes que contrasten con el color de las barras de la manga (generalmente metal gris o madera café).
+        </div>
+        
+        <div class="footer">
+            Ganado Finca App - Sistema de Calibración de Manga - Página 1 de 3
+        </div>
+    </div>
+
+    <!-- PAGE 2: Installation Instructions -->
+    <div class="page">
+        <h1>🔧 Instalación de Marcas</h1>
+        
+        <h2>📍 Diagrama de la Manga Calibrada</h2>
+        <div class="diagram-box">
+<pre>
+    VISTA LATERAL DE LA MANGA
+    ═════════════════════════════════════════════════════════════════════
+    
+    ENTRADA                      CENTRO                         SALIDA
+       │                           │                              │
+       ▼                           ▼                              ▼
+    ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+    │     │     │     │     │     │     │     │     │     │     │     │
+150 │──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│ 🔴 ROJO
+cm  │     │     │     │     │     │     │     │     │     │     │     │
+    │     │     │     │     │     │     │     │     │     │     │     │
+100 │──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│ ⚪ BLANCO
+cm  │     │     │     │     │     │     │     │     │     │     │     │
+    │     │     │     │     │     │     │     │     │     │     │     │
+ 50 │──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│──●──│ 🟠 NARANJA
+cm  │     │     │     │     │     │     │     │     │     │     │     │
+    │     │     │     │     │     │     │     │     │     │     │     │
+  0 └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+    ◄────────────────── Espaciado entre barras: 80-100cm ──────────────►
+
+    LEYENDA:
+    ● = Punto de marca en cada barra vertical
+    ──●── = Línea horizontal continua pintada
+</pre>
+        </div>
+        
+        <h2>📝 Pasos de Instalación</h2>
+        <div class="step-container">
+            <div class="step">
+                <div><strong>Limpiar las barras</strong> - Retire óxido, suciedad y grasa de las barras donde pintará. Use un cepillo de alambre si es necesario.</div>
+            </div>
+            <div class="step">
+                <div><strong>Medir desde el suelo</strong> - Use la cinta métrica para marcar 50cm, 100cm y 150cm en CADA barra vertical. Marque con tiza.</div>
+            </div>
+            <div class="step">
+                <div><strong>Verificar horizontalidad</strong> - Use el nivel para asegurar que las marcas estén alineadas horizontalmente entre barras.</div>
+            </div>
+            <div class="step">
+                <div><strong>Aplicar cinta de enmascarar</strong> - Coloque cinta arriba y abajo de donde pintará cada franja (5cm de ancho).</div>
+            </div>
+            <div class="step">
+                <div><strong>Pintar franja NARANJA (50cm)</strong> - Pinte una franja de 5cm de ancho a 50cm del suelo en todas las barras.</div>
+            </div>
+            <div class="step">
+                <div><strong>Pintar franja BLANCA (100cm)</strong> - Pinte una franja de 5cm de ancho a 100cm del suelo.</div>
+            </div>
+            <div class="step">
+                <div><strong>Pintar franja ROJA (150cm)</strong> - Pinte una franja de 5cm de ancho a 150cm del suelo.</div>
+            </div>
+            <div class="step">
+                <div><strong>Retirar cinta y dejar secar</strong> - Retire la cinta antes de que la pintura seque completamente. Deje secar 24h.</div>
+            </div>
+        </div>
+        
+        <h2>📐 Detalle de Franja Individual</h2>
+        <div class="diagram-box">
+<pre>
+    VISTA DE UNA BARRA VERTICAL (de frente)
+    
+         │◄── 5cm ──►│
+         │           │
+    ─────┼───────────┼───── 152.5cm
+         │███████████│
+         │███ ROJO ██│ ←── Franja 150cm
+         │███████████│
+    ─────┼───────────┼───── 147.5cm
+         │           │
+         │     │     │
+         │     │     │
+    ─────┼───────────┼───── 102.5cm
+         │███████████│
+         │██ BLANCO █│ ←── Franja 100cm
+         │███████████│
+    ─────┼───────────┼───── 97.5cm
+         │           │
+         │     │     │
+         │     │     │
+    ─────┼───────────┼───── 52.5cm
+         │███████████│
+         │█ NARANJA █│ ←── Franja 50cm
+         │███████████│
+    ─────┼───────────┼───── 47.5cm
+         │           │
+    ═════╧═══════════╧═════ SUELO (0cm)
+</pre>
+        </div>
+        
+        <div class="warning-box">
+            <strong>⚠️ IMPORTANTE:</strong> Mida SIEMPRE desde el suelo donde pisan los animales, no desde la base de la barra. El suelo puede tener variaciones.
+        </div>
+        
+        <div class="footer">
+            Ganado Finca App - Sistema de Calibración de Manga - Página 2 de 3
+        </div>
+    </div>
+
+    <!-- PAGE 3: Photo Guidelines and Reference -->
+    <div class="page">
+        <h1>📸 Guía de Fotografía</h1>
+        
+        <h2>📍 Posiciones Recomendadas</h2>
+        <div class="photo-positions">
+            <div class="photo-position">
+                <div style="font-size: 24pt;">📍</div>
+                <strong>ENTRADA</strong>
+                <div style="font-size: 9pt; color: #666;">Animal entrando<br>Foto frontal</div>
+            </div>
+            <div class="photo-position recommended">
+                <div style="font-size: 24pt;">⭐</div>
+                <strong>CENTRO</strong>
+                <div style="font-size: 9pt; color: #666;">Mejor posición<br>Todas las marcas visibles</div>
+            </div>
+            <div class="photo-position">
+                <div style="font-size: 24pt;">📍</div>
+                <strong>SALIDA</strong>
+                <div style="font-size: 9pt; color: #666;">Animal saliendo<br>Foto trasera</div>
+            </div>
+        </div>
+        
+        <h2>📷 Ángulos de Fotografía</h2>
+        <div class="two-column">
+            <div>
+                <h3>📐 Foto LATERAL (Obligatoria)</h3>
+                <div class="diagram-box" style="font-size: 8pt;">
+<pre>
+        CÁMARA
+           │
+           │ ← perpendicular
+           ▼
+    ┌─────────────────┐
+150 │─────────────────│ 🔴
+    │    ╭─────╮      │
+100 │────│ 🐄 │──────│ ⚪ ← lomo
+    │    ╰─────╯      │
+ 50 │─────────────────│ 🟠
+    └─────────────────┘
+    
+✅ Todas las franjas visibles
+✅ Animal de perfil completo
+✅ Cámara a nivel del lomo
+</pre>
+                </div>
+            </div>
+            <div>
+                <h3>📐 Foto TRASERA (Obligatoria)</h3>
+                <div class="diagram-box" style="font-size: 8pt;">
+<pre>
+          CÁMARA
+             │
+             ▼
+    ┌───────────────────┐
+    │    ╭───────╮      │
+    │    │ 🐄    │      │
+    │    │ (anca)│      │
+    │    ╰───────╯      │
+    └───────────────────┘
+    ▲         ▲         ▲
+    │         │         │
+  BARRA    ANIMAL    BARRA
+  
+✅ Ancho de caderas visible
+✅ Barras laterales en frame
+✅ Marcas de altura visibles
+</pre>
+                </div>
+            </div>
+        </div>
+        
+        <h2>✅ Checklist Antes de Fotografiar</h2>
+        <ul class="checklist">
+            <li>Animal quieto en posición central de la manga</li>
+            <li>Al menos 2 barras verticales visibles con marcas</li>
+            <li>Franjas de color claramente visibles (no cubiertas)</li>
+            <li>Buena iluminación (evitar contraluz)</li>
+            <li>Cámara a nivel del lomo del animal (~100cm altura)</li>
+            <li>Animal completo en el encuadre</li>
+            <li>Foto enfocada y sin movimiento</li>
+        </ul>
+        
+        <h2>📊 Cómo la IA Calcula el Peso</h2>
+        <table>
+            <tr>
+                <th>Medida</th>
+                <th>Cálculo de IA</th>
+                <th>Uso</th>
+            </tr>
+            <tr>
+                <td>Altura Cruz</td>
+                <td>Píxeles lomo ÷ Píxeles 100cm × 100</td>
+                <td>Indica tamaño general</td>
+            </tr>
+            <tr>
+                <td>Largo Cuerpo</td>
+                <td>Píxeles hombro-cola ÷ Píxeles entre barras × espaciado</td>
+                <td>Correlación con peso</td>
+            </tr>
+            <tr>
+                <td>Perímetro Torácico</td>
+                <td>Estimado desde altura + profundidad</td>
+                <td>Factor principal de peso</td>
+            </tr>
+            <tr>
+                <td>Ancho Caderas</td>
+                <td>Píxeles ancho ÷ Píxeles referencia × cm conocidos</td>
+                <td>Desarrollo muscular</td>
+            </tr>
+        </table>
+        
+        <div class="success-box">
+            <strong>🎯 Fórmula de Peso:</strong><br>
+            Peso (kg) = a × (Perímetro²) × Largo × Factor_Raza × Ajuste_BCS<br>
+            <small>Donde 'a' es una constante calibrada por raza</small>
+        </div>
+        
+        <h2>📏 Regla de Verificación (10cm)</h2>
+        <div class="ruler">
+            <div style="text-align: center; margin-bottom: 0.2rem; font-size: 9pt;">Use esta regla para verificar sus impresiones</div>
+            <div class="ruler-scale"></div>
+            <div style="display: flex; justify-content: space-between; font-size: 8pt; margin-top: 2px;">
+                <span>0</span>
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span>5</span>
+                <span>6</span>
+                <span>7</span>
+                <span>8</span>
+                <span>9</span>
+                <span>10cm</span>
+            </div>
+        </div>
+        
+        <h2>📞 Soporte</h2>
+        <table>
+            <tr>
+                <td><strong>App:</strong></td>
+                <td>Ganado Finca - Módulo de Fotos</td>
+            </tr>
+            <tr>
+                <td><strong>Referencia:</strong></td>
+                <td>Seleccione "🚧 Manga Calibrada" en tipo de referencia</td>
+            </tr>
+            <tr>
+                <td><strong>Posición:</strong></td>
+                <td>Indique Entrada / Centro / Salida según donde esté el animal</td>
+            </tr>
+        </table>
+        
+        <div class="footer">
+            Ganado Finca App - Sistema de Calibración de Manga - Página 3 de 3<br>
+            <small>Versión 1.0 - Diciembre 2024</small>
+        </div>
+    </div>
+</body>
+</html>
