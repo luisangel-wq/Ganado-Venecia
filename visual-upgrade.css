@@ -1,0 +1,774 @@
+/* ============================================
+   🎨 GANADO FINCA - PROFESSIONAL UI UPGRADE
+   Version 2.0 - Mobile-First Design
+   
+   Add this CSS to your existing index.html 
+   to instantly upgrade the visual design.
+   ============================================ */
+
+/* Google Fonts - Add this to <head> section:
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+*/
+
+:root {
+    /* Primary Colors - Rich Forest Green */
+    --primary: #1a472a !important;
+    --primary-light: #2d6a4f !important;
+    --primary-dark: #0d2818 !important;
+    --primary-gradient: linear-gradient(135deg, #1a472a 0%, #2d6a4f 50%, #40916c 100%);
+    --primary-glow: 0 4px 20px rgba(26, 71, 42, 0.4);
+    
+    /* Accent Colors */
+    --accent: #d4a373;
+    --accent-gold: #e9c46a;
+    
+    /* Status Colors - Vibrant */
+    --success: #10b981 !important;
+    --success-light: #d1fae5;
+    --warning: #f59e0b !important;
+    --warning-light: #fef3c7;
+    --danger: #ef4444 !important;
+    --danger-light: #fee2e2;
+    --info: #3b82f6 !important;
+    --info-light: #dbeafe;
+    
+    /* Neutrals */
+    --white: #ffffff;
+    --light: #f8faf9 !important;
+    --gray: #6b7280 !important;
+    --dark: #1f2937 !important;
+    --border: #e5e7eb !important;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+    
+    /* Bottom nav height for mobile */
+    --bottom-nav-height: 80px;
+    --safe-bottom: env(safe-area-inset-bottom);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%) !important;
+    background-attachment: fixed;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 20px);
+    -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 1024px) {
+    body {
+        padding-bottom: 2rem;
+    }
+}
+
+/* ============================================
+   HEADER - Modern Gradient
+   ============================================ */
+
+.header {
+    background: var(--primary-gradient) !important;
+    box-shadow: var(--shadow-lg), var(--primary-glow) !important;
+    padding: 1rem 1.5rem !important;
+}
+
+.logo-icon {
+    font-size: 2.75rem !important;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    animation: gentleBounce 2s ease-in-out infinite;
+}
+
+@keyframes gentleBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+.header-stat {
+    background: rgba(255,255,255,0.15) !important;
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md) !important;
+    padding: 0.5rem 1rem !important;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.header-stat-value {
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+}
+
+/* ============================================
+   NAVIGATION - Scrollable on Mobile
+   ============================================ */
+
+.nav-tabs {
+    background: var(--white) !important;
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    padding: 0.5rem !important;
+    gap: 0.25rem !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    display: none !important;
+}
+
+.nav-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .nav-tabs {
+        display: flex !important;
+    }
+}
+
+.nav-tab {
+    padding: 0.6rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    transition: all 0.25s ease !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.nav-tab:hover {
+    background: #f3f4f6 !important;
+    transform: translateY(-2px);
+}
+
+.nav-tab.active {
+    background: var(--primary-gradient) !important;
+    box-shadow: var(--shadow-md), var(--primary-glow) !important;
+}
+
+.nav-tab-icon {
+    font-size: 1.35rem !important;
+}
+
+/* ============================================
+   SUMMARY BOXES - Large Icons
+   ============================================ */
+
+.summary-grid {
+    gap: 1rem !important;
+}
+
+.summary-box {
+    background: var(--white) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 1.5rem 1rem !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid #e5e7eb !important;
+    transition: all 0.3s ease !important;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.summary-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.summary-box:hover::before {
+    transform: scaleX(1);
+}
+
+.summary-box:hover {
+    transform: translateY(-6px) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+.summary-box:active {
+    transform: scale(0.98);
+}
+
+.summary-box-icon {
+    font-size: 3.5rem !important;
+    margin-bottom: 0.5rem !important;
+    display: block;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+    transition: transform 0.3s ease;
+}
+
+.summary-box:hover .summary-box-icon {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.summary-box-value {
+    font-size: 1.75rem !important;
+    font-weight: 900 !important;
+    color: #111827 !important;
+    letter-spacing: -1px;
+}
+
+.summary-box-label {
+    font-size: 0.7rem !important;
+    color: #6b7280 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700 !important;
+}
+
+@media (max-width: 480px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+    }
+    .summary-box {
+        padding: 1rem 0.75rem !important;
+    }
+    .summary-box-icon {
+        font-size: 2.75rem !important;
+    }
+    .summary-box-value {
+        font-size: 1.35rem !important;
+    }
+}
+
+/* ============================================
+   EVENT CARDS - Large Interactive
+   ============================================ */
+
+.event-cards {
+    gap: 1rem !important;
+}
+
+.event-card {
+    background: var(--white) !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 2rem 1.5rem !important;
+    box-shadow: var(--shadow-md) !important;
+    border-width: 3px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.event-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    transition: height 0.3s ease;
+}
+
+.event-card:hover::after {
+    height: 8px;
+}
+
+.event-card:hover {
+    transform: translateY(-8px) scale(1.02) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+.event-card:active {
+    transform: scale(0.98) !important;
+}
+
+/* Event Card Colors */
+.event-card.compras {
+    border-color: #10b981 !important;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+}
+.event-card.compras::after { background: #10b981; }
+.event-card.compras:hover { box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3) !important; }
+
+.event-card.nacimientos {
+    border-color: #3b82f6 !important;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+}
+.event-card.nacimientos::after { background: #3b82f6; }
+.event-card.nacimientos:hover { box-shadow: 0 20px 40px rgba(59, 130, 246, 0.3) !important; }
+
+.event-card.ventas {
+    border-color: #f59e0b !important;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+}
+.event-card.ventas::after { background: #f59e0b; }
+.event-card.ventas:hover { box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3) !important; }
+
+.event-card.muertes {
+    border-color: #9ca3af !important;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%) !important;
+}
+.event-card.muertes::after { background: #9ca3af; }
+.event-card.muertes:hover { box-shadow: 0 20px 40px rgba(156, 163, 175, 0.3) !important; }
+
+.event-card-icon {
+    font-size: 4.5rem !important;
+    margin-bottom: 1rem !important;
+    display: block;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.15));
+    transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+}
+
+.event-card:hover .event-card-icon {
+    transform: scale(1.15) rotate(-8deg) !important;
+}
+
+.event-card-title {
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem !important;
+}
+
+.event-card-desc {
+    font-size: 0.8rem !important;
+    font-weight: 500;
+}
+
+@media (max-width: 480px) {
+    .event-cards {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+    }
+    .event-card {
+        padding: 1.5rem 0.75rem !important;
+    }
+    .event-card-icon {
+        font-size: 3rem !important;
+    }
+    .event-card-title {
+        font-size: 0.85rem !important;
+    }
+    .event-card-desc {
+        display: none;
+    }
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.card {
+    background: var(--white) !important;
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease !important;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.card-header {
+    background: var(--primary-gradient) !important;
+    padding: 1rem 1.5rem !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+}
+
+.card-header span:first-child {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+.card-header.compras { background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; }
+.card-header.nacimientos { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important; }
+.card-header.ventas { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important; }
+.card-header.muertes { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important; }
+
+.card-body {
+    padding: 1.5rem !important;
+}
+
+@media (max-width: 480px) {
+    .card-body {
+        padding: 1rem !important;
+    }
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+
+.form-input, .form-select {
+    border: 2px solid #e5e7eb !important;
+    border-radius: var(--radius-md) !important;
+    padding: 1rem !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.form-input:focus, .form-select:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px rgba(26, 71, 42, 0.1) !important;
+    outline: none !important;
+}
+
+.form-label {
+    font-weight: 700 !important;
+    font-size: 0.875rem !important;
+    color: #374151 !important;
+}
+
+.form-calculated {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    font-weight: 700 !important;
+    color: var(--primary) !important;
+    border-color: #10b981 !important;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+    padding: 1rem 1.5rem !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.25s ease !important;
+    min-height: 52px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:active {
+    transform: scale(0.98) !important;
+}
+
+.btn span:first-child {
+    font-size: 1.25rem;
+}
+
+.btn-primary {
+    background: var(--primary-gradient) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.btn-primary:hover {
+    box-shadow: var(--shadow-lg), var(--primary-glow) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.btn-success:hover {
+    box-shadow: var(--shadow-lg), 0 4px 20px rgba(16, 185, 129, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.btn-danger:hover {
+    box-shadow: var(--shadow-lg), 0 4px 20px rgba(239, 68, 68, 0.4) !important;
+}
+
+.btn-secondary {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+}
+
+.btn-outline {
+    background: transparent !important;
+    border: 2px solid var(--primary) !important;
+    color: var(--primary) !important;
+}
+
+.btn-outline:hover {
+    background: var(--primary) !important;
+    color: white !important;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+
+.table-container {
+    border-radius: var(--radius-md) !important;
+    border: 1px solid #e5e7eb !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+th {
+    background: #f9fafb !important;
+    font-weight: 700 !important;
+    color: #4b5563 !important;
+    text-transform: uppercase;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.5px;
+    padding: 1rem !important;
+}
+
+td {
+    padding: 1rem !important;
+}
+
+tr {
+    transition: background 0.2s ease !important;
+}
+
+tr:hover {
+    background: #f9fafb !important;
+}
+
+.clickable-row:hover {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+
+.modal {
+    background: rgba(0,0,0,0.6) !important;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    border-radius: var(--radius-xl) !important;
+    box-shadow: var(--shadow-xl) !important;
+    max-width: 600px;
+}
+
+.modal-header {
+    padding: 1.5rem !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+.modal-title {
+    font-weight: 800 !important;
+    font-size: 1.25rem !important;
+}
+
+.modal-body {
+    padding: 1.5rem !important;
+}
+
+.modal-footer {
+    padding: 1.5rem !important;
+    border-top: 1px solid #e5e7eb !important;
+}
+
+/* ============================================
+   RANCH SELECTOR
+   ============================================ */
+
+.ranch-selector-bar {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%) !important;
+}
+
+.ranch-btn {
+    border-radius: var(--radius-full) !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 600 !important;
+    transition: all 0.25s ease !important;
+}
+
+.ranch-btn.active {
+    background: var(--primary) !important;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.4) !important;
+}
+
+.ranch-icon {
+    font-size: 1.25rem !important;
+}
+
+/* ============================================
+   BOTTOM NAVIGATION (Add to HTML)
+   ============================================ */
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-top: 1px solid #e5e7eb;
+    padding: 0.5rem;
+    padding-bottom: calc(0.5rem + var(--safe-bottom));
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-around;
+}
+
+@media (min-width: 1024px) {
+    .bottom-nav {
+        display: none !important;
+    }
+    body {
+        padding-bottom: 2rem !important;
+    }
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0.5rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #9ca3af;
+    transition: all 0.2s ease;
+    min-height: 56px;
+}
+
+.bottom-nav-item.active {
+    color: var(--primary);
+}
+
+.bottom-nav-icon {
+    font-size: 1.75rem;
+    transition: transform 0.2s ease;
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+    transform: scale(1.15);
+}
+
+.bottom-nav-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* ============================================
+   AI ANALYTICS
+   ============================================ */
+
+.ai-provider-btn {
+    padding: 1rem 1.5rem !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: var(--radius-md) !important;
+    font-weight: 600 !important;
+    transition: all 0.25s ease !important;
+}
+
+.ai-provider-btn.active {
+    border-color: #3b82f6 !important;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    color: #1e40af !important;
+}
+
+#btnProviderAnthropic.active {
+    border-color: #9333ea !important;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%) !important;
+    color: #7c3aed !important;
+}
+
+/* ============================================
+   TOASTS
+   ============================================ */
+
+.toast {
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-xl) !important;
+    border-left: 4px solid !important;
+    padding: 1rem 1.5rem !important;
+}
+
+.toast.success { border-color: #10b981 !important; }
+.toast.error { border-color: #ef4444 !important; }
+.toast.warning { border-color: #f59e0b !important; }
+.toast.info { border-color: #3b82f6 !important; }
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content.active {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* ============================================
+   PWA INSTALL BANNER
+   ============================================ */
+
+.pwa-install-banner {
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-xl) !important;
+}
+
+/* ============================================
+   UTILITY - Hide scrollbars
+   ============================================ */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
