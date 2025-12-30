@@ -1789,24 +1789,56 @@
                         <h3 style="margin-bottom: 1rem; color: var(--warning);">💵 Paso 1: Información de la Venta</h3>
                         <div class="form-hint" style="margin-bottom: 1rem;">Esta información aplica a todos los animales de esta venta</div>
                         
+                        <!-- Transfer option -->
+                        <div class="form-group full-width" style="margin-bottom: 1.5rem; padding: 1rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 600;">
+                                <input type="checkbox" id="ventaEsTransferencia" onchange="toggleTransferMode()" style="width: 20px; height: 20px;">
+                                <span>🔄 Transferencia entre fincas</span>
+                            </label>
+                            <div class="form-hint" style="margin-top: 0.5rem;">
+                                Marque esta opción si está transfiriendo animales a otra finca propia
+                            </div>
+                        </div>
+                        
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Cantidad de Animales <span class="required">*</span></label>
                                 <input type="number" class="form-input" id="ventaCantidadAnimales" required min="1" max="100" placeholder="ej: 6" style="font-size: 1.2rem; font-weight: bold;">
                                 <div class="form-hint">¿Cuántos animales vas a vender?</div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Comprador <span class="required">*</span></label>
-                                <input type="text" class="form-input" id="ventaComprador" required list="compradoresList" placeholder="ej: Camilo Correa">
-                                <datalist id="compradoresList"></datalist>
+                            
+                            <!-- Normal sale fields -->
+                            <div id="ventaNormalFields">
+                                <div class="form-group">
+                                    <label class="form-label">Comprador <span class="required">*</span></label>
+                                    <input type="text" class="form-input" id="ventaComprador" list="compradoresList" placeholder="ej: Camilo Correa">
+                                    <datalist id="compradoresList"></datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Precio/Kg de Venta <span class="required">*</span></label>
+                                    <input type="number" class="form-input" id="ventaPrecioKilo" min="1" step="1" placeholder="ej: 9500">
+                                    <div class="form-hint">Mismo precio para todos los animales</div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Precio/Kg de Venta <span class="required">*</span></label>
-                                <input type="number" class="form-input" id="ventaPrecioKilo" required min="1" step="1" placeholder="ej: 9500">
-                                <div class="form-hint">Mismo precio para todos los animales</div>
+                            
+                            <!-- Transfer fields -->
+                            <div id="ventaTransferFields" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label">Finca Destino <span class="required">*</span></label>
+                                    <select class="form-select" id="ventaFincaDestino">
+                                        <option value="">-- Seleccionar finca --</option>
+                                    </select>
+                                    <div class="form-hint">Finca que recibirá los animales</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Precio/Kg de Transferencia</label>
+                                    <input type="number" class="form-input" id="ventaPrecioTransfer" min="0" step="1" placeholder="0" value="0">
+                                    <div class="form-hint">Dejar en 0 para transferir al costo original</div>
+                                </div>
                             </div>
+                            
                             <div class="form-group">
-                                <label class="form-label">Fecha de Venta <span class="required">*</span></label>
+                                <label class="form-label">Fecha de Venta/Transferencia <span class="required">*</span></label>
                                 <input type="date" class="form-input" id="ventaFecha" required>
                             </div>
                         </div>
@@ -4318,7 +4350,8 @@
             precioKilo: null,
             fecha: null,
             cantidadEsperada: 0,
-            animales: []
+            animales: [],
+            transferenciaHacia: null // Ranch ID for inter-ranch transfers
         };
         
         function initVentaForm() {
@@ -4331,36 +4364,96 @@
             document.getElementById('ventaPrecioKilo').value = '';
             document.getElementById('ventaCantidadAnimales').value = '';
             
+            const checkboxEl = document.getElementById('ventaEsTransferencia');
+            if (checkboxEl) checkboxEl.checked = false;
+            
+            // Populate destination ranch selector (only if element exists)
+            populateDestinationRanches();
+            
+            // Reset transfer mode UI
+            toggleTransferMode();
+            
             // Reset current venta
             currentVenta = {
                 comprador: null,
                 precioKilo: null,
                 fecha: null,
                 cantidadEsperada: 0,
-                animales: []
+                animales: [],
+                esTransferencia: false,
+                fincaDestino: null
             };
+        }
+        
+        function populateDestinationRanches() {
+            const select = document.getElementById('ventaFincaDestino');
+            if (!select) return; // Element might not exist yet
+            
+            // Get all ranches except current one
+            select.innerHTML = '<option value="">-- Seleccionar finca --</option>' +
+                Object.keys(RANCHES)
+                    .filter(id => id !== currentRanch)
+                    .map(id => {
+                        const ranch = RANCHES[id];
+                        return `<option value="${id}">${ranch.icon} ${ranch.name}</option>`;
+                    })
+                    .join('');
+        }
+        
+        function toggleTransferMode() {
+            const isTransfer = document.getElementById('ventaEsTransferencia').checked;
+            const normalFields = document.getElementById('ventaNormalFields');
+            const transferFields = document.getElementById('ventaTransferFields');
+            
+            if (isTransfer) {
+                normalFields.style.display = 'none';
+                transferFields.style.display = 'contents';
+            } else {
+                normalFields.style.display = 'contents';
+                transferFields.style.display = 'none';
+            }
         }
         
         function startVentaEntry() {
             const cantidadAnimales = parseInt(document.getElementById('ventaCantidadAnimales').value);
-            const comprador = document.getElementById('ventaComprador').value.trim();
-            const precioKilo = parseFloat(document.getElementById('ventaPrecioKilo').value);
+            const esTransferencia = document.getElementById('ventaEsTransferencia').checked;
             const fecha = document.getElementById('ventaFecha').value;
             
             if (!cantidadAnimales || cantidadAnimales < 1) {
                 showToast('Ingrese la cantidad de animales a vender', 'error');
                 return;
             }
-            if (!comprador) {
-                showToast('Ingrese el comprador', 'error');
-                return;
+            
+            let comprador, precioKilo, fincaDestino;
+            
+            if (esTransferencia) {
+                // Transfer mode validation
+                fincaDestino = document.getElementById('ventaFincaDestino').value;
+                precioKilo = parseFloat(document.getElementById('ventaPrecioTransfer').value) || 0;
+                
+                if (!fincaDestino) {
+                    showToast('Seleccione la finca destino', 'error');
+                    return;
+                }
+                
+                comprador = `TRANSFERENCIA → ${RANCHES[fincaDestino].name}`;
+            } else {
+                // Normal sale validation
+                comprador = document.getElementById('ventaComprador').value.trim();
+                precioKilo = parseFloat(document.getElementById('ventaPrecioKilo').value);
+                
+                if (!comprador) {
+                    showToast('Ingrese el comprador', 'error');
+                    return;
+                }
+                if (!precioKilo || precioKilo <= 0) {
+                    showToast('Ingrese el precio por kilo', 'error');
+                    return;
+                }
             }
-            if (!precioKilo || precioKilo <= 0) {
-                showToast('Ingrese el precio por kilo', 'error');
-                return;
-            }
+            
             if (!fecha) {
-                showToast('Ingrese la fecha de venta', 'error');
+                showToast('Ingrese la fecha', 'error');
                 return;
             }
             
@@ -4376,6 +4469,8 @@
             currentVenta.comprador = comprador;
             currentVenta.precioKilo = precioKilo;
             currentVenta.fecha = fecha;
+            currentVenta.esTransferencia = esTransferencia;
+            currentVenta.fincaDestino = fincaDestino || null;
             
             // Update display
             document.getElementById('ventaCompradorDisplay').textContent = comprador;
@@ -4654,30 +4749,78 @@
                 return;
             }
             
-            if (!confirm(`¿Finalizar venta de ${currentVenta.animales.length} animales a ${currentVenta.comprador}?`)) {
+            const esTransferencia = currentVenta.esTransferencia || false;
+            const fincaDestino = currentVenta.fincaDestino;
+            
+            const confirmMsg = esTransferencia 
+                ? `¿Finalizar transferencia de ${currentVenta.animales.length} animales a ${RANCHES[fincaDestino].name}?`
+                : `¿Finalizar venta de ${currentVenta.animales.length} animales a ${currentVenta.comprador}?`;
+            
+            if (!confirm(confirmMsg)) {
                 return;
             }
             
-            // Save all animals to salidas (NO loteVenta - animals sold individually)
+            // Save all animals to salidas in CURRENT ranch
             currentVenta.animales.forEach(animal => {
                 const venta = {
                     numero: animal.numero,
                     peso: animal.pesoVenta,
                     fechaSalida: currentVenta.fecha,
                     precioKiloVenta: currentVenta.precioKilo,
-                    comprador: currentVenta.comprador,
+                    comprador: esTransferencia ? `TRANSFERENCIA → ${RANCHES[fincaDestino].name}` : currentVenta.comprador,
                     costoVenta: animal.costoVenta,
-                    gananciaDay: animal.gdp
+                    gananciaDay: animal.gdp,
+                    esTransferencia: esTransferencia,
+                    fincaDestino: esTransferencia ? fincaDestino : null
                 };
                 data.salidas.push(venta);
             });
             
             saveData();
             
+            // If it's a transfer, create purchase entries in destination ranch
+            if (esTransferencia && fincaDestino) {
+                const destinoRanch = RANCHES[fincaDestino];
+                const destinoData = JSON.parse(localStorage.getItem(destinoRanch.storageKey) || '{"entradas":[],"salidas":[],"config":{}}');
+                
+                if (!destinoData.entradas) destinoData.entradas = [];
+                
+                const precioTransfer = currentVenta.precioKilo || 0;
+                
+                currentVenta.animales.forEach(animal => {
+                    // Find original animal data to get complete info
+                    const originalAnimal = data.entradas.find(e => e.numero === animal.numero);
+                    
+                    const compra = {
+                        numero: animal.numero,
+                        lote: `TRANSFER-${currentRanch.toUpperCase()}-${new Date().getTime()}`,
+                        vendedor: `Transferencia desde ${RANCHES[currentRanch].name}`,
+                        raza: originalAnimal?.raza || animal.raza || 'No especificada',
+                        sexo: originalAnimal?.sexo || animal.sexo || 'MACHO',
+                        peso: animal.pesoVenta,
+                        precioKilo: precioTransfer,
+                        fechaEntrada: currentVenta.fecha,
+                        numeroVaca: null,
+                        costoTotal: animal.pesoVenta * precioTransfer,
+                        esTransferencia: true,
+                        fincaOrigen: currentRanch
+                    };
+                    
+                    destinoData.entradas.push(compra);
+                });
+                
+                // Save to destination ranch
+                localStorage.setItem(destinoRanch.storageKey, JSON.stringify(destinoData));
+            }
+            
             const totalKg = currentVenta.animales.reduce((sum, a) => sum + a.pesoVenta, 0);
             const totalVenta = currentVenta.animales.reduce((sum, a) => sum + a.costoVenta, 0);
             
-            showToast(`✅ Venta guardada: ${currentVenta.animales.length} animales, ${formatNumber(totalKg)} kg, ${formatCurrency(totalVenta)}`, 'success');
+            const successMsg = esTransferencia
+                ? `✅ Transferencia completada: ${currentVenta.animales.length} animales a ${RANCHES[fincaDestino].name}, ${formatNumber(totalKg)} kg`
+                : `✅ Venta guardada: ${currentVenta.animales.length} animales, ${formatNumber(totalKg)} kg, ${formatCurrency(totalVenta)}`;
+            
+            showToast(successMsg, 'success');
             
             hideEventForm('venta');
         }
