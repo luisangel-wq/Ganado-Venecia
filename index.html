@@ -8771,7 +8771,8 @@ Solo responde con el JSON, sin texto adicional.`;
             const historialKey = 'pesoFotoHistorial_' + currentRanch;
             let historial = JSON.parse(localStorage.getItem(historialKey) || '[]');
             
-            historial.unshift({
+            // Prepare historial entry
+            const historialEntry = {
                 id: Date.now(),
                 animalId: estimacionActual.animalId,
                 fecha: new Date().toISOString(),
@@ -8783,13 +8784,71 @@ Solo responde con el JSON, sin texto adicional.`;
                     trasera: !!estimacionActual.fotos.trasera,
                     superior: !!estimacionActual.fotos.superior
                 }
-            });
+            };
             
+            historial.unshift(historialEntry);
             historial = historial.slice(0, 100);
             localStorage.setItem(historialKey, JSON.stringify(historial));
             
             cargarHistorialPesos();
-            showToast(`✅ Peso ${estimacionActual.resultado.peso} kg guardado (${estimacionActual.metodo})`, 'success');
+            
+            // ✨ AUTO-CALIBRATION: Use real weight from inventory
+            const pesoEstimadoIA = estimacionActual.resultado.peso;
+            const medidas = estimacionActual.medidas;
+            
+            // Get the animal's actual weight from inventory
+            const inventario = getInventario();
+            const animal = inventario.find(a => a.numero == estimacionActual.animalId);
+            
+            if (animal && animal.peso && medidas.largo && medidas.altura) {
+                // Try to get most recent REAL weight (from scale/bascula)
+                let pesoReal = null;
+                
+                // First priority: Check if user provided peso bascula in current session
+                if (estimacionActual.pesoBascula) {
+                    pesoReal = estimacionActual.pesoBascula;
+                    console.log('📏 Using peso bascula from current session:', pesoReal);
+                }
+                // Second priority: Check recent photo sessions for scale weight
+                else if (data.fotoSesiones) {
+                    const recentSessions = data.fotoSesiones
+                        .filter(s => s.numero == estimacionActual.animalId && s.pesoBascula)
+                        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                    
+                    if (recentSessions.length > 0) {
+                        // Use most recent scale weight (within last 30 days)
+                        const lastSession = recentSessions[0];
+                        const daysSince = Math.floor((new Date() - new Date(lastSession.fecha)) / (1000 * 60 * 60 * 24));
+                        
+                        if (daysSince <= 30) {
+                            pesoReal = lastSession.pesoBascula;
+                            console.log('📏 Using recent peso bascula from photo session:', pesoReal, `(${daysSince} días atrás)`);
+                        }
+                    }
+                }
+                // Third priority: Calculate from inventory initial weight + GDP
+                if (!pesoReal) {
+                    const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+                    pesoReal = animal.peso + (diasEnFinca * data.config.gdp);
+                    console.log('📏 Using estimated weight from inventory:', pesoReal.toFixed(1), 'kg');
+                }
+                
+                // Auto-calibrate if AI estimate differs significantly from real weight
+                const calibrado = autoCalibrarSiNecesario(
+                    estimacionActual.animalId,
+                    pesoReal,
+                    medidas,
+                    pesoEstimadoIA
+                );
+                
+                if (calibrado) {
+                    showToast(`✅ Peso ${pesoEstimadoIA} kg guardado y sistema auto-calibrado con peso real ${pesoReal.toFixed(0)} kg`, 'success');
+                } else {
+                    showToast(`✅ Peso ${pesoEstimadoIA} kg guardado (${estimacionActual.metodo})`, 'success');
+                }
+            } else {
+                showToast(`✅ Peso ${pesoEstimadoIA} kg guardado (${estimacionActual.metodo})`, 'success');
+            }
         }
 
         function cargarHistorialPesos() {
@@ -8815,6 +8874,58 @@ Solo responde con el JSON, sin texto adicional.`;
             `).join('');
         }
 
+        // ✨ AUTO-CALIBRATION: Automatically calibrate when AI estimate differs from real weight
+        function autoCalibrarSiNecesario(animalId, pesoReal, medidas, pesoEstimadoIA) {
+            if (!pesoReal || !medidas || !pesoEstimadoIA) return false;
+            
+            // Calculate difference percentage
+            const diferencia = Math.abs(pesoReal - pesoEstimadoIA);
+            const porcentajeDiferencia = (diferencia / pesoReal) * 100;
+            
+            // Only auto-calibrate if difference is significant (>5%)
+            if (porcentajeDiferencia > 5 && medidas.largo && medidas.altura) {
+                // Use CattleWeight module if available
+                if (typeof CattleWeight !== 'undefined' && CattleWeight.calibrate) {
+                    const calibrationData = {
+                        id: animalId,
+                        largo: medidas.largo,
+                        altura: medidas.altura,
+                        ancho: medidas.ancho || null,
+                        pesoReal: pesoReal
+                    };
+                    
+                    const result = CattleWeight.calibrate(calibrationData);
+                    
+                    if (result.success) {
+                        // Update calibration display if function exists
+                        if (typeof updateCalibrationDisplay === 'function') {
+                            updateCalibrationDisplay();
+                        }
+                        
+                        // Log calibration for debugging
+                        console.log('🎯 Auto-calibración exitosa:', {
+                            animal: animalId,
+                            pesoReal: pesoReal.toFixed(1),
+                            pesoEstimadoIA: pesoEstimadoIA.toFixed(1),
+                            diferencia: diferencia.toFixed(1),
+                            porcentaje: porcentajeDiferencia.toFixed(1) + '%',
+                            nuevoRatio: result.calibratedRatio?.toFixed(3)
+                        });
+                        
+                        return true;
+                    } else {
+                        console.warn('❌ Auto-calibración falló:', result.message);
+                    }
+                } else {
+                    console.warn('⚠️ CattleWeight module no disponible para calibración');
+                }
+            } else if (porcentajeDiferencia <= 5) {
+                console.log('✅ Peso IA muy preciso (diferencia <5%), no se requiere calibración');
+            }
+            
+            return false;
+        }
+        
         function nuevaEstimacion() {
             ['side', 'back', 'top'].forEach(type => {
                 const card = document.getElementById(type + 'PhotoCard');
