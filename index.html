@@ -11,6 +11,8 @@
     <meta name="description" content="Sistema de Gestión Ganadera para Fincas">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%232e7d32' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🐂</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect fill=%27%232e7d32%27 width=%27100%27 height=%27100%27 rx=%2720%27/><text x=%2750%27 y=%2770%27 font-size=%2760%27 text-anchor=%27middle%27 fill=%27white%27>🐂</text></svg>">
     <title>Ganado Finca - Sistema de Gestión</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
@@ -800,6 +802,13 @@
         
         .camera-btn.capture:hover {
             background: #d32f2f;
+        }
+        
+        /* Fix for label buttons acting as actual buttons */
+        label.btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .photo-grid {
@@ -2953,12 +2962,10 @@
                             
                             <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
                                 <!-- Chapeta photo capture -->
-                                <div class="camera-input-wrapper">
-                                    <button type="button" class="btn btn-primary" id="btnCaptureChapeta">
-                                        📷 Foto de Chapeta
-                                    </button>
-                                    <input type="file" accept="image/*" capture="environment" onchange="handleChapetaCapture(event)">
-                                </div>
+                                <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0;">
+                                    📷 Foto de Chapeta
+                                    <input type="file" accept="image/*" capture="environment" onchange="handleChapetaCapture(event)" style="display: none;">
+                                </label>
                                 <span style="align-self: center; color: var(--gray);">ó</span>
                                 <div style="flex: 1; min-width: 150px;">
                                     <input type="text" class="form-input" id="fotoNumeroManual" placeholder="Ingresar # chapeta" oninput="handleManualChapeta(event)">
@@ -3101,18 +3108,14 @@
                                 
                                 <!-- Camera capture buttons -->
                                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                                    <div class="camera-input-wrapper">
-                                        <button type="button" class="btn btn-primary">
-                                            📷 Tomar Foto
-                                        </button>
-                                        <input type="file" accept="image/*" capture="environment" onchange="handlePhotoCapture(event)">
-                                    </div>
-                                    <div class="camera-input-wrapper">
-                                        <button type="button" class="btn btn-outline">
-                                            🖼️ Galería
-                                        </button>
-                                        <input type="file" accept="image/*" onchange="handlePhotoCapture(event)">
-                                    </div>
+                                    <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0;">
+                                        📷 Tomar Foto
+                                        <input type="file" accept="image/*" capture="environment" onchange="handlePhotoCapture(event)" style="display: none;">
+                                    </label>
+                                    <label class="btn btn-outline" style="cursor: pointer; margin-bottom: 0;">
+                                        🖼️ Galería
+                                        <input type="file" accept="image/*" onchange="handlePhotoCapture(event)" style="display: none;">
+                                    </label>
                                 </div>
                                 
                                 <!-- Photo preview grid -->
@@ -3631,6 +3634,95 @@
             </div>
 
             <!-- Photo Capture Section -->
+
+            <!-- AI AUTO-RECOGNITION SECTION -->
+            <div class="card" style="border: 3px solid #10b981; margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <span style="font-size: 1.5rem;">🤖📷</span>
+                    <span>Carga Inteligente - Auto-Reconocimiento IA</span>
+                </div>
+                <div class="card-body">
+                    <!-- Feature highlight -->
+                    <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #10b981; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <div style="font-size: 2.5rem;">✨</div>
+                            <div>
+                                <h4 style="margin: 0 0 0.5rem 0; color: #059669; font-weight: 800;">¡Súper Fácil!</h4>
+                                <p style="margin: 0; font-size: 0.9rem; color: #065f46; line-height: 1.5;">
+                                    1️⃣ Sube las 4 fotos juntas (Chapeta + Lateral + Trasera + Superior)<br>
+                                    2️⃣ La IA detecta automáticamente qué tipo es cada foto<br>
+                                    3️⃣ La IA lee el número de la chapeta<br>
+                                    4️⃣ ¡Listo! Solo haz clic en "Analizar"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Photo Upload Button -->
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <label for="multiPhotoInput" class="btn btn-success" style="font-size: 1.1rem; padding: 1.25rem 2rem; cursor: pointer; display: inline-block;">
+                            <span style="font-size: 1.5rem;">📤</span>
+                            <span>Subir 4 Fotos del Animal</span>
+                            <input type="file" id="multiPhotoInput" accept="image/*" multiple style="display: none;" onchange="handleMultiplePhotoUpload(this.files)">
+                        </label>
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                            Puedes seleccionar hasta 4 fotos a la vez
+                        </div>
+                    </div>
+
+                    <!-- Drag and Drop Zone -->
+                    <div id="dragDropZone" style="border: 3px dashed #10b981; border-radius: 16px; padding: 2rem; text-align: center; background: #f9fafb; margin-bottom: 1.5rem; transition: all 0.3s;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📁</div>
+                        <div style="font-size: 1.1rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                            Arrastra y suelta tus fotos aquí
+                        </div>
+                        <div style="font-size: 0.85rem; color: #6b7280;">
+                            O haz clic en el botón de arriba para seleccionar archivos
+                        </div>
+                    </div>
+
+                    <!-- Auto-Recognition Loading -->
+                    <div id="autoRecognitionLoading" style="display: none; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
+                        <div style="font-size: 3rem; animation: pulse 1.5s infinite;">🤖</div>
+                        <div style="font-size: 1.1rem; font-weight: 600; color: #374151; margin-top: 0.5rem;">
+                            Analizando fotos con IA...
+                        </div>
+                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">
+                            Detectando tipos de vista y leyendo chapeta
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <div style="background: #e5e7eb; border-radius: 10px; height: 8px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #10b981, #059669, #10b981); background-size: 200% 100%; height: 100%; width: 100%; animation: progressMove 1.5s linear infinite;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Detected Chapeta Display -->
+                    <div id="autoDetectedChapeta" style="display: none; margin-bottom: 1.5rem;"></div>
+
+                    <!-- Classified Photos Grid -->
+                    <div id="autoClassifiedPhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="autoRecognitionActions" style="display: none; gap: 0.75rem; margin-top: 1.5rem;">
+                        <button class="btn btn-primary" id="btnAnalyzeAutoPhotos" onclick="analyzeClassifiedPhotos()" style="flex: 2; padding: 1rem; font-size: 1.1rem; background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                            <span style="font-size: 1.25rem;">🤖</span> Analizar con IA
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearPhotoBatch()" style="padding: 1rem;">
+                            🗑️ Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OR Divider -->
+            <div style="text-align: center; margin: 2rem 0; position: relative;">
+                <div style="position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: #e5e7eb;"></div>
+                <span style="position: relative; background: #f9fafb; padding: 0 1rem; color: #6b7280; font-weight: 600; font-size: 0.9rem;">
+                    O USA EL MÉTODO MANUAL
+                </span>
+            </div>
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
                     <span style="font-size: 1.5rem;">📷</span>
@@ -8229,7 +8321,7 @@
 
         // Build measurement prompt for Gemini
         function buildMeasurementPrompt() {
-            return `Eres un experto en medición de ganado bovino. Analiza las imágenes de un animal dentro de una manga ganadera (cattle chute) y estima sus medidas corporales.
+            return `Eres un experto CONSERVADOR en medición de ganado bovino. Tu objetivo es dar medidas PRECISAS y REALISTAS, no sobreestimadas.
 
 ## REFERENCIAS DE LA MANGA (CALIBRACIÓN):
 - Altura total de barras: ${MANGA.altura} cm
@@ -8237,24 +8329,54 @@
 - Diámetro de cada tubo/barra: ${MANGA.diametroTubo} cm
 - Ancho interno (entre columnas): ${MANGA.anchoInterno} cm
 
-## INSTRUCCIONES:
-1. Identifica las barras horizontales de la manga en la imagen
-2. Usa las barras como escala de referencia (cada espacio = 23cm, cada tubo = 5cm)
-3. Estima las siguientes medidas del animal:
-   - LARGO: Distancia desde el hombro hasta la base de la cola
-   - ALTURA: Desde el suelo hasta la cruz (punto más alto del lomo)
-   - ANCHO: Parte más ancha del cuerpo (vista trasera)
-   - PERIMETRO_TORACICO: Circunferencia del tórax detrás de las patas delanteras
+## INSTRUCCIONES CRÍTICAS (LEE CUIDADOSAMENTE):
+
+1. **VERIFICACIÓN DE ESCALA**: 
+   - Cuenta EXACTAMENTE cuántas barras horizontales caben en cada medida del animal
+   - Cada espacio entre barras = 23cm, cada tubo = 5cm
+   - Si NO ves claramente las barras → confianza MAX 40% y advierte en notas
+
+2. **CONSIDERACIONES DE PERSPECTIVA**:
+   - La cámara puede distorsionar. Si el animal está en ángulo o la foto no es perfectamente perpendicular, REDUCE tus medidas un 10-15%
+   - Si no puedes ver el suelo claramente, la altura es incierta → confianza MAX 60%
+   - Si la vista trasera está parcial u oblicua, el ancho es incierto → déjalo en null
+
+3. **MEDIDAS CONSERVADORAS (importante - animales grass-fed colombianos)**:
+   - LARGO corporal típico: 120-170 cm (del hombro a la base de la cola, SIN incluir la cola)
+   - ALTURA a la cruz típica: 110-140 cm
+   - ANCHO corporal típico: 35-55 cm
+   - PERÍMETRO torácico típico: 140-200 cm
+   - **Si tus medidas exceden estos rangos, VERIFICA DOS VECES o reduce confianza**
+
+4. **REGLAS PARA PERÍMETRO**:
+   - Solo calcula si tienes TANTO vista lateral como trasera claras
+   - Si solo tienes una vista, deja perímetro en null
+   - El perímetro debe ser consistente: aproximadamente π × (ancho + altura×0.6)/2
+
+5. **CONFIANZA HONESTA**:
+   - Perspectiva no ideal → MAX 60%
+   - Barras parcialmente visibles → MAX 70%
+   - Animal en movimiento o borroso → MAX 50%
+   - Vista única (solo lateral o trasera) → MAX 65%
+   - Es MEJOR decir "baja confianza" que dar medidas incorrectas
+
+## PROCESO DE VALIDACIÓN ANTES DE RESPONDER:
+1. ¿Las medidas están en rangos típicos? Si no → explica por qué
+2. ¿El perímetro calculado es consistente con largo×altura×ancho? Si no → ajusta
+3. ¿Hay suficiente claridad visual para esta confianza? Si no → reduce confianza
+4. ¿Las notas explican limitaciones claramente?
 
 ## FORMATO DE RESPUESTA (JSON):
 {
-  "largo_cm": <número>,
-  "altura_cm": <número>,
-  "ancho_cm": <número>,
+  "largo_cm": <número o null>,
+  "altura_cm": <número o null>,
+  "ancho_cm": <número o null>,
   "perimetro_cm": <número o null>,
-  "confianza": <número 0-100>,
-  "notas": "<observaciones>"
+  "confianza": <número 0-100, SER HONESTO>,
+  "notas": "<OBLIGATORIO: explica qué referencias usaste, qué limitaciones encontraste, y si redujiste medidas por perspectiva>"
 }
+
+**RECUERDA**: Subestimar es mejor que sobreestimar. Los ganaderos necesitan precisión, no optimismo.
 
 Solo responde con el JSON, sin texto adicional.`;
         }
@@ -8681,7 +8803,7 @@ Solo responde con el JSON, sin texto adicional.`;
             let googleKey = localStorage.getItem('googleApiKey');
             if (!googleKey) {
                 // Pre-configure with provided API key
-                googleKey = 'AIzaSyA4y3nCiv79TevLUfRGEx4gDfRFEVYCaac';
+                googleKey = 'AIzaSyCdpo1fa-GFuffCzKTgR8igr0HQ1VqT-Ik';
                 localStorage.setItem('googleApiKey', googleKey);
             }
             if (googleKey) {
@@ -9064,4 +9186,144 @@ INSTRUCCIONES:
         }
     </script>
 </body>
+
+    <!-- AI Auto-Recognition Styles -->
+    <style>
+        .classified-photo-card {
+            position: relative;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .classified-photo-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+        
+        .classified-photo-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        
+        .photo-classification-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 0.4rem 0.75rem;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .photo-confidence {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .photo-actions {
+            padding: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .photo-type-selector {
+            flex: 1;
+            padding: 0.35rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        #dragDropZone.drag-over {
+            background: #ecfdf5 !important;
+            border-color: #059669 !important;
+            transform: scale(1.02);
+        }
+        
+        #autoRecognitionActions {
+            display: flex !important;
+        }
+    </style>
+
+    <!-- AI Auto-Recognition Scripts -->
+    <script src="photo-auto-recognition.js"></script>
+    
+    <script>
+        // Initialize drag and drop functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.getElementById('dragDropZone');
+            
+            if (dropZone) {
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                // Highlight drop zone when item is dragged over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, highlight, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+                
+                // Handle dropped files
+                dropZone.addEventListener('drop', handleDrop, false);
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight(e) {
+                dropZone.classList.add('drag-over');
+            }
+            
+            function unhighlight(e) {
+                dropZone.classList.remove('drag-over');
+            }
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    handleMultiplePhotoUpload(files);
+                }
+            }
+        });
+        
+        // Update displayClassifiedPhotos to show action buttons
+        const originalDisplayClassifiedPhotos = window.displayClassifiedPhotos;
+        if (originalDisplayClassifiedPhotos) {
+            window.displayClassifiedPhotos = function() {
+                originalDisplayClassifiedPhotos();
+                
+                // Show action buttons if we have photos
+                const actionDiv = document.getElementById('autoRecognitionActions');
+                if (actionDiv && window.photoBatch && window.photoBatch.photos.length > 0) {
+                    actionDiv.style.display = 'flex';
+                } else if (actionDiv) {
+                    actionDiv.style.display = 'none';
+                }
+            };
+        }
+    </script>
 </html>
