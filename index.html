@@ -961,6 +961,187 @@
             cursor: pointer;
         }
         
+        /* Photo Weight AI Styles */
+        .photo-capture-card {
+            background: white;
+            border: 3px dashed #d1d5db;
+            border-radius: 20px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .photo-capture-card:hover {
+            border-color: #8b5cf6;
+            background: #faf5ff;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+        }
+        
+        .photo-capture-card:active {
+            transform: scale(0.98);
+        }
+        
+        .photo-capture-card.has-photo {
+            border-style: solid;
+            border-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        }
+        
+        .photo-capture-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .photo-capture-card:hover .photo-capture-icon {
+            transform: scale(1.1);
+        }
+        
+        .photo-capture-card.has-photo .photo-capture-icon {
+            font-size: 2rem;
+        }
+        
+        .photo-capture-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 0.25rem;
+        }
+        
+        .photo-capture-distance {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        
+        .photo-capture-status {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        
+        .photo-capture-card.has-photo .photo-capture-status {
+            color: #059669;
+            font-weight: 700;
+        }
+        
+        .photo-preview-container {
+            margin-top: 0.75rem;
+        }
+        
+        .photo-preview-container img {
+            max-width: 100%;
+            max-height: 120px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .ai-measurement-box {
+            background: linear-gradient(135deg, #faf5ff, #ede9fe);
+            border: 2px solid #c4b5fd;
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-measurement-box:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
+        
+        .ai-measurement-icon {
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .ai-measurement-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #6d28d9;
+            margin-bottom: 0.25rem;
+        }
+        
+        .ai-measurement-label {
+            font-size: 0.7rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .ai-measurement-edit {
+            padding: 0.4rem !important;
+            font-size: 0.85rem !important;
+            text-align: center;
+            border-color: #c4b5fd !important;
+        }
+        
+        .ai-measurement-edit:focus {
+            border-color: #8b5cf6 !important;
+        }
+        
+        .ai-progress-bar {
+            background: #e5e7eb;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        }
+        
+        .ai-progress-fill {
+            background: linear-gradient(90deg, #8b5cf6, #6d28d9, #8b5cf6);
+            background-size: 200% 100%;
+            height: 100%;
+            width: 100%;
+            animation: progressMove 1.5s linear infinite;
+        }
+        
+        @keyframes progressMove {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 200% 0%; }
+        }
+        
+        @keyframes resultPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        #resultadosPesoFoto.show,
+        #aiMeasurementResults.show {
+            animation: resultPop 0.4s ease-out;
+        }
+        
+        @media (max-width: 480px) {
+            .photo-capture-card {
+                padding: 1rem 0.75rem;
+            }
+            
+            .photo-capture-icon {
+                font-size: 2.5rem;
+            }
+            
+            .photo-capture-title {
+                font-size: 0.9rem;
+            }
+            
+            .ai-measurement-box {
+                padding: 0.75rem;
+            }
+            
+            .ai-measurement-value {
+                font-size: 1.25rem;
+            }
+            
+            #resultadoPesoKg {
+                font-size: 2.5rem !important;
+            }
+        }
+        
         /* AI Analytics Styles */
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -1554,6 +1735,10 @@
             <button class="nav-tab" data-tab="analytics">
                 <span class="nav-tab-icon">🤖</span>
                 <span>Análisis IA</span>
+            </button>
+            <button class="nav-tab" data-tab="peso-foto">
+                <span class="nav-tab-icon">📷</span>
+                <span>Peso x Foto</span>
             </button>
             <button class="nav-tab" data-tab="config">
                 <span class="nav-tab-icon">⚙️</span>
@@ -3348,6 +3533,315 @@
             </div>
         </div>
         
+        <!-- Tab: Peso por Foto AI -->
+        <div id="tab-peso-foto" class="tab-content">
+            
+            <!-- Header with AI Badge -->
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <h2 style="margin: 0; color: #374151; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 2rem;">📷</span>
+                    Peso por Fotografía
+                </h2>
+                <span style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">
+                    🤖 AI POWERED
+                </span>
+            </div>
+
+            <!-- Manga Calibration Info Card -->
+            <div class="card" style="border: 2px solid #8b5cf6; margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                    <span style="font-size: 1.5rem;">📐</span>
+                    <span>Sistema de Medición con IA</span>
+                </div>
+                <div class="card-body">
+                    <!-- AI Info Banner -->
+                    <div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #3b82f6; border-radius: 16px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <div style="font-size: 2.5rem;">🤖</div>
+                            <div>
+                                <h4 style="margin: 0 0 0.5rem 0; color: #1d4ed8;">Google Gemini Vision</h4>
+                                <p style="margin: 0; font-size: 0.85rem; color: #4b5563;">
+                                    La IA analiza las fotos y detecta automáticamente las medidas del animal usando la manga calibrada como referencia. 
+                                    <strong>Solo toma las fotos y la IA hace el resto.</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calibration Reference Display -->
+                    <div style="background: linear-gradient(135deg, #faf5ff, #ede9fe); padding: 1.25rem; border-radius: 16px; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #6d28d9; font-size: 0.9rem;">
+                            🔧 Referencias de la Manga (conocidas por la IA)
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 0.5rem;">
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">📏</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">144.5</div>
+                                <div style="font-size: 0.6rem; color: #666;">Altura cm</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">↔️</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">60.5</div>
+                                <div style="font-size: 0.6rem; color: #666;">Ancho cm</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">📊</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">23</div>
+                                <div style="font-size: 0.6rem; color: #666;">Entre Barras</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">⭕</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">5</div>
+                                <div style="font-size: 0.6rem; color: #666;">Tubo cm</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">📐</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">170</div>
+                                <div style="font-size: 0.6rem; color: #666;">Sección 1</div>
+                            </div>
+                            <div style="text-align: center; padding: 0.5rem; background: white; border-radius: 10px;">
+                                <div style="font-size: 1.25rem;">📐</div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #6d28d9;">152</div>
+                                <div style="font-size: 0.6rem; color: #666;">Sección 2</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Animal Selection -->
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 1rem;">
+                            🐂 Seleccionar Animal
+                        </label>
+                        <select class="form-select" id="pesoFotoAnimal" onchange="loadAnimalForPhotoWeight()">
+                            <option value="">-- Seleccionar chapeta --</option>
+                        </select>
+                    </div>
+
+                    <!-- Selected Animal Info -->
+                    <div id="selectedAnimalInfo" style="display: none; background: #f0fdf4; border: 2px solid #10b981; border-radius: 12px; padding: 1rem; margin-top: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                            <div style="font-size: 2.5rem;">🐂</div>
+                            <div>
+                                <div style="font-weight: 800; font-size: 1.25rem; color: #059669;" id="selectedAnimalChapeta">--</div>
+                                <div style="font-size: 0.85rem; color: #666;" id="selectedAnimalDetails">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Photo Capture Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                    <span style="font-size: 1.5rem;">📷</span>
+                    <span>Capturar Fotografías</span>
+                </div>
+                <div class="card-body">
+                    <!-- Photo Instructions -->
+                    <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #d97706; font-size: 0.9rem;">📸 Instrucciones</h4>
+                        <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #92400e;">
+                            <li><strong>Lateral:</strong> A 2 metros, captura todo el cuerpo del animal</li>
+                            <li><strong>Trasera:</strong> A 1.5-2 metros, centrado en el animal</li>
+                            <li><strong>Superior:</strong> A 1 metro desde arriba (opcional pero mejora precisión)</li>
+                        </ul>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;">
+                        
+                        <!-- Side Photo -->
+                        <div class="photo-capture-card" id="sidePhotoCard" onclick="document.getElementById('sidePhotoInput').click()">
+                            <input type="file" accept="image/*" capture="environment" id="sidePhotoInput" onchange="handlePhotoCapture('side', this)" style="display: none;">
+                            <div class="photo-capture-icon" id="sidePhotoIcon">📷</div>
+                            <div class="photo-capture-title">Vista Lateral</div>
+                            <div class="photo-capture-distance">📍 2 metros</div>
+                            <div class="photo-capture-status" id="sidePhotoStatus">Toca para capturar</div>
+                            <div class="photo-preview-container" id="sidePhotoPreview"></div>
+                        </div>
+
+                        <!-- Back Photo -->
+                        <div class="photo-capture-card" id="backPhotoCard" onclick="document.getElementById('backPhotoInput').click()">
+                            <input type="file" accept="image/*" capture="environment" id="backPhotoInput" onchange="handlePhotoCapture('back', this)" style="display: none;">
+                            <div class="photo-capture-icon" id="backPhotoIcon">📷</div>
+                            <div class="photo-capture-title">Vista Trasera</div>
+                            <div class="photo-capture-distance">📍 1.5-2 metros</div>
+                            <div class="photo-capture-status" id="backPhotoStatus">Toca para capturar</div>
+                            <div class="photo-preview-container" id="backPhotoPreview"></div>
+                        </div>
+
+                        <!-- Top Photo -->
+                        <div class="photo-capture-card" id="topPhotoCard" onclick="document.getElementById('topPhotoInput').click()">
+                            <input type="file" accept="image/*" capture="environment" id="topPhotoInput" onchange="handlePhotoCapture('top', this)" style="display: none;">
+                            <div class="photo-capture-icon" id="topPhotoIcon">📷</div>
+                            <div class="photo-capture-title">Vista Superior</div>
+                            <div class="photo-capture-distance">📍 1 metro</div>
+                            <div class="photo-capture-status" id="topPhotoStatus">Toca para capturar</div>
+                            <div class="photo-preview-container" id="topPhotoPreview"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI Analysis Button -->
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn btn-primary" id="btnAnalyzeAI" onclick="analyzeWithGemini()" style="width: 100%; padding: 1.25rem; font-size: 1.1rem; background: linear-gradient(135deg, #8b5cf6, #6d28d9);" disabled>
+                            <span style="font-size: 1.5rem;">🤖</span>
+                            <span>Analizar con IA</span>
+                        </button>
+                        <p style="text-align: center; font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+                            Captura al menos la foto lateral para activar el análisis
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Analysis Loading -->
+            <div id="aiAnalysisLoading" class="card" style="display: none; margin-bottom: 1.5rem;">
+                <div class="card-body" style="text-align: center; padding: 3rem;">
+                    <div style="font-size: 4rem; animation: pulse 1.5s infinite;">🤖</div>
+                    <h3 style="margin: 1rem 0 0.5rem 0; color: #374151;">Analizando imágenes...</h3>
+                    <p style="color: #6b7280; margin: 0;">La IA está midiendo el animal usando la manga como referencia</p>
+                    <div style="margin-top: 1.5rem;">
+                        <div class="ai-progress-bar">
+                            <div class="ai-progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Results Section -->
+            <div id="aiMeasurementResults" class="card" style="display: none; border: 3px solid #8b5cf6; margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+                    <span style="font-size: 1.5rem;">🤖</span>
+                    <span>Mediciones Detectadas por IA</span>
+                </div>
+                <div class="card-body">
+                    <!-- AI Detected Measurements -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="ai-measurement-box">
+                            <div class="ai-measurement-icon">📏</div>
+                            <div class="ai-measurement-value" id="aiLargo">-- cm</div>
+                            <div class="ai-measurement-label">Largo del Cuerpo</div>
+                            <input type="number" class="form-input ai-measurement-edit" id="inputLargoCuerpo" placeholder="Ajustar" oninput="calcularPesoFoto()">
+                        </div>
+                        <div class="ai-measurement-box">
+                            <div class="ai-measurement-icon">📐</div>
+                            <div class="ai-measurement-value" id="aiAltura">-- cm</div>
+                            <div class="ai-measurement-label">Altura a la Cruz</div>
+                            <input type="number" class="form-input ai-measurement-edit" id="inputAlturaCruz" placeholder="Ajustar" oninput="calcularPesoFoto()">
+                        </div>
+                        <div class="ai-measurement-box">
+                            <div class="ai-measurement-icon">↔️</div>
+                            <div class="ai-measurement-value" id="aiAncho">-- cm</div>
+                            <div class="ai-measurement-label">Ancho del Cuerpo</div>
+                            <input type="number" class="form-input ai-measurement-edit" id="inputAnchoCuerpo" placeholder="Ajustar" oninput="calcularPesoFoto()">
+                        </div>
+                        <div class="ai-measurement-box">
+                            <div class="ai-measurement-icon">⭕</div>
+                            <div class="ai-measurement-value" id="aiPerimetro">-- cm</div>
+                            <div class="ai-measurement-label">Perímetro Estimado</div>
+                            <input type="number" class="form-input ai-measurement-edit" id="inputPerimetroToracico" placeholder="Ajustar" oninput="calcularPesoFoto()">
+                        </div>
+                    </div>
+
+                    <!-- AI Confidence -->
+                    <div style="background: #f3f4f6; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 600; color: #374151;">Confianza del Análisis</span>
+                            <span style="font-weight: 800; color: #8b5cf6;" id="aiConfidenceValue">--%</span>
+                        </div>
+                        <div style="background: #e5e7eb; border-radius: 10px; height: 10px; overflow: hidden;">
+                            <div id="aiConfidenceBar" style="background: linear-gradient(90deg, #8b5cf6, #6d28d9); height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI Notes -->
+                    <div id="aiNotes" style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 12px; padding: 1rem; font-size: 0.85rem; color: #92400e; display: none;">
+                        <strong>💡 Notas de la IA:</strong>
+                        <p id="aiNotesText" style="margin: 0.5rem 0 0 0;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weight Results Section -->
+            <div class="card" id="resultadosPesoFoto" style="display: none; border: 3px solid #10b981;">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <span style="font-size: 1.5rem;">⚖️</span>
+                    <span>Peso Estimado</span>
+                </div>
+                <div class="card-body">
+                    <!-- Main Result -->
+                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 20px; margin-bottom: 1.5rem;">
+                        <div style="font-size: 4rem; margin-bottom: 0.5rem;">⚖️</div>
+                        <div style="font-size: 3.5rem; font-weight: 900; color: #059669; line-height: 1;" id="resultadoPesoKg">-- kg</div>
+                        <div style="font-size: 1rem; color: #666; margin-top: 0.5rem;">Peso Estimado</div>
+                        <div style="font-size: 1.25rem; color: #374151; margin-top: 0.5rem; font-weight: 600;" id="resultadoRango">Rango: -- a -- kg</div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                            <div style="font-size: 1.75rem;">⭕</div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: #374151;" id="resultadoPerimetro">-- cm</div>
+                            <div style="font-size: 0.65rem; color: #666; text-transform: uppercase;">Perímetro</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                            <div style="font-size: 1.75rem;">📊</div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: #374151;" id="resultadoConfianza">--%</div>
+                            <div style="font-size: 0.65rem; color: #666; text-transform: uppercase;">Confianza</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                            <div style="font-size: 1.75rem;">📈</div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: #374151;" id="resultadoGDP">-- g/día</div>
+                            <div style="font-size: 0.65rem; color: #666; text-transform: uppercase;">GDP Est.</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                            <div style="font-size: 1.75rem;">🤖</div>
+                            <div style="font-weight: 800; font-size: 1.1rem; color: #8b5cf6;" id="resultadoMetodo">IA</div>
+                            <div style="font-size: 0.65rem; color: #666; text-transform: uppercase;">Método</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="btn-group" style="justify-content: center;">
+                        <button class="btn btn-success" onclick="guardarPesoFoto()">
+                            <span style="font-size: 1.25rem;">💾</span> Guardar
+                        </button>
+                        <button class="btn btn-primary" onclick="verHistorialPesos()">
+                            <span style="font-size: 1.25rem;">📊</span> Historial
+                        </button>
+                        <button class="btn btn-secondary" onclick="nuevaEstimacion()">
+                            <span style="font-size: 1.25rem;">🔄</span> Nueva
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weight History -->
+            <div class="card">
+                <div class="card-header">
+                    <span style="font-size: 1.25rem;">📈</span>
+                    <span>Historial de Estimaciones</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Chapeta</th>
+                                    <th>Peso</th>
+                                    <th>Método</th>
+                                    <th>Conf.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialPesosTable">
+                                <tr><td colspan="5" class="text-center" style="color: #9ca3af;">No hay estimaciones guardadas</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Tab: Configuración -->
         <div id="tab-config" class="tab-content">
             <!-- Weather Condition Selector -->
@@ -3537,6 +4031,11 @@
             initSortableHeaders();
             updateAllViews();
             initConfigValues();
+            loadApiKeys();
+            
+            // Initialize photo weight module
+            cargarAnimalesParaFoto();
+            cargarHistorialPesos();
             
             document.getElementById('importExcel').addEventListener('change', handleExcelImport);
             
@@ -7616,6 +8115,522 @@
                 closeAnimalProfile();
             }
         });
+        
+        // ==================== AI PHOTO WEIGHT ESTIMATION MODULE ====================
+        
+        // Manga Calibration Constants
+        const MANGA = {
+            altura: 144.5,           // Height: top of first bar to bottom of last bar (cm)
+            anchoInterno: 60.5,      // Internal width between columns (cm)
+            espacioBarras: 23,       // Space between bars (cm)
+            diametroTubo: 5,         // Tube diameter (cm)
+            anchoColumna: 7,         // Column width (cm)
+            seccion1: 170,           // Section 1 length (cm)
+            seccion2: 152,           // Section 2 length (cm)
+            largoTotal: 330.5        // Total length (cm)
+        };
+
+        // Storage for current estimation
+        let estimacionActual = {
+            animalId: null,
+            fotos: { lateral: null, trasera: null, superior: null },
+            medidas: { largo: null, altura: null, ancho: null, perimetro: null },
+            resultado: null,
+            metodo: 'manual'
+        };
+
+        // Populate animal dropdown
+        function cargarAnimalesParaFoto() {
+            const select = document.getElementById('pesoFotoAnimal');
+            if (!select) return;
+            
+            const inventario = getInventario();
+            select.innerHTML = '<option value="">-- Seleccionar chapeta --</option>';
+            
+            inventario.forEach(animal => {
+                const option = document.createElement('option');
+                option.value = animal.numero;
+                option.textContent = `${animal.numero} - ${animal.sexo} - ${animal.peso} kg`;
+                select.appendChild(option);
+            });
+        }
+
+        // Load selected animal info
+        function loadAnimalForPhotoWeight() {
+            const animalId = document.getElementById('pesoFotoAnimal').value;
+            const infoDiv = document.getElementById('selectedAnimalInfo');
+            
+            if (!animalId) {
+                infoDiv.style.display = 'none';
+                estimacionActual.animalId = null;
+                return;
+            }
+            
+            estimacionActual.animalId = animalId;
+            
+            const inventario = getInventario();
+            const animal = inventario.find(a => a.numero === animalId);
+            
+            if (animal) {
+                document.getElementById('selectedAnimalChapeta').textContent = `Chapeta: ${animalId}`;
+                document.getElementById('selectedAnimalDetails').textContent = 
+                    `${animal.sexo} | Peso entrada: ${animal.peso} kg | ${animal.lote || 'Sin lote'}`;
+                infoDiv.style.display = 'block';
+            }
+            
+            // Clear previous results
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+        }
+
+        // Handle photo capture
+        function handlePhotoCapture(type, input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoData = e.target.result;
+                
+                // Store photo
+                const typeMap = { side: 'lateral', back: 'trasera', top: 'superior' };
+                estimacionActual.fotos[typeMap[type] || type] = photoData;
+                
+                // Update UI
+                const card = document.getElementById(type + 'PhotoCard');
+                const icon = document.getElementById(type + 'PhotoIcon');
+                const status = document.getElementById(type + 'PhotoStatus');
+                const preview = document.getElementById(type + 'PhotoPreview');
+                
+                card.classList.add('has-photo');
+                icon.textContent = '✅';
+                status.textContent = '¡Capturada!';
+                preview.innerHTML = `<img src="${photoData}" alt="Vista ${type}">`;
+                
+                // Enable AI button if at least side photo is available
+                updateAIButtonState();
+                
+                showToast(`📷 Foto ${type === 'side' ? 'lateral' : type === 'back' ? 'trasera' : 'superior'} capturada`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Update AI button state
+        function updateAIButtonState() {
+            const btn = document.getElementById('btnAnalyzeAI');
+            const hasPhotos = estimacionActual.fotos.lateral || estimacionActual.fotos.trasera;
+            btn.disabled = !hasPhotos;
+            
+            if (hasPhotos) {
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+        }
+
+        // Build measurement prompt for Gemini
+        function buildMeasurementPrompt() {
+            return `Eres un experto en medición de ganado bovino. Analiza las imágenes de un animal dentro de una manga ganadera (cattle chute) y estima sus medidas corporales.
+
+## REFERENCIAS DE LA MANGA (CALIBRACIÓN):
+- Altura total de barras: ${MANGA.altura} cm
+- Espacio entre barras horizontales: ${MANGA.espacioBarras} cm
+- Diámetro de cada tubo/barra: ${MANGA.diametroTubo} cm
+- Ancho interno (entre columnas): ${MANGA.anchoInterno} cm
+
+## INSTRUCCIONES:
+1. Identifica las barras horizontales de la manga en la imagen
+2. Usa las barras como escala de referencia (cada espacio = 23cm, cada tubo = 5cm)
+3. Estima las siguientes medidas del animal:
+   - LARGO: Distancia desde el hombro hasta la base de la cola
+   - ALTURA: Desde el suelo hasta la cruz (punto más alto del lomo)
+   - ANCHO: Parte más ancha del cuerpo (vista trasera)
+   - PERIMETRO_TORACICO: Circunferencia del tórax detrás de las patas delanteras
+
+## FORMATO DE RESPUESTA (JSON):
+{
+  "largo_cm": <número>,
+  "altura_cm": <número>,
+  "ancho_cm": <número>,
+  "perimetro_cm": <número o null>,
+  "confianza": <número 0-100>,
+  "notas": "<observaciones>"
+}
+
+Solo responde con el JSON, sin texto adicional.`;
+        }
+
+        // Parse AI response
+        function parseAIMeasurements(aiText) {
+            try {
+                let jsonStr = aiText;
+                
+                const jsonMatch = aiText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonStr = jsonMatch[1];
+                }
+                
+                const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (objectMatch) {
+                    jsonStr = objectMatch[0];
+                }
+                
+                const parsed = JSON.parse(jsonStr);
+                
+                return {
+                    largo: parsed.largo_cm || null,
+                    altura: parsed.altura_cm || null,
+                    ancho: parsed.ancho_cm || null,
+                    perimetro: parsed.perimetro_cm || null,
+                    confianza: parsed.confianza || 70,
+                    notas: parsed.notas || null
+                };
+            } catch (e) {
+                console.error('Error parsing AI response:', e, aiText);
+                
+                const largoMatch = aiText.match(/largo[:\s]+(\d+(?:\.\d+)?)/i);
+                const alturaMatch = aiText.match(/altura[:\s]+(\d+(?:\.\d+)?)/i);
+                const anchoMatch = aiText.match(/ancho[:\s]+(\d+(?:\.\d+)?)/i);
+                
+                return {
+                    largo: largoMatch ? parseFloat(largoMatch[1]) : null,
+                    altura: alturaMatch ? parseFloat(alturaMatch[1]) : null,
+                    ancho: anchoMatch ? parseFloat(anchoMatch[1]) : null,
+                    perimetro: null,
+                    confianza: 50,
+                    notas: 'Análisis parcial - algunos valores pueden requerir ajuste manual'
+                };
+            }
+        }
+
+        // Display AI results
+        function displayAIResults(measurements) {
+            const resultsDiv = document.getElementById('aiMeasurementResults');
+            
+            if (measurements.largo) {
+                document.getElementById('aiLargo').textContent = `${measurements.largo} cm`;
+                document.getElementById('inputLargoCuerpo').value = measurements.largo;
+            }
+            
+            if (measurements.altura) {
+                document.getElementById('aiAltura').textContent = `${measurements.altura} cm`;
+                document.getElementById('inputAlturaCruz').value = measurements.altura;
+            }
+            
+            if (measurements.ancho) {
+                document.getElementById('aiAncho').textContent = `${measurements.ancho} cm`;
+                document.getElementById('inputAnchoCuerpo').value = measurements.ancho;
+            }
+            
+            if (measurements.perimetro) {
+                document.getElementById('aiPerimetro').textContent = `${measurements.perimetro} cm`;
+                document.getElementById('inputPerimetroToracico').value = measurements.perimetro;
+            } else {
+                document.getElementById('aiPerimetro').textContent = 'Calculado';
+            }
+            
+            document.getElementById('aiConfidenceValue').textContent = `${measurements.confianza}%`;
+            document.getElementById('aiConfidenceBar').style.width = `${measurements.confianza}%`;
+            
+            if (measurements.notas) {
+                document.getElementById('aiNotes').style.display = 'block';
+                document.getElementById('aiNotesText').textContent = measurements.notas;
+            } else {
+                document.getElementById('aiNotes').style.display = 'none';
+            }
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('show');
+            
+            estimacionActual.medidas = {
+                largo: measurements.largo,
+                altura: measurements.altura,
+                ancho: measurements.ancho,
+                perimetro: measurements.perimetro
+            };
+        }
+
+        // Analyze with Gemini AI
+        async function analyzeWithGemini() {
+            const apiKey = localStorage.getItem('googleApiKey');
+            if (!apiKey) {
+                showToast('❌ Configura tu API Key de Google en la pestaña Análisis IA', 'error');
+                return;
+            }
+            
+            if (!estimacionActual.fotos.lateral && !estimacionActual.fotos.trasera) {
+                showToast('📷 Captura al menos una foto (lateral o trasera)', 'warning');
+                return;
+            }
+            
+            document.getElementById('aiAnalysisLoading').style.display = 'block';
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+            
+            try {
+                const prompt = buildMeasurementPrompt();
+                const imageParts = [];
+                
+                if (estimacionActual.fotos.lateral) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.lateral.split(',')[1]
+                        }
+                    });
+                }
+                
+                if (estimacionActual.fotos.trasera) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.trasera.split(',')[1]
+                        }
+                    });
+                }
+                
+                if (estimacionActual.fotos.superior) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.superior.split(',')[1]
+                        }
+                    });
+                }
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                ...imageParts
+                            ]
+                        }],
+                        generationConfig: {
+                            temperature: 0.2,
+                            maxOutputTokens: 1024
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const measurements = parseAIMeasurements(aiText);
+                
+                displayAIResults(measurements);
+                calcularPesoFoto();
+                
+                estimacionActual.metodo = 'IA Gemini';
+                showToast('🤖 Análisis completado', 'success');
+                
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                showToast('❌ Error en análisis: ' + error.message, 'error');
+            } finally {
+                document.getElementById('aiAnalysisLoading').style.display = 'none';
+            }
+        }
+
+        // Calculate weight from measurements
+        function calcularPesoFoto() {
+            const largo = parseFloat(document.getElementById('inputLargoCuerpo').value) || 0;
+            const altura = parseFloat(document.getElementById('inputAlturaCruz').value) || 0;
+            const ancho = parseFloat(document.getElementById('inputAnchoCuerpo').value) || 0;
+            let perimetro = parseFloat(document.getElementById('inputPerimetroToracico').value) || 0;
+            
+            if (largo < 50 || altura < 60 || ancho < 20) {
+                document.getElementById('resultadosPesoFoto').style.display = 'none';
+                return;
+            }
+            
+            if (!perimetro || perimetro < 80) {
+                const a = ancho / 2;
+                const b = (altura * 0.65) / 2;
+                perimetro = Math.PI * Math.sqrt(2 * (a * a + b * b)) * 2 * 1.05;
+                perimetro = Math.round(perimetro * 10) / 10;
+                
+                if (!document.getElementById('inputPerimetroToracico').value) {
+                    document.getElementById('aiPerimetro').textContent = `${perimetro} cm`;
+                }
+            }
+            
+            estimacionActual.medidas = { largo, altura, ancho, perimetro };
+            
+            const P = perimetro;
+            const L = largo;
+            
+            const pesoSchaeffer = (P * P * L) / 10840;
+            const pesoCrevat = (P * P * L) / 11880;
+            const pesoQuetelet = (P * P * L) / 10000;
+            
+            const pesoPromedio = (pesoSchaeffer + pesoCrevat + pesoQuetelet) / 3;
+            const pesoMin = Math.round(pesoPromedio * 0.9);
+            const pesoMax = Math.round(pesoPromedio * 1.1);
+            const pesoFinal = Math.round(pesoPromedio);
+            
+            let confianza = 70;
+            if (estimacionActual.fotos.lateral) confianza += 10;
+            if (estimacionActual.fotos.trasera) confianza += 10;
+            if (estimacionActual.fotos.superior) confianza += 5;
+            if (estimacionActual.metodo === 'IA Gemini') confianza += 5;
+            confianza = Math.min(confianza, 95);
+            
+            estimacionActual.resultado = {
+                peso: pesoFinal,
+                rango: { min: pesoMin, max: pesoMax },
+                perimetroCalculado: perimetro,
+                confianza: confianza,
+                fecha: new Date().toISOString(),
+                metodo: estimacionActual.metodo
+            };
+            
+            document.getElementById('resultadoPesoKg').textContent = `${pesoFinal} kg`;
+            document.getElementById('resultadoRango').textContent = `Rango: ${pesoMin} - ${pesoMax} kg`;
+            document.getElementById('resultadoPerimetro').textContent = `${perimetro} cm`;
+            document.getElementById('resultadoConfianza').textContent = `${confianza}%`;
+            document.getElementById('resultadoMetodo').textContent = estimacionActual.metodo === 'IA Gemini' ? '🤖 IA' : '✏️ Manual';
+            
+            if (estimacionActual.animalId) {
+                const inventario = getInventario();
+                const animal = inventario.find(a => a.numero === estimacionActual.animalId);
+                if (animal && animal.peso && animal.fechaEntrada) {
+                    const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+                    if (diasEnFinca > 0) {
+                        const ganancia = pesoFinal - animal.peso;
+                        const gdp = Math.round((ganancia / diasEnFinca) * 1000);
+                        document.getElementById('resultadoGDP').textContent = `${gdp} g/día`;
+                    }
+                }
+            }
+            
+            document.getElementById('resultadosPesoFoto').style.display = 'block';
+            document.getElementById('resultadosPesoFoto').classList.add('show');
+        }
+
+        function toggleManualInput() {
+            const section = document.getElementById('manualInputSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function syncManualToAI(field) {
+            const value = document.getElementById('manual' + field.charAt(0).toUpperCase() + field.slice(1)).value;
+            const targetId = field === 'largo' ? 'inputLargoCuerpo' : 
+                             field === 'altura' ? 'inputAlturaCruz' :
+                             field === 'ancho' ? 'inputAnchoCuerpo' : 'inputPerimetroToracico';
+            document.getElementById(targetId).value = value;
+            calcularPesoFoto();
+        }
+
+        function guardarPesoFoto() {
+            if (!estimacionActual.resultado || !estimacionActual.animalId) {
+                showToast('Selecciona un animal y completa las mediciones', 'warning');
+                return;
+            }
+            
+            const historialKey = 'pesoFotoHistorial_' + currentRanch;
+            let historial = JSON.parse(localStorage.getItem(historialKey) || '[]');
+            
+            historial.unshift({
+                id: Date.now(),
+                animalId: estimacionActual.animalId,
+                fecha: new Date().toISOString(),
+                medidas: { ...estimacionActual.medidas },
+                resultado: { ...estimacionActual.resultado },
+                metodo: estimacionActual.metodo,
+                fotos: {
+                    lateral: !!estimacionActual.fotos.lateral,
+                    trasera: !!estimacionActual.fotos.trasera,
+                    superior: !!estimacionActual.fotos.superior
+                }
+            });
+            
+            historial = historial.slice(0, 100);
+            localStorage.setItem(historialKey, JSON.stringify(historial));
+            
+            cargarHistorialPesos();
+            showToast(`✅ Peso ${estimacionActual.resultado.peso} kg guardado (${estimacionActual.metodo})`, 'success');
+        }
+
+        function cargarHistorialPesos() {
+            const historialKey = 'pesoFotoHistorial_' + currentRanch;
+            const historial = JSON.parse(localStorage.getItem(historialKey) || '[]');
+            const tbody = document.getElementById('historialPesosTable');
+            
+            if (!tbody) return;
+            
+            if (historial.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: #9ca3af;">No hay estimaciones guardadas</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = historial.slice(0, 20).map(est => `
+                <tr>
+                    <td>${formatDate(est.fecha)}</td>
+                    <td><strong>${est.animalId}</strong></td>
+                    <td style="font-weight: 700; color: #059669;">${est.resultado.peso} kg</td>
+                    <td style="font-size: 0.75rem;">${est.metodo === 'IA Gemini' ? '🤖' : '✏️'} ${est.metodo || 'Manual'}</td>
+                    <td>${est.resultado.confianza}%</td>
+                </tr>
+            `).join('');
+        }
+
+        function nuevaEstimacion() {
+            ['side', 'back', 'top'].forEach(type => {
+                const card = document.getElementById(type + 'PhotoCard');
+                const icon = document.getElementById(type + 'PhotoIcon');
+                const status = document.getElementById(type + 'PhotoStatus');
+                const preview = document.getElementById(type + 'PhotoPreview');
+                const input = document.getElementById(type + 'PhotoInput');
+                
+                if (card) card.classList.remove('has-photo');
+                if (icon) icon.textContent = '📷';
+                if (status) status.textContent = 'Toca para capturar';
+                if (preview) preview.innerHTML = '';
+                if (input) input.value = '';
+            });
+            
+            document.getElementById('inputLargoCuerpo').value = '';
+            document.getElementById('inputAlturaCruz').value = '';
+            document.getElementById('inputAnchoCuerpo').value = '';
+            document.getElementById('inputPerimetroToracico').value = '';
+            
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+            document.getElementById('btnAnalyzeAI').disabled = true;
+            
+            estimacionActual.fotos = { lateral: null, trasera: null, superior: null };
+            estimacionActual.medidas = { largo: null, altura: null, ancho: null, perimetro: null };
+            estimacionActual.resultado = null;
+            estimacionActual.metodo = 'manual';
+            
+            showToast('🔄 Listo para nueva estimación', 'info');
+        }
+
+        function mostrarGuiaMedicion() {
+            document.getElementById('guiaMedicionModal').classList.add('active');
+        }
+
+        function cerrarGuiaMedicion() {
+            document.getElementById('guiaMedicionModal').classList.remove('active');
+        }
+
+        function calcularPorBarras() {
+            const espacios = parseFloat(document.getElementById('calcBarras').value) || 0;
+            const tubos = parseFloat(document.getElementById('calcTubos').value) || 0;
+            const totalCm = (espacios * MANGA.espacioBarras) + (tubos * MANGA.diametroTubo);
+            document.getElementById('calcResultado').textContent = `= ${totalCm} cm`;
+        }
+
+        function verHistorialPesos() {
+            document.querySelector('#historialPesosTable').closest('.card').scrollIntoView({ behavior: 'smooth' });
+        }
         
         // ==================== AI ANALYTICS MODULE ====================
         
