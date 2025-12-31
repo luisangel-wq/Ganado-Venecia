@@ -364,6 +364,272 @@ BACK VIEW:
     }
     
     // ============================================================
+    // CALIBRATION SYSTEM
+    // ============================================================
+    
+    /**
+     * Storage key for calibration data
+     */
+    const CALIBRATION_STORAGE_KEY = 'cattleWeight_calibration_v6';
+    
+    /**
+     * Get calibration data from localStorage
+     */
+    function getCalibrationData() {
+        const stored = localStorage.getItem(CALIBRATION_STORAGE_KEY);
+        if (!stored) {
+            return {
+                points: [],
+                adjustedRatio: 1.35, // Default middle ratio
+                lastUpdated: null,
+                stats: {
+                    count: 0,
+                    avgError: 0,
+                    stdDev: 0
+                }
+            };
+        }
+        return JSON.parse(stored);
+    }
+    
+    /**
+     * Save calibration data to localStorage
+     */
+    function saveCalibrationData(data) {
+        localStorage.setItem(CALIBRATION_STORAGE_KEY, JSON.stringify(data));
+    }
+    
+    /**
+     * Add a calibration point and recalculate optimal ratio
+     * 
+     * @param {object} calibrationPoint - Calibration data
+     *   - animalId: string
+     *   - fecha: ISO date string
+     *   - largo: number (cm)
+     *   - altura: number (cm)
+     *   - ancho: number (cm, optional)
+     *   - pesoReal: number (kg) - actual weight from scale
+     *   - pesoEstimado: number (kg) - AI/photo estimated weight
+     * @returns {object} Updated calibration stats
+     */
+    function addCalibrationPoint(calibrationPoint) {
+        const data = getCalibrationData();
+        
+        // Add new point with ID
+        const point = {
+            ...calibrationPoint,
+            id: Date.now(),
+            fecha: calibrationPoint.fecha || new Date().toISOString()
+        };
+        
+        data.points.push(point);
+        
+        // Keep only last 50 calibration points
+        if (data.points.length > 50) {
+            data.points = data.points.slice(-50);
+        }
+        
+        // Recalculate optimal ratio
+        data.adjustedRatio = calculateOptimalRatio(data.points);
+        data.lastUpdated = new Date().toISOString();
+        
+        // Calculate statistics
+        data.stats = calculateCalibrationStats(data.points, data.adjustedRatio);
+        
+        saveCalibrationData(data);
+        
+        return {
+            success: true,
+            adjustedRatio: data.adjustedRatio,
+            stats: data.stats,
+            message: `Calibración agregada. Nuevo ratio: ${data.adjustedRatio.toFixed(3)}`
+        };
+    }
+    
+    /**
+     * Calculate optimal ratio from calibration points
+     * Uses weighted average based on recency and accuracy
+     */
+    function calculateOptimalRatio(points) {
+        if (points.length === 0) {
+            return 1.35; // Default
+        }
+        
+        // For each point, calculate what ratio would have given the correct weight
+        const ratios = points.map(p => {
+            // Using Schaeffer formula backwards:
+            // peso = (perimetro² × largo) / 10840
+            // perimetro = altura × ratio
+            // So: peso = (altura² × ratio² × largo) / 10840
+            // Solving for ratio: ratio = sqrt((peso × 10840) / (altura² × largo))
+            
+            const largo = p.largo;
+            const altura = p.altura;
+            const pesoReal = p.pesoReal;
+            
+            if (!largo || !altura || !pesoReal) return null;
+            
+            const calculatedRatio = Math.sqrt((pesoReal * 10840) / (altura * altura * largo));
+            
+            // Weight by recency (more recent = more weight)
+            const daysSince = (new Date() - new Date(p.fecha)) / (1000 * 60 * 60 * 24);
+            const recencyWeight = Math.exp(-daysSince / 180); // 180 day half-life
+            
+            return {
+                ratio: calculatedRatio,
+                weight: recencyWeight
+            };
+        }).filter(r => r !== null && r.ratio > 0.8 && r.ratio < 2.0); // Filter outliers
+        
+        if (ratios.length === 0) {
+            return 1.35;
+        }
+        
+        // Calculate weighted average
+        const totalWeight = ratios.reduce((sum, r) => sum + r.weight, 0);
+        const weightedSum = ratios.reduce((sum, r) => sum + (r.ratio * r.weight), 0);
+        
+        const optimalRatio = weightedSum / totalWeight;
+        
+        // Constrain to reasonable range
+        return Math.max(1.20, Math.min(1.50, optimalRatio));
+    }
+    
+    /**
+     * Calculate calibration statistics
+     */
+    function calculateCalibrationStats(points, currentRatio) {
+        if (points.length === 0) {
+            return { count: 0, avgError: 0, stdDev: 0, avgErrorPercent: 0 };
+        }
+        
+        const errors = points.map(p => {
+            // Calculate what the current system would estimate
+            const perimetro = p.altura * currentRatio;
+            const pesoEstimado = (perimetro * perimetro * p.largo) / 10840;
+            const error = pesoEstimado - p.pesoReal;
+            const errorPercent = (error / p.pesoReal) * 100;
+            
+            return { error, errorPercent };
+        });
+        
+        const avgError = errors.reduce((sum, e) => sum + Math.abs(e.error), 0) / errors.length;
+        const avgErrorPercent = errors.reduce((sum, e) => sum + Math.abs(e.errorPercent), 0) / errors.length;
+        
+        // Calculate standard deviation
+        const mean = errors.reduce((sum, e) => sum + e.error, 0) / errors.length;
+        const variance = errors.reduce((sum, e) => sum + Math.pow(e.error - mean, 2), 0) / errors.length;
+        const stdDev = Math.sqrt(variance);
+        
+        return {
+            count: points.length,
+            avgError: Math.round(avgError * 10) / 10,
+            avgErrorPercent: Math.round(avgErrorPercent * 10) / 10,
+            stdDev: Math.round(stdDev * 10) / 10
+        };
+    }
+    
+    /**
+     * Get current calibrated ratio
+     */
+    function getCalibratedRatio() {
+        const data = getCalibrationData();
+        return data.adjustedRatio;
+    }
+    
+    /**
+     * Calculate weight using calibrated ratio
+     */
+    function calculateWeightCalibrated(alturaCm, largoCm, bcs = BCS.MODERATE) {
+        const data = getCalibrationData();
+        const baseRatio = data.adjustedRatio;
+        const adjustedRatio = baseRatio + bcs.ratioAdjustment;
+        
+        const perimetro = alturaCm * adjustedRatio;
+        const peso = (perimetro * perimetro * largoCm) / 10840;
+        
+        return {
+            altura_cm: Math.round(alturaCm * 10) / 10,
+            largo_cm: Math.round(largoCm * 10) / 10,
+            perimetro_cm: Math.round(perimetro * 10) / 10,
+            peso_kg: Math.round(peso * 10) / 10,
+            calibrated: true,
+            base_ratio: baseRatio,
+            adjusted_ratio: Math.round(adjustedRatio * 1000) / 1000,
+            calibration_points: data.points.length,
+            avg_error_kg: data.stats.avgError,
+            avg_error_percent: data.stats.avgErrorPercent
+        };
+    }
+    
+    /**
+     * Get all calibration points
+     */
+    function getCalibrationPoints() {
+        const data = getCalibrationData();
+        return data.points;
+    }
+    
+    /**
+     * Delete a calibration point and recalculate
+     */
+    function deleteCalibrationPoint(pointId) {
+        const data = getCalibrationData();
+        data.points = data.points.filter(p => p.id !== pointId);
+        
+        if (data.points.length > 0) {
+            data.adjustedRatio = calculateOptimalRatio(data.points);
+            data.stats = calculateCalibrationStats(data.points, data.adjustedRatio);
+        } else {
+            data.adjustedRatio = 1.35;
+            data.stats = { count: 0, avgError: 0, stdDev: 0, avgErrorPercent: 0 };
+        }
+        
+        data.lastUpdated = new Date().toISOString();
+        saveCalibrationData(data);
+        
+        return { success: true };
+    }
+    
+    /**
+     * Reset calibration to defaults
+     */
+    function resetCalibration() {
+        localStorage.removeItem(CALIBRATION_STORAGE_KEY);
+        return { success: true, message: 'Calibración reiniciada a valores por defecto' };
+    }
+    
+    /**
+     * Export calibration data
+     */
+    function exportCalibration() {
+        const data = getCalibrationData();
+        return {
+            version: '6.0',
+            exportDate: new Date().toISOString(),
+            ...data
+        };
+    }
+    
+    /**
+     * Import calibration data
+     */
+    function importCalibration(importData) {
+        if (!importData.points || !Array.isArray(importData.points)) {
+            return { success: false, message: 'Datos de calibración inválidos' };
+        }
+        
+        saveCalibrationData({
+            points: importData.points,
+            adjustedRatio: importData.adjustedRatio || 1.35,
+            lastUpdated: new Date().toISOString(),
+            stats: importData.stats || { count: 0, avgError: 0, stdDev: 0 }
+        });
+        
+        return { success: true, message: 'Calibración importada correctamente' };
+    }
+    
+    // ============================================================
     // PUBLIC API
     // ============================================================
     
@@ -373,15 +639,26 @@ BACK VIEW:
         MangaLateralRef,
         MangaBackRef,
         calculateWeight,
+        calculateWeightCalibrated,
         estimateFromLateral,
         estimateAnchoFromBack,
         detectBreedType,
         getBCSFromScore,
         getGeminiReferenceInfo,
         
+        // Calibration functions
+        addCalibrationPoint,
+        getCalibrationData,
+        getCalibratedRatio,
+        getCalibrationPoints,
+        deleteCalibrationPoint,
+        resetCalibration,
+        exportCalibration,
+        importCalibration,
+        
         // Version info
         version: '6.0',
-        description: 'Manga-based weight estimation with breed and BCS adjustments'
+        description: 'Manga-based weight estimation with breed and BCS adjustments + Learning calibration'
     };
 })();
 

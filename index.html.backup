@@ -1557,10 +1557,6 @@
                 <span class="nav-tab-icon">📈</span>
                 <span>Reportes</span>
             </button>
-            <button class="nav-tab" data-tab="analytics">
-                <span class="nav-tab-icon">🤖</span>
-                <span>IA</span>
-            </button>
             <button class="nav-tab" data-tab="config">
                 <span class="nav-tab-icon">⚙️</span>
                 <span>Config</span>
@@ -2658,7 +2654,6 @@
             </div>
         </div>
         
-        
         <!-- Tab: Reportes -->
         <div id="tab-reportes" class="tab-content">
             <div class="summary-grid">
@@ -3516,6 +3511,7 @@
             salidas: { column: null, direction: 'asc' },
             vendedores: { column: null, direction: 'asc' },
             compradores: { column: null, direction: 'asc' },
+            fotoSesiones: { column: null, direction: 'asc' },
             saludHistorial: { column: null, direction: 'asc' }
         };
         
@@ -3532,7 +3528,6 @@
             // Apply ranch theme and load data
             applyRanchTheme();
             loadData();
-            loadAnimalPhotos(); // Load animal photos
             initTabs();
             initForms();
             initSortableHeaders();
@@ -3822,6 +3817,9 @@
             });
             
             // Foto historial table
+            document.querySelectorAll('#fotoHistorialTableContainer th.sortable').forEach(th => {
+                th.addEventListener('click', () => handleSort('fotoSesiones', th));
+            });
         }
         
         function handleSort(tableId, th) {
@@ -7596,80 +7594,825 @@
             }
         });
         
-        // ==================== ANIMAL PHOTO PROFILES MODULE ====================
+        // ==================== AI PHOTO WEIGHT ESTIMATION MODULE ====================
         
-        // Storage for animal photos
-        let animalPhotos = {}; // { chapeta: photoDataUrl }
-        
-        function loadAnimalPhotos() {
-            const saved = localStorage.getItem('animalPhotos_' + currentRanch);
-            if (saved) {
-                animalPhotos = JSON.parse(saved);
+        // Manga Calibration Constants
+        const MANGA = {
+            altura: 144.5,           // Height: top of first bar to bottom of last bar (cm)
+            anchoInterno: 60.5,      // Internal width between columns (cm)
+            espacioBarras: 23,       // Space between bars (cm)
+            diametroTubo: 5,         // Tube diameter (cm)
+            anchoColumna: 7,         // Column width (cm)
+            seccion1: 170,           // Section 1 length (cm)
+            seccion2: 152,           // Section 2 length (cm)
+            largoTotal: 330.5        // Total length (cm)
+        };
+
+        // Storage for current estimation
+        let estimacionActual = {
+            animalId: null,
+            fotos: { lateral: null, trasera: null, superior: null },
+            medidas: { largo: null, altura: null, ancho: null, perimetro: null },
+            resultado: null,
+            metodo: 'manual'
+        };
+
+        // Populate animal dropdown
+        function cargarAnimalesParaFoto() {
+            const select = document.getElementById('pesoFotoAnimal');
+            if (!select) return;
+            
+            const inventario = getInventario();
+            select.innerHTML = '<option value="">-- Seleccionar chapeta --</option>';
+            
+            inventario.forEach(animal => {
+                const option = document.createElement('option');
+                option.value = animal.numero;
+                option.textContent = `${animal.numero} - ${animal.sexo} - ${animal.peso} kg`;
+                select.appendChild(option);
+            });
+        }
+
+        // Load selected animal info
+        function loadAnimalForPhotoWeight() {
+            const animalId = document.getElementById('pesoFotoAnimal').value;
+            const infoDiv = document.getElementById('selectedAnimalInfo');
+            
+            if (!animalId) {
+                infoDiv.style.display = 'none';
+                estimacionActual.animalId = null;
+                return;
+            }
+            
+            estimacionActual.animalId = animalId;
+            
+            const inventario = getInventario();
+            const animal = inventario.find(a => a.numero === animalId);
+            
+            if (animal) {
+                document.getElementById('selectedAnimalChapeta').textContent = `Chapeta: ${animalId}`;
+                document.getElementById('selectedAnimalDetails').textContent = 
+                    `${animal.sexo} | Peso entrada: ${animal.peso} kg | ${animal.lote || 'Sin lote'}`;
+                infoDiv.style.display = 'block';
+            }
+            
+            // Clear previous results
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+        }
+
+        // Handle photo capture
+        function handlePhotoCapture(type, input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoData = e.target.result;
+                
+                // Store photo
+                const typeMap = { side: 'lateral', back: 'trasera', top: 'superior' };
+                estimacionActual.fotos[typeMap[type] || type] = photoData;
+                
+                // Update UI
+                const card = document.getElementById(type + 'PhotoCard');
+                const icon = document.getElementById(type + 'PhotoIcon');
+                const status = document.getElementById(type + 'PhotoStatus');
+                const preview = document.getElementById(type + 'PhotoPreview');
+                
+                card.classList.add('has-photo');
+                icon.textContent = '✅';
+                status.textContent = '¡Capturada!';
+                preview.innerHTML = `<img src="${photoData}" alt="Vista ${type}">`;
+                
+                // Enable AI button if at least side photo is available
+                updateAIButtonState();
+                
+                showToast(`📷 Foto ${type === 'side' ? 'lateral' : type === 'back' ? 'trasera' : 'superior'} capturada`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Update AI button state
+        function updateAIButtonState() {
+            const btn = document.getElementById('btnAnalyzeAI');
+            const hasPhotos = estimacionActual.fotos.lateral || estimacionActual.fotos.trasera;
+            btn.disabled = !hasPhotos;
+            
+            if (hasPhotos) {
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
             }
         }
-        
-        function saveAnimalPhotos() {
-            localStorage.setItem('animalPhotos_' + currentRanch, JSON.stringify(animalPhotos));
+
+        // Build measurement prompt for Gemini
+        function buildMeasurementPrompt() {
+            return `Eres un experto CONSERVADOR en medición de ganado bovino. Tu objetivo es dar medidas PRECISAS y REALISTAS, no sobreestimadas.
+
+## REFERENCIAS DE LA MANGA (CALIBRACIÓN):
+- Altura total de barras: ${MANGA.altura} cm
+- Espacio entre barras horizontales: ${MANGA.espacioBarras} cm
+- Diámetro de cada tubo/barra: ${MANGA.diametroTubo} cm
+- Ancho interno (entre columnas): ${MANGA.anchoInterno} cm
+
+## INSTRUCCIONES CRÍTICAS (LEE CUIDADOSAMENTE):
+
+1. **VERIFICACIÓN DE ESCALA**: 
+   - Cuenta EXACTAMENTE cuántas barras horizontales caben en cada medida del animal
+   - Cada espacio entre barras = 23cm, cada tubo = 5cm
+   - Si NO ves claramente las barras → confianza MAX 40% y advierte en notas
+
+2. **CONSIDERACIONES DE PERSPECTIVA**:
+   - La cámara puede distorsionar. Si el animal está en ángulo o la foto no es perfectamente perpendicular, REDUCE tus medidas un 10-15%
+   - Si no puedes ver el suelo claramente, la altura es incierta → confianza MAX 60%
+   - Si la vista trasera está parcial u oblicua, el ancho es incierto → déjalo en null
+
+3. **MEDIDAS CONSERVADORAS (importante - animales grass-fed colombianos)**:
+   - LARGO corporal típico: 120-170 cm (del hombro a la base de la cola, SIN incluir la cola)
+   - ALTURA a la cruz típica: 110-140 cm
+   - ANCHO corporal típico: 35-55 cm
+   - PERÍMETRO torácico típico: 140-200 cm
+   - **Si tus medidas exceden estos rangos, VERIFICA DOS VECES o reduce confianza**
+
+4. **REGLAS PARA PERÍMETRO**:
+   - Solo calcula si tienes TANTO vista lateral como trasera claras
+   - Si solo tienes una vista, deja perímetro en null
+   - El perímetro debe ser consistente: aproximadamente π × (ancho + altura×0.6)/2
+
+5. **CONFIANZA HONESTA**:
+   - Perspectiva no ideal → MAX 60%
+   - Barras parcialmente visibles → MAX 70%
+   - Animal en movimiento o borroso → MAX 50%
+   - Vista única (solo lateral o trasera) → MAX 65%
+   - Es MEJOR decir "baja confianza" que dar medidas incorrectas
+
+## PROCESO DE VALIDACIÓN ANTES DE RESPONDER:
+1. ¿Las medidas están en rangos típicos? Si no → explica por qué
+2. ¿El perímetro calculado es consistente con largo×altura×ancho? Si no → ajusta
+3. ¿Hay suficiente claridad visual para esta confianza? Si no → reduce confianza
+4. ¿Las notas explican limitaciones claramente?
+
+## FORMATO DE RESPUESTA (JSON):
+{
+  "largo_cm": <número o null>,
+  "altura_cm": <número o null>,
+  "ancho_cm": <número o null>,
+  "perimetro_cm": <número o null>,
+  "confianza": <número 0-100, SER HONESTO>,
+  "notas": "<OBLIGATORIO: explica qué referencias usaste, qué limitaciones encontraste, y si redujiste medidas por perspectiva>"
+}
+
+**RECUERDA**: Subestimar es mejor que sobreestimar. Los ganaderos necesitan precisión, no optimismo.
+
+Solo responde con el JSON, sin texto adicional.`;
         }
-        
-        function showAddAnimalPhoto() {
-            const chapeta = prompt('🐂 Ingrese el número de chapeta del animal:');
-            if (!chapeta || !chapeta.trim()) return;
+
+        // Parse AI response
+        function parseAIMeasurements(aiText) {
+            try {
+                let jsonStr = aiText;
+                
+                const jsonMatch = aiText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonStr = jsonMatch[1];
+                }
+                
+                const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (objectMatch) {
+                    jsonStr = objectMatch[0];
+                }
+                
+                const parsed = JSON.parse(jsonStr);
+                
+                return {
+                    largo: parsed.largo_cm || null,
+                    altura: parsed.altura_cm || null,
+                    ancho: parsed.ancho_cm || null,
+                    perimetro: parsed.perimetro_cm || null,
+                    confianza: parsed.confianza || 70,
+                    notas: parsed.notas || null
+                };
+            } catch (e) {
+                console.error('Error parsing AI response:', e, aiText);
+                
+                const largoMatch = aiText.match(/largo[:\s]+(\d+(?:\.\d+)?)/i);
+                const alturaMatch = aiText.match(/altura[:\s]+(\d+(?:\.\d+)?)/i);
+                const anchoMatch = aiText.match(/ancho[:\s]+(\d+(?:\.\d+)?)/i);
+                
+                return {
+                    largo: largoMatch ? parseFloat(largoMatch[1]) : null,
+                    altura: alturaMatch ? parseFloat(alturaMatch[1]) : null,
+                    ancho: anchoMatch ? parseFloat(anchoMatch[1]) : null,
+                    perimetro: null,
+                    confianza: 50,
+                    notas: 'Análisis parcial - algunos valores pueden requerir ajuste manual'
+                };
+            }
+        }
+
+        // Display AI results
+        function displayAIResults(measurements) {
+            const resultsDiv = document.getElementById('aiMeasurementResults');
             
-            const chapetaNum = chapeta.trim();
+            if (measurements.largo) {
+                document.getElementById('aiLargo').textContent = `${measurements.largo} cm`;
+                document.getElementById('inputLargoCuerpo').value = measurements.largo;
+            }
             
-            // Check if animal exists
-            const animal = data.entradas.find(e => e.numero == chapetaNum);
-            if (!animal) {
-                if (!confirm(`El animal #${chapetaNum} no existe en el sistema. ¿Agregar foto de todas formas?`)) {
-                    return;
+            if (measurements.altura) {
+                document.getElementById('aiAltura').textContent = `${measurements.altura} cm`;
+                document.getElementById('inputAlturaCruz').value = measurements.altura;
+            }
+            
+            if (measurements.ancho) {
+                document.getElementById('aiAncho').textContent = `${measurements.ancho} cm`;
+                document.getElementById('inputAnchoCuerpo').value = measurements.ancho;
+            }
+            
+            if (measurements.perimetro) {
+                document.getElementById('aiPerimetro').textContent = `${measurements.perimetro} cm`;
+                document.getElementById('inputPerimetroToracico').value = measurements.perimetro;
+            } else {
+                document.getElementById('aiPerimetro').textContent = 'Calculado';
+            }
+            
+            document.getElementById('aiConfidenceValue').textContent = `${measurements.confianza}%`;
+            document.getElementById('aiConfidenceBar').style.width = `${measurements.confianza}%`;
+            
+            if (measurements.notas) {
+                document.getElementById('aiNotes').style.display = 'block';
+                document.getElementById('aiNotesText').textContent = measurements.notas;
+            } else {
+                document.getElementById('aiNotes').style.display = 'none';
+            }
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.classList.add('show');
+            
+            estimacionActual.medidas = {
+                largo: measurements.largo,
+                altura: measurements.altura,
+                ancho: measurements.ancho,
+                perimetro: measurements.perimetro
+            };
+        }
+
+        // Analyze with Gemini AI
+        async function analyzeWithGemini() {
+            const apiKey = localStorage.getItem('googleApiKey');
+            if (!apiKey) {
+                showToast('❌ Configura tu API Key de Google en la pestaña Análisis IA', 'error');
+                return;
+            }
+            
+            if (!estimacionActual.fotos.lateral && !estimacionActual.fotos.trasera) {
+                showToast('📷 Captura al menos una foto (lateral o trasera)', 'warning');
+                return;
+            }
+            
+            document.getElementById('aiAnalysisLoading').style.display = 'block';
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+            
+            try {
+                const prompt = buildMeasurementPrompt();
+                const imageParts = [];
+                
+                if (estimacionActual.fotos.lateral) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.lateral.split(',')[1]
+                        }
+                    });
+                }
+                
+                if (estimacionActual.fotos.trasera) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.trasera.split(',')[1]
+                        }
+                    });
+                }
+                
+                if (estimacionActual.fotos.superior) {
+                    imageParts.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg',
+                            data: estimacionActual.fotos.superior.split(',')[1]
+                        }
+                    });
+                }
+                
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                ...imageParts
+                            ]
+                        }],
+                        generationConfig: {
+                            temperature: 0.2,
+                            maxOutputTokens: 1024
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const measurements = parseAIMeasurements(aiText);
+                
+                displayAIResults(measurements);
+                calcularPesoFoto();
+                
+                estimacionActual.metodo = 'IA Gemini';
+                showToast('🤖 Análisis completado', 'success');
+                
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                showToast('❌ Error en análisis: ' + error.message, 'error');
+            } finally {
+                document.getElementById('aiAnalysisLoading').style.display = 'none';
+            }
+        }
+
+        // Calculate weight from measurements
+        function calcularPesoFoto() {
+            const largo = parseFloat(document.getElementById('inputLargoCuerpo').value) || 0;
+            const altura = parseFloat(document.getElementById('inputAlturaCruz').value) || 0;
+            const ancho = parseFloat(document.getElementById('inputAnchoCuerpo').value) || 0;
+            let perimetro = parseFloat(document.getElementById('inputPerimetroToracico').value) || 0;
+            
+            if (largo < 50 || altura < 60 || ancho < 20) {
+                document.getElementById('resultadosPesoFoto').style.display = 'none';
+                return;
+            }
+            
+            if (!perimetro || perimetro < 80) {
+                const a = ancho / 2;
+                const b = (altura * 0.65) / 2;
+                perimetro = Math.PI * Math.sqrt(2 * (a * a + b * b)) * 2 * 1.05;
+                perimetro = Math.round(perimetro * 10) / 10;
+                
+                if (!document.getElementById('inputPerimetroToracico').value) {
+                    document.getElementById('aiPerimetro').textContent = `${perimetro} cm`;
                 }
             }
             
-            // Create file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
+            estimacionActual.medidas = { largo, altura, ancho, perimetro };
             
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    // Compress image
-                    compressImage(file, (compressedDataUrl) => {
-                        animalPhotos[chapetaNum] = compressedDataUrl;
-                        saveAnimalPhotos();
-                        updateAllViews();
-                        showToast(`📷 Foto guardada para animal #${chapetaNum}`, 'success');
-                    });
-                };
-                reader.readAsDataURL(file);
+            const P = perimetro;
+            const L = largo;
+            
+            const pesoSchaeffer = (P * P * L) / 10840;
+            const pesoCrevat = (P * P * L) / 11880;
+            const pesoQuetelet = (P * P * L) / 10000;
+            
+            const pesoPromedio = (pesoSchaeffer + pesoCrevat + pesoQuetelet) / 3;
+            const pesoMin = Math.round(pesoPromedio * 0.9);
+            const pesoMax = Math.round(pesoPromedio * 1.1);
+            const pesoFinal = Math.round(pesoPromedio);
+            
+            let confianza = 70;
+            if (estimacionActual.fotos.lateral) confianza += 10;
+            if (estimacionActual.fotos.trasera) confianza += 10;
+            if (estimacionActual.fotos.superior) confianza += 5;
+            if (estimacionActual.metodo === 'IA Gemini') confianza += 5;
+            confianza = Math.min(confianza, 95);
+            
+            estimacionActual.resultado = {
+                peso: pesoFinal,
+                rango: { min: pesoMin, max: pesoMax },
+                perimetroCalculado: perimetro,
+                confianza: confianza,
+                fecha: new Date().toISOString(),
+                metodo: estimacionActual.metodo
             };
             
-            input.click();
-        }
-        
-        function getAnimalPhoto(chapeta) {
-            return animalPhotos[chapeta] || null;
-        }
-        
-        function deleteAnimalPhoto(chapeta) {
-            if (!confirm(`¿Eliminar foto del animal #${chapeta}?`)) return;
+            document.getElementById('resultadoPesoKg').textContent = `${pesoFinal} kg`;
+            document.getElementById('resultadoRango').textContent = `Rango: ${pesoMin} - ${pesoMax} kg`;
+            document.getElementById('resultadoPerimetro').textContent = `${perimetro} cm`;
+            document.getElementById('resultadoConfianza').textContent = `${confianza}%`;
+            document.getElementById('resultadoMetodo').textContent = estimacionActual.metodo === 'IA Gemini' ? '🤖 IA' : '✏️ Manual';
             
-            delete animalPhotos[chapeta];
-            saveAnimalPhotos();
-            updateAllViews();
-            showToast(`Foto eliminada de animal #${chapeta}`, 'warning');
+            if (estimacionActual.animalId) {
+                const inventario = getInventario();
+                const animal = inventario.find(a => a.numero === estimacionActual.animalId);
+                if (animal && animal.peso && animal.fechaEntrada) {
+                    const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+                    if (diasEnFinca > 0) {
+                        const ganancia = pesoFinal - animal.peso;
+                        const gdp = Math.round((ganancia / diasEnFinca) * 1000);
+                        document.getElementById('resultadoGDP').textContent = `${gdp} g/día`;
+                    }
+                }
+            }
+            
+            document.getElementById('resultadosPesoFoto').style.display = 'block';
+            document.getElementById('resultadosPesoFoto').classList.add('show');
+        }
+
+        function toggleManualInput() {
+            const section = document.getElementById('manualInputSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function syncManualToAI(field) {
+            const value = document.getElementById('manual' + field.charAt(0).toUpperCase() + field.slice(1)).value;
+            const targetId = field === 'largo' ? 'inputLargoCuerpo' : 
+                             field === 'altura' ? 'inputAlturaCruz' :
+                             field === 'ancho' ? 'inputAnchoCuerpo' : 'inputPerimetroToracico';
+            document.getElementById(targetId).value = value;
+            calcularPesoFoto();
+        }
+
+        function guardarPesoFoto() {
+            if (!estimacionActual.resultado || !estimacionActual.animalId) {
+                showToast('Selecciona un animal y completa las mediciones', 'warning');
+                return;
+            }
+            
+            const historialKey = 'pesoFotoHistorial_' + currentRanch;
+            let historial = JSON.parse(localStorage.getItem(historialKey) || '[]');
+            
+            // Prepare historial entry
+            const historialEntry = {
+                id: Date.now(),
+                animalId: estimacionActual.animalId,
+                fecha: new Date().toISOString(),
+                medidas: { ...estimacionActual.medidas },
+                resultado: { ...estimacionActual.resultado },
+                metodo: estimacionActual.metodo,
+                fotos: {
+                    lateral: !!estimacionActual.fotos.lateral,
+                    trasera: !!estimacionActual.fotos.trasera,
+                    superior: !!estimacionActual.fotos.superior
+                }
+            };
+            
+            historial.unshift(historialEntry);
+            historial = historial.slice(0, 100);
+            localStorage.setItem(historialKey, JSON.stringify(historial));
+            
+            cargarHistorialPesos();
+            
+            // ✨ AUTO-CALIBRATION: Use real weight from inventory
+            const pesoEstimadoIA = estimacionActual.resultado.peso;
+            const medidas = estimacionActual.medidas;
+            
+            // Get the animal's actual weight from inventory
+            const inventario = getInventario();
+            const animal = inventario.find(a => a.numero == estimacionActual.animalId);
+            
+            if (animal && animal.peso && medidas.largo && medidas.altura) {
+                // Try to get most recent REAL weight (from scale/bascula)
+                let pesoReal = null;
+                
+                // First priority: Check if user provided peso bascula in current session
+                if (estimacionActual.pesoBascula) {
+                    pesoReal = estimacionActual.pesoBascula;
+                    console.log('📏 Using peso bascula from current session:', pesoReal);
+                }
+                // Second priority: Check recent photo sessions for scale weight
+                else if (data.fotoSesiones) {
+                    const recentSessions = data.fotoSesiones
+                        .filter(s => s.numero == estimacionActual.animalId && s.pesoBascula)
+                        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                    
+                    if (recentSessions.length > 0) {
+                        // Use most recent scale weight (within last 30 days)
+                        const lastSession = recentSessions[0];
+                        const daysSince = Math.floor((new Date() - new Date(lastSession.fecha)) / (1000 * 60 * 60 * 24));
+                        
+                        if (daysSince <= 30) {
+                            pesoReal = lastSession.pesoBascula;
+                            console.log('📏 Using recent peso bascula from photo session:', pesoReal, `(${daysSince} días atrás)`);
+                        }
+                    }
+                }
+                // Third priority: Calculate from inventory initial weight + GDP
+                if (!pesoReal) {
+                    const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+                    pesoReal = animal.peso + (diasEnFinca * data.config.gdp);
+                    console.log('📏 Using estimated weight from inventory:', pesoReal.toFixed(1), 'kg');
+                }
+                
+                // Auto-calibrate if AI estimate differs significantly from real weight
+                const calibrado = autoCalibrarSiNecesario(
+                    estimacionActual.animalId,
+                    pesoReal,
+                    medidas,
+                    pesoEstimadoIA
+                );
+                
+                if (calibrado) {
+                    showToast(`✅ Peso ${pesoEstimadoIA} kg guardado y sistema auto-calibrado con peso real ${pesoReal.toFixed(0)} kg`, 'success');
+                } else {
+                    showToast(`✅ Peso ${pesoEstimadoIA} kg guardado (${estimacionActual.metodo})`, 'success');
+                }
+            } else {
+                showToast(`✅ Peso ${pesoEstimadoIA} kg guardado (${estimacionActual.metodo})`, 'success');
+            }
+        }
+
+        function cargarHistorialPesos() {
+            const historialKey = 'pesoFotoHistorial_' + currentRanch;
+            const historial = JSON.parse(localStorage.getItem(historialKey) || '[]');
+            const tbody = document.getElementById('historialPesosTable');
+            
+            if (!tbody) return;
+            
+            if (historial.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: #9ca3af;">No hay estimaciones guardadas</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = historial.slice(0, 20).map(est => `
+                <tr>
+                    <td>${formatDate(est.fecha)}</td>
+                    <td><strong>${est.animalId}</strong></td>
+                    <td style="font-weight: 700; color: #059669;">${est.resultado.peso} kg</td>
+                    <td style="font-size: 0.75rem;">${est.metodo === 'IA Gemini' ? '🤖' : '✏️'} ${est.metodo || 'Manual'}</td>
+                    <td>${est.resultado.confianza}%</td>
+                </tr>
+            `).join('');
+        }
+
+        // ✨ AUTO-CALIBRATION: Automatically calibrate when AI estimate differs from real weight
+        function autoCalibrarSiNecesario(animalId, pesoReal, medidas, pesoEstimadoIA) {
+            if (!pesoReal || !medidas || !pesoEstimadoIA) return false;
+            
+            // Calculate difference percentage
+            const diferencia = Math.abs(pesoReal - pesoEstimadoIA);
+            const porcentajeDiferencia = (diferencia / pesoReal) * 100;
+            
+            // Only auto-calibrate if difference is significant (>5%)
+            if (porcentajeDiferencia > 5 && medidas.largo && medidas.altura) {
+                // Use CattleWeight module if available
+                if (typeof CattleWeight !== 'undefined' && CattleWeight.calibrate) {
+                    const calibrationData = {
+                        id: animalId,
+                        largo: medidas.largo,
+                        altura: medidas.altura,
+                        ancho: medidas.ancho || null,
+                        pesoReal: pesoReal
+                    };
+                    
+                    const result = CattleWeight.calibrate(calibrationData);
+                    
+                    if (result.success) {
+                        // Update calibration display if function exists
+                        if (typeof updateCalibrationDisplay === 'function') {
+                            updateCalibrationDisplay();
+                        }
+                        
+                        // Log calibration for debugging
+                        console.log('🎯 Auto-calibración exitosa:', {
+                            animal: animalId,
+                            pesoReal: pesoReal.toFixed(1),
+                            pesoEstimadoIA: pesoEstimadoIA.toFixed(1),
+                            diferencia: diferencia.toFixed(1),
+                            porcentaje: porcentajeDiferencia.toFixed(1) + '%',
+                            nuevoRatio: result.calibratedRatio?.toFixed(3)
+                        });
+                        
+                        return true;
+                    } else {
+                        console.warn('❌ Auto-calibración falló:', result.message);
+                    }
+                } else {
+                    console.warn('⚠️ CattleWeight module no disponible para calibración');
+                }
+            } else if (porcentajeDiferencia <= 5) {
+                console.log('✅ Peso IA muy preciso (diferencia <5%), no se requiere calibración');
+            }
+            
+            return false;
         }
         
-        function viewAnimalPhotoLarge(chapeta) {
-            const photo = getAnimalPhoto(chapeta);
-            if (!photo) return;
+        function nuevaEstimacion() {
+            ['side', 'back', 'top'].forEach(type => {
+                const card = document.getElementById(type + 'PhotoCard');
+                const icon = document.getElementById(type + 'PhotoIcon');
+                const status = document.getElementById(type + 'PhotoStatus');
+                const preview = document.getElementById(type + 'PhotoPreview');
+                const input = document.getElementById(type + 'PhotoInput');
+                
+                if (card) card.classList.remove('has-photo');
+                if (icon) icon.textContent = '📷';
+                if (status) status.textContent = 'Toca para capturar';
+                if (preview) preview.innerHTML = '';
+                if (input) input.value = '';
+            });
             
-            viewPhoto(photo, `Animal #${chapeta}`);
+            document.getElementById('inputLargoCuerpo').value = '';
+            document.getElementById('inputAlturaCruz').value = '';
+            document.getElementById('inputAnchoCuerpo').value = '';
+            document.getElementById('inputPerimetroToracico').value = '';
+            
+            document.getElementById('aiMeasurementResults').style.display = 'none';
+            document.getElementById('resultadosPesoFoto').style.display = 'none';
+            document.getElementById('btnAnalyzeAI').disabled = true;
+            
+            estimacionActual.fotos = { lateral: null, trasera: null, superior: null };
+            estimacionActual.medidas = { largo: null, altura: null, ancho: null, perimetro: null };
+            estimacionActual.resultado = null;
+            estimacionActual.metodo = 'manual';
+            
+            showToast('🔄 Listo para nueva estimación', 'info');
+        }
+
+        // ==================== CALIBRATION FUNCTIONS ====================
+        
+        function submitCalibration(event) {
+            event.preventDefault();
+            
+            const animalId = document.getElementById('calibAnimalId').value.trim();
+            const pesoReal = parseFloat(document.getElementById('calibPesoReal').value);
+            const largo = parseFloat(document.getElementById('calibLargo').value);
+            const altura = parseFloat(document.getElementById('calibAltura').value);
+            const ancho = parseFloat(document.getElementById('calibAncho').value) || null;
+            
+            if (!animalId || !pesoReal || !largo || !altura) {
+                showToast('⚠️ Complete todos los campos requeridos', 'error');
+                return;
+            }
+            
+            // Use CattleWeightV6 module
+            if (typeof CattleWeightV6 === 'undefined') {
+                showToast('❌ Módulo de peso no disponible', 'error');
+                return;
+            }
+            
+            const calibrationPoint = {
+                animalId: animalId,
+                fecha: new Date().toISOString(),
+                largo: largo,
+                altura: altura,
+                ancho: ancho,
+                pesoReal: pesoReal,
+                pesoEstimado: estimacionActual.resultado ? estimacionActual.resultado.peso : null
+            };
+            
+            const result = CattleWeightV6.addCalibrationPoint(calibrationPoint);
+            
+            if (result.success) {
+                showToast(result.message, 'success');
+                
+                // Clear form
+                document.getElementById('calibrationForm').reset();
+                
+                // Update display
+                updateCalibrationDisplay();
+                
+                // Update history table
+                updateCalibrationHistory();
+            } else {
+                showToast('❌ Error al agregar calibración', 'error');
+            }
+        }
+        
+        function updateCalibrationDisplay() {
+            if (typeof CattleWeightV6 === 'undefined') return;
+            
+            const data = CattleWeightV6.getCalibrationData();
+            
+            // Update status display
+            document.getElementById('calibrationPoints').textContent = `${data.points.length} puntos`;
+            document.getElementById('calibrationRatio').textContent = data.adjustedRatio.toFixed(3);
+            document.getElementById('calibrationStdDev').textContent = data.stats.stdDev.toFixed(2);
+            
+            // Update message based on points
+            const messageEl = document.getElementById('calibrationMessage');
+            if (data.points.length === 0) {
+                messageEl.textContent = 'Agrega medidas reales para mejorar la precisión';
+            } else if (data.points.length < 5) {
+                messageEl.textContent = `Sistema aprendiendo (${data.points.length}/5 mínimo recomendado)`;
+            } else if (data.stats.avgErrorPercent < 5) {
+                messageEl.textContent = `¡Excelente! Error promedio: ${data.stats.avgErrorPercent.toFixed(1)}%`;
+            } else if (data.stats.avgErrorPercent < 10) {
+                messageEl.textContent = `Buena precisión - Error: ${data.stats.avgErrorPercent.toFixed(1)}%`;
+            } else {
+                messageEl.textContent = `Necesita más datos - Error: ${data.stats.avgErrorPercent.toFixed(1)}%`;
+            }
+        }
+        
+        function updateCalibrationHistory() {
+            if (typeof CattleWeightV6 === 'undefined') return;
+            
+            const points = CattleWeightV6.getCalibrationPoints();
+            const tbody = document.getElementById('calibrationHistoryTable');
+            
+            if (!tbody) return;
+            
+            if (points.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: #9ca3af;">Sin calibraciones aún</td></tr>';
+                return;
+            }
+            
+            // Sort by date descending
+            const sorted = [...points].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            
+            tbody.innerHTML = sorted.slice(0, 10).map(p => {
+                // Calculate what ratio this point would give
+                const calculatedRatio = Math.sqrt((p.pesoReal * 10840) / (p.altura * p.altura * p.largo));
+                
+                return `
+                    <tr>
+                        <td><strong>${p.animalId}</strong></td>
+                        <td>${formatDate(p.fecha)}</td>
+                        <td class="text-right">${p.pesoReal.toFixed(1)} kg</td>
+                        <td class="text-right">${calculatedRatio.toFixed(3)}</td>
+                        <td class="text-center">
+                            <button class="btn btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteCalibrationPoint(${p.id})">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function deleteCalibrationPoint(pointId) {
+            if (!confirm('¿Eliminar este punto de calibración?')) return;
+            
+            if (typeof CattleWeightV6 === 'undefined') return;
+            
+            const result = CattleWeightV6.deleteCalibrationPoint(pointId);
+            
+            if (result.success) {
+                showToast('Punto eliminado', 'warning');
+                updateCalibrationDisplay();
+                updateCalibrationHistory();
+            }
+        }
+        
+        function resetCalibrationConfirm() {
+            if (!confirm('⚠️ ¿Reiniciar toda la calibración? Esto eliminará todos los puntos de calibración guardados.')) return;
+            
+            if (typeof CattleWeightV6 === 'undefined') return;
+            
+            const result = CattleWeightV6.resetCalibration();
+            
+            if (result.success) {
+                showToast(result.message, 'warning');
+                updateCalibrationDisplay();
+                updateCalibrationHistory();
+            }
+        }
+        
+        function exportCalibration() {
+            if (typeof CattleWeightV6 === 'undefined') return;
+            
+            const data = CattleWeightV6.exportCalibration();
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `calibration_${currentRanch}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showToast('📥 Calibración exportada', 'success');
+        }
+        
+        // Initialize calibration display on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing DOMContentLoaded code ...
+            
+            // Initialize calibration display
+            setTimeout(() => {
+                updateCalibrationDisplay();
+                updateCalibrationHistory();
+            }, 500);
+        });
+
+        function mostrarGuiaMedicion() {
+            document.getElementById('guiaMedicionModal').classList.add('active');
+        }
+
+        function cerrarGuiaMedicion() {
+            document.getElementById('guiaMedicionModal').classList.remove('active');
+        }
+
+        function calcularPorBarras() {
+            const espacios = parseFloat(document.getElementById('calcBarras').value) || 0;
+            const tubos = parseFloat(document.getElementById('calcTubos').value) || 0;
+            const totalCm = (espacios * MANGA.espacioBarras) + (tubos * MANGA.diametroTubo);
+            document.getElementById('calcResultado').textContent = `= ${totalCm} cm`;
+        }
+
+        function verHistorialPesos() {
+            document.querySelector('#historialPesosTable').closest('.card').scrollIntoView({ behavior: 'smooth' });
         }
         
         // ==================== AI ANALYTICS MODULE ====================
@@ -7888,62 +8631,7 @@ INSTRUCCIONES:
 - Cuando menciones valores monetarios, usa formato colombiano ($ con separador de miles)`;
         }
         
-        // ========== API RATE LIMITING & RETRY LOGIC ==========
-        let apiRequestQueue = [];
-        let isProcessingQueue = false;
-        let lastRequestTime = 0;
-        const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between requests
-        
-        async function throttledAPICall(apiFunction, ...args) {
-            return new Promise((resolve) => {
-                apiRequestQueue.push({ apiFunction, args, resolve });
-                processQueue();
-            });
-        }
-        
-        async function processQueue() {
-            if (isProcessingQueue || apiRequestQueue.length === 0) return;
-            
-            isProcessingQueue = true;
-            
-            while (apiRequestQueue.length > 0) {
-                const now = Date.now();
-                const timeSinceLastRequest = now - lastRequestTime;
-                
-                if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-                    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest));
-                }
-                
-                const { apiFunction, args, resolve } = apiRequestQueue.shift();
-                lastRequestTime = Date.now();
-                
-                const result = await apiFunction(...args);
-                resolve(result);
-            }
-            
-            isProcessingQueue = false;
-        }
-        
-        async function retryWithBackoff(apiFunction, maxRetries = 3) {
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    const result = await apiFunction();
-                    return result;
-                } catch (error) {
-                    if (error.message.includes('429') || error.message.includes('rate limit')) {
-                        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
-                        console.log(`Rate limit hit. Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`);
-                        showToast(`Esperando ${delay/1000}s para reintentar... (${attempt + 1}/${maxRetries})`, 'warning');
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        throw error;
-                    }
-                }
-            }
-            throw new Error('Máximo de reintentos alcanzado. Por favor intente más tarde.');
-        }
-        
-        // ========== GOOGLE GEMINI API WITH RETRY ==========
+        // ========== GOOGLE GEMINI API ==========
         async function callGoogleGeminiAPI(prompt) {
             const apiKey = localStorage.getItem('googleApiKey');
             if (!apiKey) {
@@ -7957,7 +8645,7 @@ INSTRUCCIONES:
             
             const fullPrompt = `${systemPrompt}\n\n---\n\nSOLICITUD DEL USUARIO:\n${prompt}`;
             
-            const makeRequest = async () => {
+            try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: {
@@ -7977,9 +8665,6 @@ INSTRUCCIONES:
                 });
                 
                 if (!response.ok) {
-                    if (response.status === 429) {
-                        throw new Error('429 - Rate limit exceeded');
-                    }
                     const error = await response.json();
                     throw new Error(error.error?.message || 'Error en la API de Google');
                 }
@@ -7991,10 +8676,6 @@ INSTRUCCIONES:
                 } else {
                     throw new Error('Respuesta inesperada de Google Gemini');
                 }
-            };
-            
-            try {
-                return await retryWithBackoff(makeRequest);
             } catch (error) {
                 console.error('Google API Error:', error);
                 showToast('Error: ' + error.message, 'error');
@@ -8002,7 +8683,7 @@ INSTRUCCIONES:
             }
         }
         
-        // ========== ANTHROPIC CLAUDE API WITH RETRY ==========
+        // ========== ANTHROPIC CLAUDE API ==========
         async function callAnthropicAPI(prompt) {
             const apiKey = localStorage.getItem('anthropicApiKey');
             if (!apiKey) {
@@ -8014,7 +8695,7 @@ INSTRUCCIONES:
             const dataSummary = getDataSummaryForAI();
             const systemPrompt = getSystemPrompt(dataSummary);
             
-            const makeRequest = async () => {
+            try {
                 const response = await fetch('https://api.anthropic.com/v1/messages', {
                     method: 'POST',
                     headers: {
@@ -8034,19 +8715,12 @@ INSTRUCCIONES:
                 });
                 
                 if (!response.ok) {
-                    if (response.status === 429) {
-                        throw new Error('429 - Rate limit exceeded');
-                    }
                     const error = await response.json();
                     throw new Error(error.error?.message || 'Error en la API de Anthropic');
                 }
                 
                 const result = await response.json();
                 return result.content[0].text;
-            };
-            
-            try {
-                return await retryWithBackoff(makeRequest);
             } catch (error) {
                 console.error('Anthropic API Error:', error);
                 showToast('Error: ' + error.message, 'error');
@@ -8054,16 +8728,15 @@ INSTRUCCIONES:
             }
         }
         
-        // ========== UNIFIED AI CALL WITH THROTTLING ==========
+        // ========== UNIFIED AI CALL ==========
         async function callAI(prompt) {
             const providerName = currentAIProvider === 'google' ? 'Google Gemini' : 'Anthropic Claude';
             document.getElementById('aiLoadingText').textContent = `Analizando con ${providerName}...`;
             
-            // Use throttled call to prevent rate limiting
             if (currentAIProvider === 'google') {
-                return await throttledAPICall(callGoogleGeminiAPI, prompt);
+                return await callGoogleGeminiAPI(prompt);
             } else {
-                return await throttledAPICall(callAnthropicAPI, prompt);
+                return await callAnthropicAPI(prompt);
             }
         }
         
@@ -8078,13 +8751,7 @@ INSTRUCCIONES:
                 'salud': 'Evalúa el estado de salud del hato: vacunaciones al día, tratamientos recientes, animales en retiro. ¿Qué acciones sanitarias se necesitan próximamente?',
                 'potreros': 'Analiza la eficiencia de uso de potreros: ocupación, rotación, días de descanso. ¿Están bien distribuidos los animales? ¿Hay potreros subutilizados?',
                 'proyeccion': 'Genera una proyección a 30, 60 y 90 días: cuántos animales llegarán al peso objetivo, ingreso estimado por ventas, y recomendaciones de timing para maximizar ganancias.',
-                'recomendaciones': 'Basándote en todos los datos, genera las 5 recomendaciones más importantes para mejorar la rentabilidad de la finca en los próximos 3 meses.',
-                'costos': 'Analiza la estructura de costos: inversión total, costo por animal, costo por kg de ganancia, y proyección de gastos. Identifica oportunidades de reducción de costos.',
-                'mercado': 'Analiza las tendencias del mercado basándote en el historial de ventas: mejor época para vender, precios promedio obtenidos, y recomendaciones para maximizar ingresos en ventas futuras.',
-                'breeding': 'Analiza el programa reproductivo: hembras en edad reproductiva, tasas de natalidad, calidad genética del hato. Recomendaciones para mejorar la genética.',
-                'financiero': 'Genera un reporte financiero completo: flujo de caja, ROI por lote, punto de equilibrio, y proyección de ganancias a 6 meses.',
-                'comparativo': 'Compara el rendimiento actual con períodos anteriores: crecimiento del hato, mejora en GDP, eficiencia de costos, y tendencias importantes.',
-                'alertas': 'Identifica alertas críticas: animales con bajo rendimiento, problemas de salud, oportunidades de venta inminentes, y acciones urgentes requeridas.'
+                'recomendaciones': 'Basándote en todos los datos, genera las 5 recomendaciones más importantes para mejorar la rentabilidad de la finca en los próximos 3 meses.'
             };
             
             const prompt = prompts[type];
@@ -8179,6 +8846,10 @@ INSTRUCCIONES:
             }, 3000);
         }
     </script>
+    <script src="photo-auto-recognition.js"></script>
+    <script src="cattle-weight-v6.js"></script>
+    <script src="photo-breed-detection.js"></script>
+
 </body>
 
     <!-- AI Auto-Recognition Styles -->
