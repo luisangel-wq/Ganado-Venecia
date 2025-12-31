@@ -407,7 +407,7 @@ function updateAnalyzeButtonState() {
 }
 
 /**
- * Analyze classified photos with AI
+ * Analyze classified photos with AI + BREED DETECTION
  */
 async function analyzeClassifiedPhotos() {
     if (photoBatch.photos.length === 0) {
@@ -427,8 +427,35 @@ async function analyzeClassifiedPhotos() {
         estimacionActual.animalId = photoBatch.detectedChapeta;
     }
     
-    // Call existing analyze function
-    await analyzeWithGemini();
+    // STEP 1: Detect breed first (parallel with measurement analysis)
+    let breedPromise = null;
+    if (typeof BreedDetection !== 'undefined') {
+        showToast('🧬 Detectando raza del animal...', 'info');
+        breedPromise = BreedDetection.detectBreed(estimacionActual.fotos);
+    }
+    
+    // STEP 2: Analyze measurements
+    const measurementPromise = analyzeWithGemini();
+    
+    // Wait for both to complete
+    try {
+        const [breedResult] = await Promise.all([breedPromise, measurementPromise]);
+        
+        // Display breed detection results
+        if (breedResult && typeof BreedDetection !== 'undefined') {
+            BreedDetection.showBreedUI(breedResult);
+            
+            // Store breed in estimacionActual
+            estimacionActual.raza = breedResult.breed;
+            
+            // Recalculate weight with breed info
+            if (typeof calcularPesoFoto === 'function') {
+                setTimeout(() => calcularPesoFoto(), 500);
+            }
+        }
+    } catch (error) {
+        console.error('Error in analysis:', error);
+    }
 }
 
 /**
