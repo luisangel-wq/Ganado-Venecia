@@ -47,9 +47,11 @@ FORMATO DE RESPUESTA:
 Responde SOLO con el JSON, sin texto adicional.`;
 }
 
-// Rate limiting state
+// Rate limiting state with queue
 let lastApiCall = 0;
-const MIN_API_INTERVAL = 2000; // 2 seconds between calls
+const MIN_API_INTERVAL = 3000; // 3 seconds between calls (more conservative)
+let apiQueue = [];
+let isProcessingQueue = false;
 
 /**
  * Wait for rate limit cooldown
@@ -60,6 +62,7 @@ async function waitForRateLimit() {
     
     if (timeSinceLastCall < MIN_API_INTERVAL) {
         const waitTime = MIN_API_INTERVAL - timeSinceLastCall;
+        console.log(`⏳ Esperando ${waitTime}ms antes de llamar API...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -67,25 +70,40 @@ async function waitForRateLimit() {
 }
 
 /**
- * Retry with exponential backoff
+ * Retry with exponential backoff - improved version
  */
-async function retryWithBackoff(fn, maxRetries = 3) {
+async function retryWithBackoff(fn, maxRetries = 4) {
     for (let i = 0; i < maxRetries; i++) {
         try {
             return await fn();
         } catch (error) {
             const isRateLimit = error.message.includes('429') || 
                                error.message.includes('quota') || 
-                               error.message.includes('rate limit');
+                               error.message.includes('rate limit') ||
+                               error.message.includes('RESOURCE_EXHAUSTED');
             
             if (isRateLimit && i < maxRetries - 1) {
-                // Extract retry delay from error message if available
-                const retryMatch = error.message.match(/retry in ([\d.]+)s/i);
-                const retryDelay = retryMatch ? parseFloat(retryMatch[1]) * 1000 : Math.pow(2, i) * 2000;
+                // More aggressive backoff: 5s, 10s, 20s, 40s
+                const retryDelay = Math.pow(2, i + 2) * 1000; // Start at 4 seconds
                 
-                console.log(`Rate limit hit. Retrying in ${retryDelay/1000}s... (attempt ${i + 1}/${maxRetries})`);
+                const userMessage = `⏳ Límite de API alcanzado. Reintentando en ${retryDelay/1000} segundos... (intento ${i + 1}/${maxRetries})`;
+                console.log(userMessage);
+                
+                // Show toast to user
+                if (typeof showToast === 'function') {
+                    showToast(userMessage, 'warning');
+                }
+                
                 await new Promise(resolve => setTimeout(resolve, retryDelay));
+                
+                // Wait additional time after backoff before retry
+                await waitForRateLimit();
                 continue;
+            }
+            
+            // If not rate limit or max retries reached
+            if (isRateLimit) {
+                throw new Error('Límite de API alcanzado. Por favor espere 60 segundos antes de intentar nuevamente.');
             }
             
             throw error;
@@ -191,8 +209,15 @@ function parseClassificationResponse(aiText) {
 async function handleMultiplePhotoUpload(files) {
     if (!files || files.length === 0) return;
     
+    // Limit number of photos to prevent rate limiting
+    const maxPhotos = 4;
+    if (files.length > maxPhotos) {
+        showToast(`⚠️ Máximo ${maxPhotos} fotos a la vez para evitar límites de API. Procesando las primeras ${maxPhotos}...`, 'warning');
+        files = Array.from(files).slice(0, maxPhotos);
+    }
+    
     // Show loading
-    showAutoRecognitionLoading(true, 'Analizando fotos con IA...');
+    showAutoRecognitionLoading(true, `Analizando ${files.length} fotos con IA... Por favor espere...`);
     
     try {
         // Convert files to data URLs
@@ -208,7 +233,8 @@ async function handleMultiplePhotoUpload(files) {
             detected: false
         }));
         
-        // Call AI for classification
+        // Call AI for classification with rate limiting
+        showAutoRecognitionLoading(true, 'Conectando con IA (puede tomar 3-10 segundos)...');
         const classification = await classifyPhotosWithAI(photoDataArray);
         
         // Apply classification results
@@ -228,18 +254,26 @@ async function handleMultiplePhotoUpload(files) {
     } catch (error) {
         showAutoRecognitionLoading(false);
         
+        console.error('Classification error:', error);
+        
         // Better error messages
         let userMessage = '❌ Error en clasificación: ';
+        let messageType = 'warning';
         
-        if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate limit')) {
-            userMessage = '⏳ Límite de API alcanzado. Las fotos se cargaron pero sin clasificación automática. Por favor, clasifica manualmente o espera 1 minuto y vuelve a intentar.';
+        if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate limit') || error.message.includes('RESOURCE_EXHAUSTED')) {
+            userMessage = '⏳ Límite de API alcanzado después de varios reintentos.\n\n' +
+                         '✅ Las fotos se cargaron correctamente - puedes clasificarlas manualmente.\n\n' +
+                         '💡 Espera 60 segundos antes de subir más fotos con IA.\n\n' +
+                         '🎯 Tip: Sube máximo 4 fotos a la vez para evitar límites.';
+            messageType = 'info';
         } else if (error.message.includes('API Key')) {
-            userMessage = '❌ API Key no configurada. Ve a Configuración para agregar tu API Key de Google.';
+            userMessage = '❌ API Key no configurada.\n\nVe a la pestaña IA → Configuración para agregar tu API Key de Google Gemini.';
+            messageType = 'error';
         } else {
             userMessage += error.message;
         }
         
-        showToast(userMessage, 'warning');
+        showToast(userMessage, messageType);
         
         // Fallback: show photos without classification so user can classify manually
         displayClassifiedPhotos();
