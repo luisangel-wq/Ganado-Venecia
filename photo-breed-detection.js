@@ -210,7 +210,7 @@ ONLY respond with the JSON, no additional text.`;
         },
 
         /**
-         * Show breed detection UI
+         * Show breed detection UI - Now with smart learning integration
          */
         showBreedUI(breedData) {
             const container = document.getElementById('breedDetectionResult');
@@ -247,7 +247,7 @@ ONLY respond with the JSON, no additional text.`;
                                 Ratio perímetro: ${ratio} | Confianza: <span style="color: ${confidenceColor}; font-weight: 700;">${breedData.confidence}%</span>
                             </div>
                         </div>
-                        <button onclick="showBreedChangeDialog()" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">
+                        <button onclick="showSmartBreedSelector('${breedData.breed}')" class="btn btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.8rem;">
                             ✏️ Cambiar
                         </button>
                     </div>
@@ -268,6 +268,7 @@ ONLY respond with the JSON, no additional text.`;
                     ` : ''}
 
                     <input type="hidden" id="detectedBreed" value="${breedData.breed}">
+                    <input type="hidden" id="aiSuggestedBreed" value="${breedData.breed}">
                 </div>
             `;
 
@@ -290,55 +291,39 @@ ONLY respond with the JSON, no additional text.`;
         },
 
         /**
-         * Show dialog to change breed
+         * Show smart breed selector (delegates to learning system)
          */
-        showBreedChangeDialog() {
-            const breeds = GanadoVeneciaWeight?.getBreedOptions?.() || [];
-            const currentBreed = document.getElementById('detectedBreed')?.value || '';
+        showSmartBreedSelector(aiSuggestion) {
+            if (typeof openSmartBreedSelector === 'function') {
+                openSmartBreedSelector(aiSuggestion, (breedValue, breedInfo) => {
+                    // Update detected breed
+                    document.getElementById('detectedBreed').value = breedValue;
+                    
+                    // Update breed selector
+                    const breedSelect = document.getElementById('inputRaza');
+                    if (breedSelect) {
+                        breedSelect.value = breedValue;
+                    }
 
-            const html = `
-                <div class="modal active" id="breedChangeModal" onclick="if(event.target===this) closeBreedChangeDialog()">
-                    <div class="modal-content" style="max-width: 500px;">
-                        <div class="modal-header" style="background: linear-gradient(135deg, #a855f7, #7c3aed);">
-                            <span>🧬 Cambiar Raza del Animal</span>
-                            <button class="modal-close" onclick="closeBreedChangeDialog()">×</button>
-                        </div>
-                        <div class="modal-body">
-                            <p style="margin-bottom: 1rem; color: #6b7280;">
-                                Si la IA no detectó correctamente la raza, selecciónala manualmente:
-                            </p>
-                            <div id="breedOptions" style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                ${breeds.map(b => `
-                                    <label class="breed-option" style="display: flex; align-items: center; padding: 1rem; border: 2px solid ${b.value === currentBreed ? '#a855f7' : '#e5e7eb'}; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: ${b.value === currentBreed ? '#faf5ff' : 'white'};">
-                                        <input type="radio" name="breedChoice" value="${b.value}" ${b.value === currentBreed ? 'checked' : ''} style="margin-right: 0.75rem;">
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 600; color: #374151;">
-                                                ${b.icon} ${b.label}
-                                            </div>
-                                            <div style="font-size: 0.8rem; color: #6b7280;">
-                                                ${b.description} | Ratio: ${b.ratio}
-                                            </div>
-                                        </div>
-                                    </label>
-                                `).join('')}
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-secondary" onclick="closeBreedChangeDialog()">Cancelar</button>
-                            <button class="btn btn-primary" onclick="confirmBreedChange()" style="background: #a855f7;">
-                                ✅ Confirmar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+                    // Show updated breed info
+                    this.showBreedUI({
+                        breed: breedValue,
+                        breedName: breedInfo.label,
+                        confidence: 100,
+                        evidence: ['Seleccionado manualmente por el usuario'],
+                        alternatives: [],
+                        notes: 'Confirmado manualmente'
+                    });
 
-            const existingModal = document.getElementById('breedChangeModal');
-            if (existingModal) {
-                existingModal.remove();
+                    // Recalculate with new breed
+                    if (typeof calcularPesoFoto === 'function') {
+                        calcularPesoFoto();
+                    }
+                });
+            } else {
+                console.error('Breed Learning System not loaded');
+                showToast?.('Sistema de aprendizaje no disponible', 'error');
             }
-
-            document.body.insertAdjacentHTML('beforeend', html);
         }
     };
 

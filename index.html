@@ -1557,6 +1557,10 @@
                 <span class="nav-tab-icon">📈</span>
                 <span>Reportes</span>
             </button>
+            <button class="nav-tab" data-tab="fotos">
+                <span class="nav-tab-icon">📸</span>
+                <span>Fotos</span>
+            </button>
             <button class="nav-tab" data-tab="analytics">
                 <span class="nav-tab-icon">🤖</span>
                 <span>IA</span>
@@ -2659,6 +2663,72 @@
         </div>
         
         
+        <!-- Tab: Fotos -->
+        <div id="tab-fotos" class="tab-content">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">
+                    <span>📸 Fotos de Animales</span>
+                </div>
+                <div class="card-body">
+                    <div class="form-hint" style="margin-bottom: 1.5rem; padding: 1rem; background: #e3f2fd; border-radius: 8px;">
+                        💡 <strong>Instrucciones:</strong> Primero ingresa el número de chapeta del animal, luego toma la foto desde tu cámara móvil.
+                    </div>
+                    
+                    <!-- Step 1: Enter Chapeta -->
+                    <div id="fotoChapetaStep">
+                        <div class="form-group">
+                            <label class="form-label">Número de Chapeta <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="fotoSimpleChapeta" placeholder="Ej: 123" style="font-size: 1.2rem; font-weight: bold;">
+                        </div>
+                        <button class="btn btn-primary" onclick="startPhotoCapture()" style="width: 100%;">
+                            📷 Continuar a Tomar Foto
+                        </button>
+                    </div>
+                    
+                    <!-- Step 2: Take Photo (hidden initially) -->
+                    <div id="fotoCameraStep" style="display: none;">
+                        <div style="background: #e8f5e9; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong>Animal: #<span id="fotoCurrentChapeta">---</span></strong>
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                            <label class="btn btn-success" style="flex: 1; cursor: pointer;">
+                                📸 Cámara
+                                <input type="file" accept="image/*" capture="environment" onchange="handleSimplePhotoCapture(event)" style="display: none;">
+                            </label>
+                            <label class="btn btn-primary" style="flex: 1; cursor: pointer;">
+                                🖼️ Galería
+                                <input type="file" accept="image/*" onchange="handleSimplePhotoCapture(event)" style="display: none;">
+                            </label>
+                        </div>
+                        
+                        <!-- Photo Preview -->
+                        <div id="fotoPreviewContainer" style="display: none; margin-top: 1rem;">
+                            <img id="fotoPreviewImg" src="" style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-bottom: 1rem;">
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="saveSimplePhoto()">💾 Guardar Foto</button>
+                                <button class="btn btn-secondary" onclick="cancelSimplePhoto()">🗑️ Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gallery of existing photos -->
+            <div class="card">
+                <div class="card-header">
+                    <span>🖼️ Galería de Fotos</span>
+                </div>
+                <div class="card-body">
+                    <div id="fotoGalleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem;">
+                        <div style="grid-column: 1/-1; text-align: center; color: var(--gray); padding: 2rem;">
+                            No hay fotos guardadas
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Tab: Reportes -->
         <div id="tab-reportes" class="tab-content">
             <div class="summary-grid">
@@ -2773,10 +2843,16 @@
                             
                             <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
                                 <!-- Chapeta photo capture -->
-                                <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0;">
-                                    📷 Foto de Chapeta
-                                    <input type="file" accept="image/*" capture="environment" onchange="handleChapetaCapture(event)" style="display: none;">
-                                </label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0;">
+                                        📷 Cámara
+                                        <input type="file" accept="image/*" capture="environment" onchange="handleChapetaCapture(event)" style="display: none;">
+                                    </label>
+                                    <label class="btn btn-outline" style="cursor: pointer; margin-bottom: 0;">
+                                        🖼️ Galería
+                                        <input type="file" accept="image/*" onchange="handleChapetaCapture(event)" style="display: none;">
+                                    </label>
+                                </div>
                                 <span style="align-self: center; color: var(--gray);">ó</span>
                                 <div style="flex: 1; min-width: 150px;">
                                     <input type="text" class="form-input" id="fotoNumeroManual" placeholder="Ingresar # chapeta" oninput="handleManualChapeta(event)">
@@ -2919,11 +2995,11 @@
                                 
                                 <!-- Camera capture buttons -->
                                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                                    <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0;">
-                                        📷 Tomar Foto
+                                    <label class="btn btn-primary" style="cursor: pointer; margin-bottom: 0; flex: 1;">
+                                        📷 Cámara
                                         <input type="file" accept="image/*" capture="environment" onchange="handlePhotoCapture(event)" style="display: none;">
                                     </label>
-                                    <label class="btn btn-outline" style="cursor: pointer; margin-bottom: 0;">
+                                    <label class="btn btn-outline" style="cursor: pointer; margin-bottom: 0; flex: 1;">
                                         🖼️ Galería
                                         <input type="file" accept="image/*" onchange="handlePhotoCapture(event)" style="display: none;">
                                     </label>
