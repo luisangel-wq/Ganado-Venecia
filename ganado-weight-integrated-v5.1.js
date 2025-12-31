@@ -1,20 +1,20 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * 🐄 GANADO VENECIA - INTEGRATED WEIGHT ESTIMATION MODULE v5.0
+ * 🐄 GANADO VENECIA - INTEGRATED WEIGHT ESTIMATION MODULE v5.1
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * This module:
- * 1. Replaces the faulty perímetro calculation with calibrated ratios
- * 2. Auto-calibrates from inventory entry weights
- * 3. Learns from each real weight you enter
- * 4. Provides realistic confidence estimates
+ * CALIBRATION DATA (from 5 real weights - Venecia herd):
+ * ┌─────────┬────────────────────┬───────┬────────┬────────┬───────┐
+ * │ Animal  │ Breed Type         │ Largo │ Altura │ Peso   │ Ratio │
+ * ├─────────┼────────────────────┼───────┼────────┼────────┼───────┤
+ * │ #278    │ Cebú dominante     │ 125   │ 105    │ 231 kg │ 1.348 │
+ * │ Tan     │ Cebú × Europeo     │ 115   │ 102    │ 204 kg │ 1.360 │
+ * │ Tan     │ Cebú × Europeo     │ 118   │ 103    │ 210 kg │ 1.348 │
+ * │ Black   │ Girolando (Gir×Hol)│ 130   │ 108    │ 255 kg │ 1.350 │
+ * │ #274    │ Europeo carne      │ 128   │ 107    │ 272 kg │ 1.418 │
+ * └─────────┴────────────────────┴───────┴────────┴────────┴───────┘
  * 
- * CALIBRATION DATA (from your real weights):
- * - Animal 1: 231 kg (largo=125, altura=105, ancho=55) → ratio 1.348
- * - Animal 2: 204 kg (largo=115, altura=102, ancho=50) → ratio 1.360
- * - Animal 3: 210 kg (largo=118, altura=103, ancho=52) → ratio 1.348
- * - Average ratio: 1.352
- * - Average error with calibration: 3.7%
+ * KEY INSIGHT: European beef breeds have ~5% higher ratio (deeper chest)
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -23,46 +23,108 @@
     'use strict';
 
     // ════════════════════════════════════════════════════════════════════════
-    // CONFIGURATION - CALIBRATED FOR VENECIA
+    // CONFIGURATION - CALIBRATED FOR VENECIA WITH BREED ADJUSTMENT
     // ════════════════════════════════════════════════════════════════════════
     
     const CONFIG = {
-        version: '5.0',
+        version: '5.1',
         
-        // Calibrated ratio (perímetro / altura) from 3 real weights
-        // This is the KEY fix - original code used wrong ellipse formula
-        baseRatio: 1.35,
+        // Breed-specific ratios (perímetro / altura)
+        // Based on 5 real weights from Venecia herd
+        breedRatios: {
+            'cebu_puro': 1.34,        // Cebú dominante (>70% Brahman) - lean frame, large ears, hump
+            'cebu_europeo': 1.35,     // F1 cross (50-50) - medium build, moderate hump
+            'girolando': 1.35,        // Gir × Holstein - dairy cross, tropical adapted
+            'europeo_lechero': 1.35,  // Pure Holstein/Jersey type - angular, no hump
+            'europeo_carne': 1.42     // Angus/Simmental/Charolais - deep chest, muscular, no hump
+        },
+        
+        // Default ratio (weighted average)
+        baseRatio: 1.36,
         
         // BCS adjustment: each BCS point = ±0.04 ratio change
         bcsAdjustment: 0.04,
         
         // Ancho/altura adjustment factor
         anchoBaseline: 0.52,
-        anchoFactor: 0.15,
+        anchoFactor: 0.12,
         
         // Valid ranges
-        minRatio: 1.15,
+        minRatio: 1.20,
         maxRatio: 1.55,
         
         // Formula constants
         schaefferConstant: 10840,
         
         // Storage
-        storageKey: 'ganado_venecia_calibration_v5'
+        storageKey: 'ganado_venecia_calibration_v5.1'
     };
 
     // ════════════════════════════════════════════════════════════════════════
-    // CALIBRATION DATA - INITIALIZED WITH YOUR REAL WEIGHTS
+    // BREED IDENTIFICATION HELPERS
+    // ════════════════════════════════════════════════════════════════════════
+    
+    const BREED_CHARACTERISTICS = {
+        'cebu_puro': {
+            name: 'Cebú Puro/Dominante',
+            description: 'Brahman >70%',
+            visual: ['Gray/white spotted', 'Large pendulous ears', 'Prominent hump', 'Lean angular frame', 'Loose skin/dewlap'],
+            ratio: 1.34,
+            icon: '🐂'
+        },
+        'cebu_europeo': {
+            name: 'Cebú × Europeo (F1)',
+            description: 'Cruce carne 50-50',
+            visual: ['Fawn/tan color', 'Medium ears', 'Small hump', 'Medium frame'],
+            ratio: 1.35,
+            icon: '🔀'
+        },
+        'girolando': {
+            name: 'Girolando',
+            description: 'Gir × Holstein (lechero tropical)',
+            visual: ['Black & white or reddish', 'Medium ears (Gir influence)', 'Small/no hump', 'Dairy frame', 'Heat tolerant'],
+            ratio: 1.35,
+            icon: '🥛'
+        },
+        'europeo_lechero': {
+            name: 'Europeo Lechero Puro',
+            description: 'Holstein/Jersey puro',
+            visual: ['Black & white or fawn', 'Small ears', 'No hump', 'Angular dairy frame', 'Prominent hip bones'],
+            ratio: 1.35,
+            icon: '🐄'
+        },
+        'europeo_carne': {
+            name: 'Europeo Carne',
+            description: 'Angus/Simmental/Charolais',
+            visual: ['Solid black/red/brindle', 'Small ears', 'No hump', 'DEEP barrel chest', 'Heavy muscling', 'Blocky build'],
+            ratio: 1.42,
+            icon: '🥩'
+        }
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CALIBRATION DATA - INITIALIZED WITH 5 REAL WEIGHTS
     // ════════════════════════════════════════════════════════════════════════
     
     let calibration = {
         points: [
-            { id: 'CAL_001', fecha: '2024-12-30', largo: 125, altura: 105, ancho: 55, pesoReal: 231, ratio: 1.348 },
-            { id: 'CAL_002', fecha: '2024-12-30', largo: 115, altura: 102, ancho: 50, pesoReal: 204, ratio: 1.360 },
-            { id: 'CAL_003', fecha: '2024-12-30', largo: 118, altura: 103, ancho: 52, pesoReal: 210, ratio: 1.348 }
+            { id: '#278', fecha: '2024-12-30', largo: 125, altura: 105, ancho: 55, pesoReal: 231, ratio: 1.348, raza: 'cebu_puro' },
+            { id: 'TAN_204', fecha: '2024-12-30', largo: 115, altura: 102, ancho: 50, pesoReal: 204, ratio: 1.360, raza: 'cebu_europeo' },
+            { id: 'TAN_210', fecha: '2024-12-30', largo: 118, altura: 103, ancho: 52, pesoReal: 210, ratio: 1.348, raza: 'cebu_europeo' },
+            { id: 'GIROLANDO_255', fecha: '2024-12-30', largo: 130, altura: 108, ancho: 58, pesoReal: 255, ratio: 1.350, raza: 'girolando' },
+            { id: '#274', fecha: '2024-12-30', largo: 128, altura: 107, ancho: 55, pesoReal: 272, ratio: 1.418, raza: 'europeo_carne' }
         ],
-        averageRatio: 1.352,
-        totalPoints: 3,
+        
+        // Breed-specific averages
+        breedAverages: {
+            'cebu_puro': { ratio: 1.348, count: 1 },
+            'cebu_europeo': { ratio: 1.354, count: 2 },
+            'girolando': { ratio: 1.350, count: 1 },
+            'europeo_carne': { ratio: 1.418, count: 1 }
+        },
+        
+        averageRatio: 1.365,
+        totalPoints: 5,
         lastUpdated: '2024-12-30'
     };
 
@@ -71,20 +133,31 @@
     // ════════════════════════════════════════════════════════════════════════
     
     /**
-     * Calculate perímetro using CALIBRATED ratio (not ellipse formula)
-     * This is the KEY FIX
+     * Get base ratio for a breed type
      */
-    function calcularPerimetroCalibrado(altura, ancho, bcs = 5) {
+    function getRatioForBreed(raza) {
+        // First check calibration data
+        if (calibration.breedAverages[raza] && calibration.breedAverages[raza].count > 0) {
+            return calibration.breedAverages[raza].ratio;
+        }
+        // Fall back to config defaults
+        return CONFIG.breedRatios[raza] || CONFIG.baseRatio;
+    }
+
+    /**
+     * Calculate perímetro using BREED-ADJUSTED calibrated ratio
+     */
+    function calcularPerimetroCalibrado(altura, ancho, bcs = 5, raza = null) {
         if (!altura || altura < 60) return null;
         
-        // Start with calibrated base ratio
-        let ratio = calibration.averageRatio || CONFIG.baseRatio;
+        // Get base ratio for breed (or average if unknown)
+        let ratio = raza ? getRatioForBreed(raza) : calibration.averageRatio;
         
         // Adjust for BCS (Body Condition Score)
         const bcsOffset = (bcs - 5) * CONFIG.bcsAdjustment;
         ratio += bcsOffset;
         
-        // Adjust for body width proportion (if available)
+        // Adjust for body width proportion
         if (ancho && ancho > 20) {
             const anchoRatio = ancho / altura;
             const anchoOffset = (anchoRatio - CONFIG.anchoBaseline) * CONFIG.anchoFactor;
@@ -109,11 +182,11 @@
     }
 
     /**
-     * Main estimation function
+     * Main estimation function WITH BREED
      */
-    function estimarPeso(largo, altura, ancho, bcs = 5) {
-        // Calculate perímetro with calibrated formula
-        const perimetro = calcularPerimetroCalibrado(altura, ancho, bcs);
+    function estimarPeso(largo, altura, ancho, bcs = 5, raza = null) {
+        // Calculate perímetro with breed-adjusted formula
+        const perimetro = calcularPerimetroCalibrado(altura, ancho, bcs, raza);
         if (!perimetro) {
             return { success: false, error: 'Medidas insuficientes' };
         }
@@ -124,9 +197,12 @@
             return { success: false, error: 'No se pudo calcular el peso' };
         }
         
-        // Calculate range (±8% based on calibration accuracy)
+        // Calculate range (±8%)
         const rangoMin = Math.round(peso * 0.92);
         const rangoMax = Math.round(peso * 1.08);
+        
+        // Get breed info
+        const breedInfo = raza ? BREED_CHARACTERISTICS[raza] : null;
         
         return {
             success: true,
@@ -134,9 +210,13 @@
             rango: { min: rangoMin, max: rangoMax },
             perimetro,
             ratio: perimetro / altura,
+            raza: raza,
+            razaNombre: breedInfo ? breedInfo.name : 'No especificada',
+            razaIcon: breedInfo ? breedInfo.icon : '🐄',
             calibracion: {
                 puntos: calibration.totalPoints,
-                ratioPromedio: calibration.averageRatio
+                ratioPromedio: calibration.averageRatio,
+                ratioUsado: perimetro / altura
             }
         };
     }
@@ -146,9 +226,9 @@
     // ════════════════════════════════════════════════════════════════════════
     
     /**
-     * Add a calibration point from a real weight
+     * Add a calibration point from a real weight WITH BREED
      */
-    function agregarCalibracion(id, largo, altura, ancho, pesoReal) {
+    function agregarCalibracion(id, largo, altura, ancho, pesoReal, raza = null) {
         if (!largo || !altura || !pesoReal) return null;
         
         // Calculate the perímetro that would produce this weight
@@ -169,7 +249,8 @@
             largo, altura, ancho,
             pesoReal,
             perimetroIdeal: Math.round(perimetroIdeal * 10) / 10,
-            ratio: Math.round(ratioIdeal * 1000) / 1000
+            ratio: Math.round(ratioIdeal * 1000) / 1000,
+            raza: raza
         };
         
         if (existingIndex >= 0) {
@@ -178,7 +259,7 @@
             calibration.points.push(newPoint);
         }
         
-        // Recalculate average
+        // Recalculate averages
         recalcularPromedios();
         
         // Save
@@ -197,48 +278,33 @@
             return;
         }
         
-        const sumRatio = calibration.points.reduce((sum, p) => sum + p.ratio, 0);
-        calibration.averageRatio = Math.round((sumRatio / calibration.points.length) * 1000) / 1000;
-        calibration.totalPoints = calibration.points.length;
-        calibration.lastUpdated = new Date().toISOString().split('T')[0];
-    }
-
-    /**
-     * Auto-calibrate from inventory when animals have entry weights
-     */
-    function autoCalibrateFromInventory() {
-        // Get inventory from the app's data structure
-        const appData = JSON.parse(localStorage.getItem('ganadoData_venecia') || '{}');
-        const inventario = appData.inventario || [];
+        // Reset breed averages
+        calibration.breedAverages = {};
         
-        let calibrated = 0;
+        let totalRatio = 0;
         
-        inventario.forEach(animal => {
-            // Check if animal has entry weight and photo measurements
-            const pesoEntrada = animal.peso;
-            const medidas = animal.medidasFoto;
+        calibration.points.forEach(p => {
+            totalRatio += p.ratio;
             
-            if (pesoEntrada && medidas && medidas.largo && medidas.altura) {
-                // Check if already calibrated
-                const exists = calibration.points.find(p => p.id === animal.numero);
-                if (!exists) {
-                    const result = agregarCalibracion(
-                        animal.numero,
-                        medidas.largo,
-                        medidas.altura,
-                        medidas.ancho || null,
-                        pesoEntrada
-                    );
-                    if (result) calibrated++;
+            // Update breed-specific average
+            if (p.raza) {
+                if (!calibration.breedAverages[p.raza]) {
+                    calibration.breedAverages[p.raza] = { ratio: 0, count: 0, sum: 0 };
                 }
+                calibration.breedAverages[p.raza].sum += p.ratio;
+                calibration.breedAverages[p.raza].count++;
             }
         });
         
-        if (calibrated > 0) {
-            console.log(`🐄 Auto-calibrado con ${calibrated} animales del inventario`);
-        }
+        // Calculate breed averages
+        Object.keys(calibration.breedAverages).forEach(raza => {
+            const data = calibration.breedAverages[raza];
+            data.ratio = Math.round((data.sum / data.count) * 1000) / 1000;
+        });
         
-        return calibrated;
+        calibration.averageRatio = Math.round((totalRatio / calibration.points.length) * 1000) / 1000;
+        calibration.totalPoints = calibration.points.length;
+        calibration.lastUpdated = new Date().toISOString().split('T')[0];
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -259,7 +325,7 @@
             if (saved) {
                 const data = JSON.parse(saved);
                 calibration = { ...calibration, ...data };
-                console.log(`🐄 Calibración cargada: ${calibration.totalPoints} puntos, ratio: ${calibration.averageRatio}`);
+                console.log(`🐄 Calibración cargada: ${calibration.totalPoints} puntos`);
             }
         } catch (e) {
             console.warn('No se pudo cargar calibración');
@@ -267,7 +333,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // REPLACE calcularPesoFoto - THE MAIN FIX
+    // REPLACE calcularPesoFoto - WITH BREED SUPPORT
     // ════════════════════════════════════════════════════════════════════════
     
     function calcularPesoFotoMejorado() {
@@ -276,6 +342,10 @@
         const ancho = parseFloat(document.getElementById('inputAnchoCuerpo')?.value) || 0;
         const bcs = parseInt(document.getElementById('inputBCS')?.value) || 5;
         
+        // Get breed selection if available
+        const razaSelect = document.getElementById('inputRaza');
+        const raza = razaSelect ? razaSelect.value : null;
+        
         // Validation
         if (largo < 50 || altura < 60) {
             const resultDiv = document.getElementById('resultadosPesoFoto');
@@ -283,24 +353,24 @@
             return null;
         }
         
-        // ═══════════════════════════════════════════════════════════════
-        // KEY FIX: Use calibrated perímetro, NOT the ellipse formula
-        // ═══════════════════════════════════════════════════════════════
+        // Check for manual perímetro input
         let perimetro = parseFloat(document.getElementById('inputPerimetroToracico')?.value) || 0;
         
-        // If no perímetro entered or it's invalid, calculate with calibrated ratio
+        // If no perímetro entered, calculate with breed-adjusted ratio
         if (!perimetro || perimetro < 80 || perimetro > altura * 2.5) {
-            perimetro = calcularPerimetroCalibrado(altura, ancho, bcs);
+            perimetro = calcularPerimetroCalibrado(altura, ancho, bcs, raza);
             
-            // Update UI to show calculated perímetro
+            // Update UI
             const aiPerimetroEl = document.getElementById('aiPerimetro');
             if (aiPerimetroEl) {
-                aiPerimetroEl.innerHTML = `${perimetro} cm <span style="color: #10b981; font-size: 0.7em;">⚡ calibrado</span>`;
+                const breedInfo = raza ? BREED_CHARACTERISTICS[raza] : null;
+                const label = breedInfo ? breedInfo.icon + ' ' + breedInfo.name : 'promedio';
+                aiPerimetroEl.innerHTML = `${perimetro} cm <span style="color: #10b981; font-size: 0.7em;">⚡ ${label}</span>`;
             }
         }
         
         // Calculate weight
-        const result = estimarPeso(largo, altura, ancho, bcs);
+        const result = estimarPeso(largo, altura, ancho, bcs, raza);
         
         if (!result.success) {
             console.warn('Weight calculation failed:', result.error);
@@ -314,12 +384,14 @@
             if (estimacionActual.fotos?.trasera) confianza += 8;
             if (estimacionActual.fotos?.superior) confianza += 4;
         }
-        if (calibration.totalPoints >= 5) confianza += 5;
-        confianza = Math.min(confianza, 92);
+        if (raza) confianza += 5;
+        if (calibration.totalPoints >= 5) confianza += 3;
+        confianza = Math.min(confianza, 95);
         
         // Store result
         if (typeof estimacionActual !== 'undefined') {
             estimacionActual.medidas = { largo, altura, ancho, perimetro: result.perimetro };
+            estimacionActual.raza = raza;
             estimacionActual.resultado = {
                 peso: result.peso,
                 rango: result.rango,
@@ -327,6 +399,7 @@
                 confianza: confianza,
                 fecha: new Date().toISOString(),
                 metodo: estimacionActual.metodo || 'Calibrado',
+                raza: result.razaNombre,
                 calibracion: result.calibracion
             };
         }
@@ -346,8 +419,7 @@
         if (elements.perimetro) elements.perimetro.textContent = `${result.perimetro} cm`;
         if (elements.confianza) elements.confianza.textContent = `${confianza}%`;
         if (elements.metodo) {
-            const metodoText = (typeof estimacionActual !== 'undefined' && estimacionActual.metodo === 'IA Gemini') 
-                ? '🤖 IA + Cal' : '📊 Calibrado';
+            const metodoText = raza ? `${result.razaIcon} ${result.razaNombre}` : '📊 Calibrado';
             elements.metodo.textContent = metodoText;
         }
         
@@ -380,7 +452,7 @@
                 
                 if (diasEnFinca > 0) {
                     const ganancia = pesoActual - animal.peso;
-                    const gdp = Math.round((ganancia / diasEnFinca) * 1000); // g/día
+                    const gdp = Math.round((ganancia / diasEnFinca) * 1000);
                     
                     const gdpEl = document.getElementById('resultadoGDP');
                     if (gdpEl) gdpEl.textContent = `${gdp} g/día`;
@@ -391,82 +463,68 @@
         }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // CALIBRATION UI ENHANCEMENT
-    // ════════════════════════════════════════════════════════════════════════
-    
     /**
-     * Enhanced calibration when user enters real weight
+     * Get breed options for UI dropdown
      */
-    function calibrarConPesoReal() {
-        const pesoReal = parseFloat(document.getElementById('calibPesoReal')?.value);
+    function getBreedOptions() {
+        return Object.keys(BREED_CHARACTERISTICS).map(key => ({
+            value: key,
+            label: BREED_CHARACTERISTICS[key].name,
+            description: BREED_CHARACTERISTICS[key].description,
+            ratio: BREED_CHARACTERISTICS[key].ratio,
+            icon: BREED_CHARACTERISTICS[key].icon
+        }));
+    }
+
+    /**
+     * Add breed selector to the UI
+     */
+    function addBreedSelectorToUI() {
+        const container = document.getElementById('aiMeasurementResults');
+        if (!container || document.getElementById('inputRaza')) return;
         
-        if (!pesoReal || pesoReal < 50 || pesoReal > 800) {
-            showToast?.('⚠️ Ingresa un peso real válido (50-800 kg)', 'warning');
-            return;
-        }
+        const anchoRow = document.querySelector('[id*="inputAnchoCuerpo"]')?.closest('.ai-result-item');
+        if (!anchoRow) return;
         
-        if (typeof estimacionActual === 'undefined' || !estimacionActual.medidas) {
-            showToast?.('⚠️ Primero analiza las fotos para obtener medidas', 'warning');
-            return;
-        }
+        const razaHTML = `
+            <div class="ai-result-item" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #374151; font-weight: 600;">🧬 Tipo Genético</span>
+                    <select id="inputRaza" class="form-select" onchange="calcularPesoFoto()" style="width: 200px; font-size: 0.85rem;">
+                        <option value="">-- Auto (promedio) --</option>
+                        <option value="cebu_puro">🐂 Cebú Puro (1.34)</option>
+                        <option value="cebu_europeo">🔀 Cebú × Europeo (1.35)</option>
+                        <option value="girolando">🥛 Girolando - Gir×Holstein (1.35)</option>
+                        <option value="europeo_lechero">🐄 Europeo Lechero Puro (1.35)</option>
+                        <option value="europeo_carne">🥩 Europeo Carne (1.42)</option>
+                    </select>
+                </div>
+                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">
+                    Europeo Carne (Angus/Simmental) = pecho más profundo
+                </div>
+            </div>
+        `;
         
-        const { largo, altura, ancho } = estimacionActual.medidas;
-        const id = estimacionActual.animalId || `CALIB_${Date.now()}`;
-        
-        // Add calibration point
-        const newPoint = agregarCalibracion(id, largo, altura, ancho, pesoReal);
-        
-        if (newPoint) {
-            // Show success
-            showToast?.(`✅ Calibración guardada! Ratio: ${newPoint.ratio.toFixed(3)}. Total: ${calibration.totalPoints} puntos`, 'success');
-            
-            // Update UI to show calibration info
-            const calibInfo = document.getElementById('calibracionInfo');
-            if (calibInfo) {
-                calibInfo.innerHTML = `
-                    <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
-                        <div style="color: #059669; font-weight: 600;">✅ Calibración actualizada</div>
-                        <div style="font-size: 0.85rem; color: #374151;">
-                            Ratio de este animal: ${newPoint.ratio.toFixed(3)}<br>
-                            Ratio promedio: ${calibration.averageRatio}<br>
-                            Total puntos: ${calibration.totalPoints}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Recalculate weight with new calibration
-            calcularPesoFotoMejorado();
-            
-            // Clear the input
-            document.getElementById('calibPesoReal').value = '';
-        } else {
-            showToast?.('❌ Error al guardar calibración', 'error');
-        }
+        anchoRow.insertAdjacentHTML('afterend', razaHTML);
+        console.log('✅ Selector de raza agregado');
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // INITIALIZATION & REPLACEMENT
+    // INITIALIZATION
     // ════════════════════════════════════════════════════════════════════════
     
     function init() {
         // Load saved calibration
         cargarCalibracion();
         
-        // Try to auto-calibrate from inventory
-        setTimeout(() => {
-            autoCalibrateFromInventory();
-        }, 2000);
-        
-        // Replace the original calcularPesoFoto
+        // Replace calcularPesoFoto
         if (typeof global.calcularPesoFoto !== 'undefined') {
             global._originalCalcularPesoFoto = global.calcularPesoFoto;
         }
         global.calcularPesoFoto = calcularPesoFotoMejorado;
         
-        // Replace calibrarConPesoReal if exists
-        global.calibrarConPesoReal = calibrarConPesoReal;
+        // Add breed selector
+        setTimeout(addBreedSelectorToUI, 1000);
         
         // Expose module
         global.GanadoVeneciaWeight = {
@@ -474,21 +532,31 @@
             estimarPeso,
             calcularPerimetro: calcularPerimetroCalibrado,
             agregarCalibracion,
-            autoCalibrateFromInventory,
             getCalibration: () => ({ ...calibration }),
+            getBreedOptions,
+            getBreedCharacteristics: () => ({ ...BREED_CHARACTERISTICS }),
+            getRatioForBreed,
             resetCalibration: () => {
                 calibration = {
                     points: [
-                        { id: 'CAL_001', fecha: '2024-12-30', largo: 125, altura: 105, ancho: 55, pesoReal: 231, ratio: 1.348 },
-                        { id: 'CAL_002', fecha: '2024-12-30', largo: 115, altura: 102, ancho: 50, pesoReal: 204, ratio: 1.360 },
-                        { id: 'CAL_003', fecha: '2024-12-30', largo: 118, altura: 103, ancho: 52, pesoReal: 210, ratio: 1.348 }
+                        { id: '#278', fecha: '2024-12-30', largo: 125, altura: 105, ancho: 55, pesoReal: 231, ratio: 1.348, raza: 'cebu_puro' },
+                        { id: 'TAN_204', fecha: '2024-12-30', largo: 115, altura: 102, ancho: 50, pesoReal: 204, ratio: 1.360, raza: 'cebu_europeo' },
+                        { id: 'TAN_210', fecha: '2024-12-30', largo: 118, altura: 103, ancho: 52, pesoReal: 210, ratio: 1.348, raza: 'cebu_europeo' },
+                        { id: 'GIROLANDO_255', fecha: '2024-12-30', largo: 130, altura: 108, ancho: 58, pesoReal: 255, ratio: 1.350, raza: 'girolando' },
+                        { id: '#274', fecha: '2024-12-30', largo: 128, altura: 107, ancho: 55, pesoReal: 272, ratio: 1.418, raza: 'europeo_carne' }
                     ],
-                    averageRatio: 1.352,
-                    totalPoints: 3,
+                    breedAverages: {
+                        'cebu_puro': { ratio: 1.348, count: 1 },
+                        'cebu_europeo': { ratio: 1.354, count: 2 },
+                        'girolando': { ratio: 1.350, count: 1 },
+                        'europeo_carne': { ratio: 1.418, count: 1 }
+                    },
+                    averageRatio: 1.365,
+                    totalPoints: 5,
                     lastUpdated: new Date().toISOString().split('T')[0]
                 };
                 guardarCalibracion();
-                showToast?.('Calibración reiniciada a valores iniciales', 'info');
+                showToast?.('Calibración reiniciada a 5 puntos iniciales', 'info');
             }
         };
         
@@ -497,9 +565,16 @@
         console.log('  🐄 GANADO VENECIA WEIGHT MODULE v' + CONFIG.version);
         console.log('═══════════════════════════════════════════════════════════');
         console.log('  Puntos de calibración:', calibration.totalPoints);
-        console.log('  Ratio promedio:', calibration.averageRatio);
         console.log('  ');
-        console.log('  ✅ calcularPesoFoto() reemplazado con versión calibrada');
+        console.log('  Ratios por raza:');
+        Object.keys(CONFIG.breedRatios).forEach(raza => {
+            const cal = calibration.breedAverages[raza];
+            const ratio = cal ? cal.ratio : CONFIG.breedRatios[raza];
+            const icon = BREED_CHARACTERISTICS[raza]?.icon || '🐄';
+            console.log(`    ${icon} ${raza}: ${ratio}`);
+        });
+        console.log('  ');
+        console.log('  ✅ calcularPesoFoto() reemplazado');
         console.log('═══════════════════════════════════════════════════════════');
     }
 
