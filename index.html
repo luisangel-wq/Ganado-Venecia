@@ -1537,6 +1537,10 @@
                 <span class="nav-tab-icon">📊</span>
                 <span>Inventario</span>
             </button>
+            <button class="nav-tab" data-tab="fotos">
+                <span class="nav-tab-icon">📸</span>
+                <span>Fotos</span>
+            </button>
             <button class="nav-tab" data-tab="salud">
                 <span class="nav-tab-icon">💉</span>
                 <span>Salud</span>
@@ -2162,6 +2166,39 @@
                                 <tr><td colspan="11" class="text-center">No hay datos</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab: Fotos -->
+        <div id="tab-fotos" class="tab-content">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                    <span>📸 Gestión de Fotos del Ganado</span>
+                </div>
+                <div class="card-body">
+                    <div style="background: #f3e5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9c27b0;">
+                        <strong>📷 Sistema de Fotografía del Ganado</strong>
+                        <p style="margin: 0.5rem 0 0 0; color: #666;">
+                            Capture fotos de sus animales para seguimiento visual del crecimiento y condición corporal.
+                            El sistema detecta automáticamente la raza usando IA.
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 2rem;">
+                        <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                            📸 Agregar Foto de Animal
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 2rem;">
+                        <h3 style="margin-bottom: 1rem;">Animales con Fotos</h3>
+                        <div id="animalPhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                            <div style="grid-column: 1/-1; text-align: center; color: var(--gray); padding: 2rem;">
+                                No hay fotos registradas aún
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5015,45 +5052,88 @@
                 try {
                     const workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
                     
-                    // Process Entradas sheet
+                    let importedCount = 0;
+                    
+                    // Try to find the data sheet (could be "Entradas", "Sheet1", or first sheet)
+                    let sheetName = null;
                     if (workbook.SheetNames.includes('Entradas')) {
-                        const sheet = workbook.Sheets['Entradas'];
-                        const rows = XLSX.utils.sheet_to_json(sheet);
-                        
-                        data.entradas = rows.map(row => ({
-                            numero: String(row['Número'] || row['Numero'] || ''),
-                            lote: String(row['Lote'] || ''),
-                            vendedor: row['Vendedor'] || '',
-                            sexo: row['Sexo'] || 'MACHO',
-                            peso: parseFloat(row['Peso']) || 0,
-                            precioKilo: parseFloat(row['Precio/Kilo']) || 0,
-                            fechaEntrada: parseExcelDate(row['Fecha'] || row['Fecha de entrada']),
-                            numeroVaca: row['Número vaca'] || row['Numero vaca'] || null,
-                            costoTotal: parseFloat(row['Costo Total']) || 0
-                        })).filter(e => e.numero);
+                        sheetName = 'Entradas';
+                    } else if (workbook.SheetNames.includes('Sheet1')) {
+                        sheetName = 'Sheet1';
+                    } else {
+                        sheetName = workbook.SheetNames[0];
                     }
                     
-                    // Process Salidas sheet
+                    if (sheetName) {
+                        const sheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet);
+                        
+                        console.log('Importing from sheet:', sheetName);
+                        console.log('Sample row:', rows[0]);
+                        
+                        // Process each row as entrada
+                        const newEntradas = rows.map(row => {
+                            // Get date - try different columns
+                            let fechaEntrada;
+                            if (row['Fecha']) {
+                                fechaEntrada = parseExcelDate(row['Fecha']);
+                            } else if (row['Fecha de entrada']) {
+                                fechaEntrada = parseExcelDate(row['Fecha de entrada']);
+                            } else {
+                                fechaEntrada = new Date().toISOString().split('T')[0];
+                            }
+                            
+                            const peso = parseFloat(row['Peso Inicial'] || row['Peso'] || 0);
+                            const precioKilo = parseFloat(row['Precio/Kilo'] || 0);
+                            
+                            return {
+                                numero: String(row['Número'] || row['Numero'] || ''),
+                                lote: String(row['Lote'] || ''),
+                                vendedor: row['Vendedor'] || '',
+                                raza: row['Raza'] || 'Cebú',
+                                sexo: (row['Sexo'] || 'MACHO').toUpperCase(),
+                                peso: peso,
+                                precioKilo: precioKilo,
+                                fechaEntrada: fechaEntrada,
+                                numeroVaca: row['Número vaca'] || row['Numero vaca'] || null,
+                                costoTotal: peso * precioKilo
+                            };
+                        }).filter(e => e.numero && e.numero !== '');
+                        
+                        // Add to existing data (don't replace)
+                        if (newEntradas.length > 0) {
+                            data.entradas = data.entradas.concat(newEntradas);
+                            importedCount += newEntradas.length;
+                        }
+                    }
+                    
+                    // Process Salidas sheet if exists
                     if (workbook.SheetNames.includes('Salidas')) {
                         const sheet = workbook.Sheets['Salidas'];
                         const rows = XLSX.utils.sheet_to_json(sheet);
                         
-                        data.salidas = rows.map(row => ({
+                        const newSalidas = rows.map(row => ({
                             numero: String(row['Número'] || row['Numero'] || ''),
                             peso: parseFloat(row['Peso']) || 0,
                             fechaSalida: parseExcelDate(row['Fecha'] || row['Fecha Salida']),
-                            precioKiloVenta: parseFloat(row['Precio/Kilo Venta']) || 0,
+                            precioKiloVenta: parseFloat(row['Precio/Kilo Venta'] || row['Precio/Kilo'] || 0),
                             comprador: row['Comprador'] || '',
-                            costoVenta: parseFloat(row['Costo de venta']) || 0,
-                            gananciaDay: parseFloat(row['Ganancia/Día']) || 0
-                        })).filter(s => s.numero);
+                            costoVenta: parseFloat(row['Costo de venta'] || row['Valor'] || 0),
+                            gananciaDay: parseFloat(row['Ganancia/Día'] || row['GDP'] || 0)
+                        })).filter(s => s.numero && s.numero !== '');
+                        
+                        if (newSalidas.length > 0) {
+                            data.salidas = data.salidas.concat(newSalidas);
+                            importedCount += newSalidas.length;
+                        }
                     }
                     
                     saveData();
-                    showToast(`Importados: ${data.entradas.length} entradas, ${data.salidas.length} salidas`, 'success');
+                    showToast(`✅ Importados ${importedCount} registros a ${RANCHES[currentRanch].name}`, 'success');
+                    updateAllViews();
                 } catch (err) {
                     console.error(err);
-                    showToast('Error al importar el archivo: ' + err.message, 'error');
+                    showToast('❌ Error al importar: ' + err.message, 'error');
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -7088,8 +7168,8 @@
         
         // ==================== ANIMAL PHOTO PROFILES MODULE ====================
         
-        // Storage for animal photos
-        let animalPhotos = {}; // { chapeta: photoDataUrl }
+        // Storage for animal photos with breed detection
+        let animalPhotos = {}; // { chapeta: { photo: dataUrl, breed: {...}, dateAdded: timestamp } }
         
         function loadAnimalPhotos() {
             const saved = localStorage.getItem('animalPhotos_' + currentRanch);
@@ -7102,6 +7182,204 @@
             localStorage.setItem('animalPhotos_' + currentRanch, JSON.stringify(animalPhotos));
         }
         
+        // Simple photo capture with AI breed detection
+        function captureAnimalPhoto(chapetaNum) {
+            // Create file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                showToast('📷 Procesando foto...', 'info');
+                
+                // Compress image
+                compressImage(file, async (compressedDataUrl) => {
+                    // Show loading for breed detection
+                    showToast('🧬 Detectando raza con IA...', 'info');
+                    
+                    // Detect breed using AI
+                    let breedData = null;
+                    if (typeof BreedDetection !== 'undefined') {
+                        try {
+                            breedData = await BreedDetection.detectBreed({
+                                lateral: compressedDataUrl
+                            });
+                        } catch (error) {
+                            console.error('Breed detection error:', error);
+                        }
+                    }
+                    
+                    // Store photo with breed data
+                    animalPhotos[chapetaNum] = {
+                        photo: compressedDataUrl,
+                        breed: breedData,
+                        dateAdded: new Date().toISOString()
+                    };
+                    
+                    saveAnimalPhotos();
+                    updateAllViews();
+                    
+                    // Show breed confirmation dialog
+                    if (breedData) {
+                        showBreedConfirmation(chapetaNum, breedData);
+                    } else {
+                        showToast(`✅ Foto guardada para animal #${chapetaNum}`, 'success');
+                    }
+                });
+            };
+            
+            input.click();
+        }
+        
+        // Show breed confirmation with option to change
+        function showBreedConfirmation(chapeta, breedData) {
+            const animal = data.entradas.find(e => e.numero == chapeta);
+            const confidence = breedData.confidence || 0;
+            const confidenceColor = confidence >= 80 ? '#10b981' : confidence >= 60 ? '#f59e0b' : '#ef4444';
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #a855f7, #7c3aed);">
+                        <span>🧬 Raza Detectada por IA</span>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <div style="font-size: 3rem; margin-bottom: 0.5rem;">${breedData.breedName || 'No detectada'}</div>
+                            <div style="font-size: 1.1rem; color: ${confidenceColor}; font-weight: 600;">
+                                Confianza: ${confidence}%
+                            </div>
+                        </div>
+                        
+                        ${breedData.evidence && breedData.evidence.length > 0 ? `
+                            <div style="background: #f3f4f6; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                <strong>Evidencia Visual:</strong>
+                                <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                                    ${breedData.evidence.map(e => `<li>${e}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                            💡 <strong>¿Es correcta esta raza?</strong><br>
+                            Puedes aceptarla o cambiarla manualmente.
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button class="btn btn-success" onclick="acceptBreed('${chapeta}')" style="flex: 1;">
+                                ✅ Aceptar
+                            </button>
+                            <button class="btn btn-warning" onclick="changeBreed('${chapeta}', ${JSON.stringify(breedData).replace(/"/g, '&quot;')})" style="flex: 1;">
+                                ✏️ Cambiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // Accept detected breed
+        function acceptBreed(chapeta) {
+            const photoData = animalPhotos[chapeta];
+            if (!photoData || !photoData.breed) return;
+            
+            // Update animal's breed in the system
+            const animal = data.entradas.find(e => e.numero == chapeta);
+            if (animal && photoData.breed.breed) {
+                // Map AI breed code to system breed
+                const breedMap = {
+                    'cebu_puro': 'Cebú',
+                    'cebu_europeo': 'Cebú/Europeo',
+                    'girolando': 'Girolando',
+                    'europeo_lechero': 'Holstein',
+                    'europeo_carne': 'Angus'
+                };
+                animal.raza = breedMap[photoData.breed.breed] || photoData.breed.breedName;
+                saveData();
+            }
+            
+            document.querySelector('.modal.active')?.remove();
+            showToast(`✅ Raza aceptada: ${photoData.breed.breedName}`, 'success');
+        }
+        
+        // Change breed manually
+        function changeBreed(chapeta, breedData) {
+            document.querySelector('.modal.active')?.remove();
+            
+            // Show breed selector
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <span>✏️ Seleccionar Raza</span>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="form-label">Raza Correcta</label>
+                            <select class="form-select" id="manualBreedSelect" style="font-size: 1.1rem;">
+                                <option value="Cebú">🐂 Cebú</option>
+                                <option value="Cebú/Europeo">🐮 Cebú/Europeo (F1)</option>
+                                <option value="Razuno">🐄 Razuno</option>
+                                <option value="Brangus">🐃 Brangus</option>
+                                <option value="Simbra">🐂 Simbra</option>
+                                <option value="Brahman">🐃 Brahman</option>
+                                <option value="Angus">⬛ Angus</option>
+                                <option value="Holstein">⬜ Holstein</option>
+                                <option value="Girolando">🔶 Girolando</option>
+                                <option value="Otra">❓ Otra</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveManualBreed('${chapeta}')" style="width: 100%;">
+                            💾 Guardar Raza
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // Save manually selected breed
+        function saveManualBreed(chapeta) {
+            const breedSelect = document.getElementById('manualBreedSelect');
+            if (!breedSelect) return;
+            
+            const selectedBreed = breedSelect.value;
+            
+            // Update animal's breed
+            const animal = data.entradas.find(e => e.numero == chapeta);
+            if (animal) {
+                animal.raza = selectedBreed;
+                saveData();
+            }
+            
+            // Update photo data to mark as manually corrected
+            if (animalPhotos[chapeta]) {
+                animalPhotos[chapeta].breed = {
+                    ...animalPhotos[chapeta].breed,
+                    breedName: selectedBreed,
+                    confidence: 100,
+                    manuallySet: true
+                };
+                saveAnimalPhotos();
+            }
+            
+            document.querySelector('.modal.active')?.remove();
+            showToast(`✅ Raza actualizada: ${selectedBreed}`, 'success');
+            updateAllViews();
+        }
+        
+        // Legacy function for compatibility
         function showAddAnimalPhoto() {
             const chapeta = prompt('🐂 Ingrese el número de chapeta del animal:');
             if (!chapeta || !chapeta.trim()) return;
@@ -7116,30 +7394,7 @@
                 }
             }
             
-            // Create file input
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
-            
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    // Compress image
-                    compressImage(file, (compressedDataUrl) => {
-                        animalPhotos[chapetaNum] = compressedDataUrl;
-                        saveAnimalPhotos();
-                        updateAllViews();
-                        showToast(`📷 Foto guardada para animal #${chapetaNum}`, 'success');
-                    });
-                };
-                reader.readAsDataURL(file);
-            };
-            
-            input.click();
+            captureAnimalPhoto(chapetaNum);
         }
         
         function getAnimalPhoto(chapeta) {
