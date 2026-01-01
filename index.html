@@ -3102,73 +3102,6 @@
                 </div>
             </div>
             
-            <!-- Photo Session History -->
-            <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #673AB7, #512DA8);">
-                    <span>📋 Historial de Sesiones de Fotos</span>
-                </div>
-                <div class="card-body">
-                    <div class="filters">
-                        <input type="text" class="form-input" id="fotoHistorialSearch" placeholder="Buscar chapeta..." oninput="filterFotoHistorial()">
-                        <select class="form-select" id="fotoTemporadaFilter" onchange="filterFotoHistorial()">
-                            <option value="">Todas las temporadas</option>
-                            <option value="lluvias_fuertes">🌧️ Lluvias Fuertes</option>
-                            <option value="veranillo">🌤️ Veranillo</option>
-                            <option value="lluvias">🌧️ Lluvias</option>
-                            <option value="seco">☀️ Seco</option>
-                        </select>
-                        <select class="form-select" id="fotoBCSFilter" onchange="filterFotoHistorial()">
-                            <option value="">Todos los BCS</option>
-                            <option value="1">BCS 1 - Muy Flaco</option>
-                            <option value="2">BCS 2 - Flaco</option>
-                            <option value="3">BCS 3 - Normal</option>
-                            <option value="4">BCS 4 - Gordo</option>
-                            <option value="5">BCS 5 - Obeso</option>
-                        </select>
-                    </div>
-                    <div class="table-container">
-                        <table id="fotoHistorialTableContainer">
-                            <thead>
-                                <tr>
-                                    <th class="sortable" data-sort="numero" data-type="number">Chapeta</th>
-                                    <th class="sortable" data-sort="fecha" data-type="date">Fecha</th>
-                                    <th>Temporada</th>
-                                    <th class="sortable text-center" data-sort="bcs" data-type="number">BCS</th>
-                                    <th>Pasto</th>
-                                    <th class="sortable text-right" data-sort="pesoVisual" data-type="number">Peso Visual</th>
-                                    <th class="sortable text-right" data-sort="pesoBascula" data-type="number">Peso Báscula</th>
-                                    <th>Fotos</th>
-                                    <th>Salud</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="fotoHistorialTable">
-                                <tr><td colspan="10" class="text-center">No hay sesiones registradas</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- BCS Trends Chart -->
-            <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #00BCD4, #0097A7);">
-                    <span>📊 Tendencias de Condición Corporal</span>
-                </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label">Seleccionar Animal para Ver Historial</label>
-                        <select class="form-select" id="bcsChartAnimal" onchange="updateBCSChart()">
-                            <option value="">-- Seleccionar Animal --</option>
-                        </select>
-                    </div>
-                    <div id="bcsChartContainer" style="margin-top: 1rem;">
-                        <div style="text-align: center; color: var(--gray); padding: 2rem;">
-                            Selecciona un animal para ver su historial de condición corporal
-                        </div>
-                    </div>
-                </div>
-            </div>
             
             <!-- Season GDP Reference -->
             <div class="card">
@@ -7791,26 +7724,8 @@
         }
         
         function updateAIStats() {
-            const inventario = getInventario();
-            const today = new Date();
-            const gdp = data.config.gdp || 0.31;
-            const precioVenta = data.config.precioVenta || 9000;
-            
-            let totalPesoEst = 0;
-            let totalValor = 0;
-            
-            inventario.forEach(a => {
-                const dias = Math.floor((today - new Date(a.fechaEntrada)) / (1000 * 60 * 60 * 24));
-                const pesoEst = a.peso + (dias * gdp);
-                totalPesoEst += pesoEst;
-                totalValor += pesoEst * precioVenta;
-            });
-            
-            document.getElementById('aiTotalAnimales').textContent = inventario.length;
-            document.getElementById('aiValorTotal').textContent = formatCurrency(totalValor);
-            document.getElementById('aiGDPPromedio').textContent = gdp.toFixed(2) + ' kg/día';
-            document.getElementById('aiPesoPromedio').textContent = inventario.length > 0 ? 
-                Math.round(totalPesoEst / inventario.length) + ' kg' : '0 kg';
+            // Function disabled - stats elements removed from UI
+            return;
         }
         
         function getSystemPrompt(dataSummary) {
