@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspector de Almacenamiento - Ganado Venecia</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1a472a; }
+        h2 { color: #2d6a4f; margin-top: 2rem; }
+        .ranch-section {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .stat-box {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1a472a;
+        }
+        button {
+            background: #1a472a;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        button:hover { background: #2d6a4f; }
+        button.secondary {
+            background: #666;
+        }
+        button.secondary:hover { background: #888; }
+        button.danger {
+            background: #d32f2f;
+        }
+        button.danger:hover { background: #f44336; }
+        pre {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Inspector de Almacenamiento - Ganado Venecia</h1>
+        <p>Esta herramienta te permite inspeccionar y recuperar los datos almacenados en el navegador.</p>
+
+        <div id="results"></div>
+
+        <h2>📊 Acciones Rápidas</h2>
+        <button onclick="inspectAll()">🔍 Inspeccionar Todo</button>
+        <button onclick="exportAllData()" class="secondary">📥 Exportar Todo (JSON)</button>
+        <button onclick="showRestoreSection()" class="secondary">📤 Restaurar desde Backup</button>
+        
+        <div id="restoreSection" style="display: none; margin-top: 2rem;">
+            <h2>📤 Restaurar Datos desde Backup</h2>
+            <div class="warning">
+                <strong>⚠️ Advertencia:</strong> Esto sobrescribirá los datos actuales de la finca seleccionada.
+            </div>
+            <label>Seleccionar Finca:</label>
+            <select id="restoreRanch" style="padding: 0.5rem; margin: 0.5rem 0; border-radius: 4px; border: 1px solid #ddd;">
+                <option value="la_coruna">La Coruña</option>
+                <option value="santa_catalina">Santa Catalina</option>
+                <option value="la_vega">La Vega</option>
+            </select>
+            <br>
+            <label>Pegar JSON de Backup:</label>
+            <textarea id="restoreData" placeholder='{"entradas": [...], "salidas": [...], ...}'></textarea>
+            <button onclick="restoreData()">✅ Restaurar Datos</button>
+        </div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            la_coruna: { name: 'La Coruña', key: 'ganadoFinca_LaCoruna' },
+            santa_catalina: { name: 'Santa Catalina', key: 'ganadoFinca_SantaCatalina' },
+            la_vega: { name: 'La Vega', key: 'ganadoFinca_LaVega' }
+        };
+
+        function inspectAll() {
+            const resultsDiv = document.getElementById('results');
+            let html = '<h2>📋 Datos Almacenados</h2>';
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const data = localStorage.getItem(ranch.key);
+                
+                html += `<div class="ranch-section">`;
+                html += `<h3>🏠 ${ranch.name}</h3>`;
+                
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        const entradas = parsed.entradas || [];
+                        const salidas = parsed.salidas || [];
+                        const inventario = entradas.filter(e => !salidas.some(s => s.numero === e.numero));
+                        
+                        html += `<div class="stats">`;
+                        html += `<div class="stat-box"><div class="stat-label">Total Entradas</div><div class="stat-value">${entradas.length}</div></div>`;
+                        html += `<div class="stat-box"><div class="stat-label">Inventario Actual</div><div class="stat-value">${inventario.length}</div></div>`;
+                        html += `<div class="stat-box"><div class="stat-label">Total Salidas</div><div class="stat-value">${salidas.length}</div></div>`;
+                        html += `<div class="stat-box"><div class="stat-label">Tamaño Datos</div><div class="stat-value">${(data.length / 1024).toFixed(2)} KB</div></div>`;
+                        html += `</div>`;
+
+                        // Show recent entries
+                        if (entradas.length > 0) {
+                            html += `<h4>Últimas Entradas (${Math.min(10, entradas.length)}):</h4>`;
+                            html += `<table><thead><tr><th>Chapeta</th><th>Lote</th><th>Vendedor</th><th>Peso</th><th>Fecha</th></tr></thead><tbody>`;
+                            
+                            const recent = [...entradas].sort((a, b) => new Date(b.fechaEntrada) - new Date(a.fechaEntrada)).slice(0, 10);
+                            recent.forEach(e => {
+                                html += `<tr>`;
+                                html += `<td><strong>${e.numero}</strong></td>`;
+                                html += `<td>${e.lote || '-'}</td>`;
+                                html += `<td>${e.vendedor || 'Nacimiento'}</td>`;
+                                html += `<td>${e.peso} kg</td>`;
+                                html += `<td>${e.fechaEntrada}</td>`;
+                                html += `</tr>`;
+                            });
+                            html += `</tbody></table>`;
+                        }
+
+                        html += `<button onclick="viewFullData('${ranchId}')">👁️ Ver Datos Completos</button>`;
+                        html += `<button onclick="exportRanchData('${ranchId}')" class="secondary">📥 Exportar Esta Finca</button>`;
+                        html += `<button onclick="clearRanchData('${ranchId}')" class="danger">🗑️ Borrar Datos</button>`;
+                        
+                    } catch (e) {
+                        html += `<div class="error">❌ Error al leer datos: ${e.message}</div>`;
+                    }
+                } else {
+                    html += `<div class="warning">⚠️ No hay datos almacenados para esta finca</div>`;
+                }
+                
+                html += `</div>`;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function viewFullData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            const data = localStorage.getItem(ranch.key);
+            
+            if (data) {
+                const parsed = JSON.parse(data);
+                const formatted = JSON.stringify(parsed, null, 2);
+                
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
+                modal.innerHTML = `
+                    <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 800px; max-height: 90vh; overflow: auto;">
+                        <h2>${ranch.name} - Datos Completos</h2>
+                        <pre>${formatted}</pre>
+                        <button onclick="this.closest('div').parentElement.remove()">Cerrar</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+        }
+
+        function exportRanchData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            const data = localStorage.getItem(ranch.key);
+            
+            if (data) {
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${ranchId}_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                alert(`✅ Datos de ${ranch.name} exportados`);
+            }
+        }
+
+        function exportAllData() {
+            const allData = {};
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const data = localStorage.getItem(ranch.key);
+                if (data) {
+                    allData[ranchId] = JSON.parse(data);
+                }
+            });
+            
+            const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ganado_venecia_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            alert('✅ Todos los datos exportados');
+        }
+
+        function clearRanchData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            if (confirm(`⚠️ ¿Está seguro de borrar TODOS los datos de ${ranch.name}? Esta acción no se puede deshacer.`)) {
+                localStorage.removeItem(ranch.key);
+                alert(`✅ Datos de ${ranch.name} borrados`);
+                inspectAll();
+            }
+        }
+
+        function showRestoreSection() {
+            document.getElementById('restoreSection').style.display = 'block';
+            document.getElementById('restoreSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function restoreData() {
+            const ranchId = document.getElementById('restoreRanch').value;
+            const jsonData = document.getElementById('restoreData').value.trim();
+            
+            if (!jsonData) {
+                alert('❌ Por favor pegue los datos JSON a restaurar');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(jsonData);
+                const ranch = RANCHES[ranchId];
+                
+                if (confirm(`⚠️ ¿Restaurar datos para ${ranch.name}? Esto sobrescribirá los datos actuales.`)) {
+                    localStorage.setItem(ranch.key, JSON.stringify(parsed));
+                    alert(`✅ Datos restaurados para ${ranch.name}`);
+                    inspectAll();
+                    document.getElementById('restoreSection').style.display = 'none';
+                    document.getElementById('restoreData').value = '';
+                }
+            } catch (e) {
+                alert(`❌ Error al parsear JSON: ${e.message}`);
+            }
+        }
+
+        // Auto-inspect on load
+        window.onload = inspectAll;
+    </script>
+</body>
+</html>
