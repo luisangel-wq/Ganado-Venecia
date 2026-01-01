@@ -3253,174 +3253,64 @@
         
         <!-- Tab: Analytics IA -->
         <div id="tab-analytics" class="tab-content">
+            <!-- Quick Analysis Buttons -->
             <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
-                    <span>🤖 Análisis con Inteligencia Artificial</span>
+                <div class="card-header">
+                    <span>⚡ Análisis Rápidos</span>
                 </div>
                 <div class="card-body">
-                    <!-- API Provider Selection -->
-                    <div id="apiKeySetup" class="card" style="border: 2px solid #9c27b0; margin-bottom: 1.5rem;">
-                        <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
-                            <span>🔑 Configurar Proveedor de IA</span>
-                        </div>
-                        <div class="card-body">
-                            <!-- Provider Selection -->
-                            <div class="form-group">
-                                <label class="form-label">Seleccionar Proveedor</label>
-                                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                                    <button type="button" class="btn ai-provider-btn active" id="btnProviderGoogle" onclick="selectAIProvider('google')" style="flex: 1;">
-                                        <span style="font-size: 1.2rem;">🔵</span> Google Gemini
-                                    </button>
-                                    <button type="button" class="btn ai-provider-btn" id="btnProviderAnthropic" onclick="selectAIProvider('anthropic')" style="flex: 1;">
-                                        <span style="font-size: 1.2rem;">🟠</span> Anthropic Claude
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Google Gemini Config -->
-                            <div id="googleConfig">
-                                <p style="margin-bottom: 1rem; color: #666;">
-                                    Usa tu cuenta de Google para obtener una API Key gratuita de Gemini.
-                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #4285f4;">Obtener API Key de Google →</a>
-                                </p>
-                                <div class="form-group">
-                                    <label class="form-label">API Key de Google Gemini</label>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="password" class="form-input" id="googleApiKey" placeholder="AIza...">
-                                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: #4285f4;">
-                                            💾 Guardar
-                                        </button>
-                                    </div>
-                                    <div class="form-hint">💡 Google ofrece un nivel gratuito generoso</div>
-                                </div>
-                                <div id="googleApiKeyStatus" style="margin-top: 0.5rem;"></div>
-                            </div>
-                            
-                            <!-- Anthropic Claude Config -->
-                            <div id="anthropicConfig" style="display: none;">
-                                <p style="margin-bottom: 1rem; color: #666;">
-                                    Para usar Claude, necesitas una API Key de Anthropic.
-                                    <a href="https://console.anthropic.com/" target="_blank" style="color: #9c27b0;">Obtener API Key de Anthropic →</a>
-                                </p>
-                                <div class="form-group">
-                                    <label class="form-label">API Key de Anthropic</label>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <input type="password" class="form-input" id="anthropicApiKey" placeholder="sk-ant-...">
-                                        <button class="btn btn-primary" onclick="saveAnthropicApiKey()" style="background: #9c27b0;">
-                                            💾 Guardar
-                                        </button>
-                                    </div>
-                                    <div class="form-hint">Los análisis cuestan ~$0.01-0.05 cada uno</div>
-                                </div>
-                                <div id="anthropicApiKeyStatus" style="margin-top: 0.5rem;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Stats Summary -->
-                    <div class="summary-grid" style="margin-bottom: 1.5rem;">
-                        <div class="summary-box" style="background: linear-gradient(135deg, #f3e5f5, #e1bee7);">
-                            <div class="summary-box-icon">📊</div>
-                            <div class="summary-box-value" id="aiTotalAnimales">0</div>
-                            <div class="summary-box-label">En Inventario</div>
-                        </div>
-                        <div class="summary-box" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
-                            <div class="summary-box-icon">💰</div>
-                            <div class="summary-box-value" id="aiValorTotal">$0</div>
-                            <div class="summary-box-label">Valor Estimado</div>
-                        </div>
-                        <div class="summary-box" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
-                            <div class="summary-box-icon">📈</div>
-                            <div class="summary-box-value" id="aiGDPPromedio">0</div>
-                            <div class="summary-box-label">GDP Promedio</div>
-                        </div>
-                        <div class="summary-box" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
-                            <div class="summary-box-icon">⚖️</div>
-                            <div class="summary-box-value" id="aiPesoPromedio">0</div>
-                            <div class="summary-box-label">Peso Prom. Est.</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Analysis Buttons -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <div class="card-header">
-                            <span>⚡ Análisis Rápidos</span>
-                        </div>
-                        <div class="card-body">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
-                                <button class="btn btn-secondary" onclick="quickAnalysis('resumen')">
-                                    📋 Resumen General
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('listos_venta')">
-                                    💵 Animales Listos para Venta
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('mejor_gdp')">
-                                    🏆 Mejor Rendimiento (GDP)
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('rentabilidad')">
-                                    💰 Análisis de Rentabilidad
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('vendedores')">
-                                    👥 Evaluación de Vendedores
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('compradores')">
-                                    🛒 Análisis de Compradores
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('salud')">
-                                    💉 Estado de Salud del Hato
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('potreros')">
-                                    🌿 Eficiencia de Potreros
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('proyeccion')">
-                                    📅 Proyección 30/60/90 días
-                                </button>
-                                <button class="btn btn-secondary" onclick="quickAnalysis('recomendaciones')">
-                                    💡 Recomendaciones
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Custom Question Input -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
-                            <span>💬 Pregunta Personalizada</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label class="form-label">Escribe tu pregunta sobre los datos del ganado:</label>
-                                <textarea class="form-input" id="aiCustomQuestion" rows="3" placeholder="Ejemplos:
-- ¿Cuáles animales tienen el mejor GDP y por qué?
-- ¿Cuál es el margen de ganancia promedio por animal?
-- ¿Qué vendedor me ha dado los animales más rentables?
-- ¿Cuánto dinero generaré si vendo todos los animales listos?"></textarea>
-                            </div>
-                            <button class="btn btn-primary" onclick="askCustomQuestion()" style="width: 100%; background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
-                                🤖 Analizar con IA
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- AI Response Area -->
-                    <div class="card" id="aiResponseCard" style="display: none;">
-                        <div class="card-header" style="background: linear-gradient(135deg, #4caf50, #388e3c);">
-                            <span>📊 Resultado del Análisis</span>
-                            <button class="btn btn-secondary" onclick="copyAnalysis()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                                📋 Copiar
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div id="aiResponseContent" style="white-space: pre-wrap; line-height: 1.6;"></div>
-                        </div>
-                    </div>
-                    
-                    <!-- Loading Indicator -->
-                    <div id="aiLoading" style="display: none; text-align: center; padding: 2rem;">
-                        <div style="font-size: 3rem; animation: pulse 1s infinite;">🤖</div>
-                        <p style="color: #666; margin-top: 1rem;" id="aiLoadingText">Analizando datos con IA...</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+                        <button class="btn btn-secondary" onclick="quickAnalysis('resumen')">
+                            📋 Resumen General
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('listos_venta')">
+                            💵 Animales Listos para Venta
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('mejor_gdp')">
+                            🏆 Mejor Rendimiento (GDP)
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('rentabilidad')">
+                            💰 Análisis de Rentabilidad
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('vendedores')">
+                            👥 Evaluación de Vendedores
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('compradores')">
+                            🛒 Análisis de Compradores
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('salud')">
+                            💉 Estado de Salud del Hato
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('potreros')">
+                            🌿 Eficiencia de Potreros
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('proyeccion')">
+                            📅 Proyección 30/60/90 días
+                        </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('recomendaciones')">
+                            💡 Recomendaciones
+                        </button>
                     </div>
                 </div>
+            </div>
+            
+            <!-- AI Response Area (Hidden by default, shows when analysis is requested) -->
+            <div class="card" id="aiResponseCard" style="display: none; margin-top: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #4caf50, #388e3c);">
+                    <span>📊 Resultado del Análisis</span>
+                    <button class="btn btn-secondary" onclick="copyAnalysis()" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                        📋 Copiar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="aiResponseContent" style="white-space: pre-wrap; line-height: 1.6;"></div>
+                </div>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="aiLoading" style="display: none; text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; animation: pulse 1s infinite;">🤖</div>
+                <p style="color: #666; margin-top: 1rem;" id="aiLoadingText">Analizando datos con IA...</p>
             </div>
         </div>
         
