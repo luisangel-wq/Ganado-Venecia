@@ -18,6 +18,32 @@ class CloudSync {
         this.syncInProgress = false;
         this.firebaseConfig = null;
         this.syncInterval = null;
+        
+        // Define RANCHES structure as fallback (in case main app hasn't loaded yet)
+        this.RANCHES_FALLBACK = {
+            la_coruna: {
+                id: 'la_coruna',
+                name: 'La Coruña',
+                storageKey: 'ganadoFinca_LaCoruna'
+            },
+            santa_catalina: {
+                id: 'santa_catalina',
+                name: 'Santa Catalina',
+                storageKey: 'ganadoFinca_SantaCatalina'
+            },
+            la_vega: {
+                id: 'la_vega',
+                name: 'La Vega',
+                storageKey: 'ganadoFinca_LaVega'
+            }
+        };
+    }
+    
+    /**
+     * Get RANCHES object (from global scope or fallback)
+     */
+    getRanches() {
+        return (typeof RANCHES !== 'undefined') ? RANCHES : this.RANCHES_FALLBACK;
     }
 
     /**
@@ -100,11 +126,7 @@ class CloudSync {
         try {
             this.syncInProgress = true;
             
-            // Check if RANCHES is defined
-            if (typeof RANCHES === 'undefined') {
-                console.error('RANCHES object not found - sync cannot proceed');
-                return false;
-            }
+            const RANCHES = this.getRanches();
             
             const allData = {
                 ranches: {},
@@ -193,12 +215,7 @@ class CloudSync {
     applySyncData(cloudData, showNotification = true) {
         if (!cloudData) return;
 
-        // Check if RANCHES is defined
-        if (typeof RANCHES === 'undefined') {
-            console.error('RANCHES object not found - cannot apply sync data');
-            return;
-        }
-
+        const RANCHES = this.getRanches();
         let changesCount = 0;
 
         // Restore ranch data
@@ -213,6 +230,7 @@ class CloudSync {
                         if (newData !== oldData) {
                             localStorage.setItem(ranch.storageKey, newData);
                             changesCount++;
+                            console.log(`Synced data for ranch: ${ranch.name}`);
                         }
                     } catch (e) {
                         console.error(`Error applying sync data for ranch ${ranchId}:`, e);
@@ -232,6 +250,7 @@ class CloudSync {
                     if (newPhotos !== oldPhotos) {
                         localStorage.setItem(photosKey, newPhotos);
                         changesCount++;
+                        console.log(`Synced photos for ranch: ${ranchId}`);
                     }
                 } catch (e) {
                     console.error(`Error applying sync photos for ranch ${ranchId}:`, e);
@@ -251,6 +270,15 @@ class CloudSync {
                 // Reload data in current view if updateAllViews exists
                 if (typeof updateAllViews === 'function') {
                     updateAllViews();
+                }
+                
+                // On mobile, suggest page reload for full UI refresh
+                if (showNotification && changesCount > 0) {
+                    setTimeout(() => {
+                        if (confirm('¿Recargar la página para ver todos los cambios sincronizados?')) {
+                            window.location.reload();
+                        }
+                    }, 1500);
                 }
             }
         }
@@ -312,3 +340,33 @@ class CloudSync {
 
 // Create global instance
 window.cloudSync = new CloudSync();
+
+// Auto-initialize on page load if Firebase config is available
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🔄 Checking for cloud sync auto-initialization...');
+    
+    // Wait a bit for firebase-config.js to load
+    setTimeout(async () => {
+        if (typeof firebaseConfig !== 'undefined' && typeof firebase !== 'undefined') {
+            console.log('✅ Firebase config found, auto-initializing cloud sync...');
+            
+            try {
+                const initialized = await window.cloudSync.initialize(firebaseConfig);
+                if (initialized) {
+                    console.log('✅ Cloud sync auto-initialized successfully');
+                    
+                    // Show subtle notification on mobile
+                    if (typeof showToast === 'function') {
+                        showToast('☁️ Sincronización automática activa', 'info');
+                    }
+                } else {
+                    console.warn('⚠️ Cloud sync auto-initialization failed');
+                }
+            } catch (error) {
+                console.error('❌ Error auto-initializing cloud sync:', error);
+            }
+        } else {
+            console.log('ℹ️ Firebase config not found - cloud sync will initialize manually');
+        }
+    }, 1000);
+});

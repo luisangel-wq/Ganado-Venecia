@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico de Sincronización</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #667eea;
+            color: white;
+        }
+        
+        button:active {
+            background: #5568d3;
+            transform: scale(0.98);
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .code {
+            font-family: monospace;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Sincronización</h1>
+        
+        <button onclick="runDiagnostic()">🔄 Ejecutar Diagnóstico Completo</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    
+    <script>
+        async function runDiagnostic() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="info-box">🔄 Ejecutando diagnóstico...</div>';
+            
+            let html = '';
+            
+            // 1. Check User ID
+            html += '<div class="section">';
+            html += '<h2>1️⃣ User ID</h2>';
+            const userId = localStorage.getItem('cloudSync_userId');
+            if (userId) {
+                html += `<div class="success">✅ User ID encontrado: <code>${userId}</code></div>`;
+            } else {
+                html += '<div class="error">❌ No hay User ID configurado</div>';
+            }
+            html += '</div>';
+            
+            // 2. Check Local Data
+            html += '<div class="section">';
+            html += '<h2>2️⃣ Datos Locales (localStorage)</h2>';
+            html += '<table>';
+            html += '<tr><th>Finca</th><th>Storage Key</th><th>Animales</th></tr>';
+            
+            const ranches = {
+                'La Coruña': 'ganadoFinca_LaCoruna',
+                'Santa Catalina': 'ganadoFinca_SantaCatalina',
+                'La Vega': 'ganadoFinca_LaVega'
+            };
+            
+            let totalAnimals = 0;
+            Object.keys(ranches).forEach(ranchName => {
+                const key = ranches[ranchName];
+                const data = localStorage.getItem(key);
+                let count = 0;
+                
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        count = Array.isArray(parsed) ? parsed.length : 0;
+                        totalAnimals += count;
+                    } catch (e) {
+                        count = 'Error';
+                    }
+                }
+                
+                html += `<tr><td>${ranchName}</td><td><code>${key}</code></td><td>${count}</td></tr>`;
+            });
+            
+            html += '</table>';
+            html += `<div class="info-box"><strong>Total animales en localStorage:</strong> ${totalAnimals}</div>`;
+            html += '</div>';
+            
+            // 3. Check Cloud Sync Status
+            html += '<div class="section">';
+            html += '<h2>3️⃣ Estado de Cloud Sync</h2>';
+            
+            if (typeof window.cloudSync !== 'undefined') {
+                const status = window.cloudSync.getStatus();
+                html += `<div class="info-box">`;
+                html += `<strong>Habilitado:</strong> ${status.enabled ? '✅ Sí' : '❌ No'}<br>`;
+                html += `<strong>User ID:</strong> ${status.userId || 'N/A'}<br>`;
+                html += `<strong>Última Sync:</strong> ${status.lastSync || 'Nunca'}<br>`;
+                html += `<strong>Device ID:</strong> ${status.deviceId || 'N/A'}`;
+                html += `</div>`;
+                
+                if (!status.enabled) {
+                    html += '<div class="warning">⚠️ Cloud sync no está habilitado. Ve a Config → Cloud Sync para habilitarlo.</div>';
+                }
+            } else {
+                html += '<div class="error">❌ CloudSync no está cargado</div>';
+            }
+            
+            html += '</div>';
+            
+            // 4. Check Firebase Data
+            html += '<div class="section">';
+            html += '<h2>4️⃣ Datos en Firebase</h2>';
+            html += '<div id="firebaseData">🔄 Consultando Firebase...</div>';
+            html += '</div>';
+            
+            // 5. Recommendations
+            html += '<div class="section">';
+            html += '<h2>5️⃣ Acciones Recomendadas</h2>';
+            html += '<div id="recommendations">Calculando...</div>';
+            html += '</div>';
+            
+            resultsDiv.innerHTML = html;
+            
+            // Check Firebase
+            await checkFirebase(userId, totalAnimals);
+        }
+        
+        async function checkFirebase(userId, localTotal) {
+            const firebaseDiv = document.getElementById('firebaseData');
+            const recsDiv = document.getElementById('recommendations');
+            
+            if (!userId) {
+                firebaseDiv.innerHTML = '<div class="error">❌ No se puede consultar sin User ID</div>';
+                recsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>🔧 Solución:</strong>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Ve a Config → Cloud Sync</li>
+                            <li>Inicializa la sincronización</li>
+                            <li>Vuelve a ejecutar este diagnóstico</li>
+                        </ol>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                if (typeof firebase === 'undefined') {
+                    throw new Error('Firebase no cargado');
+                }
+                
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                const db = firebase.database();
+                const snapshot = await db.ref(`users/${userId}`).once('value');
+                const cloudData = snapshot.val();
+                
+                if (!cloudData) {
+                    firebaseDiv.innerHTML = '<div class="warning">⚠️ No hay datos en la nube</div>';
+                    recsDiv.innerHTML = `
+                        <div class="warning">
+                            <strong>🔧 Solución:</strong>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>Este dispositivo tiene ${localTotal} animales localmente</li>
+                                <li>Ve a Config → Cloud Sync</li>
+                                <li>Haz clic en "☁️ Sincronizar Ahora"</li>
+                                <li>Esto subirá los datos a la nube</li>
+                                <li>Luego abre el otro dispositivo y sincroniza</li>
+                            </ol>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Count animals in cloud
+                let cloudTotal = 0;
+                if (cloudData.ranches) {
+                    Object.keys(cloudData.ranches).forEach(ranchId => {
+                        const ranchData = cloudData.ranches[ranchId];
+                        if (Array.isArray(ranchData)) {
+                            cloudTotal += ranchData.length;
+                        }
+                    });
+                }
+                
+                let html = '<table>';
+                html += '<tr><th>Campo</th><th>Valor</th></tr>';
+                html += `<tr><td>Última modificación</td><td>${cloudData.lastModified || 'N/A'}</td></tr>`;
+                html += `<tr><td>Device ID</td><td>${cloudData.deviceId || 'N/A'}</td></tr>`;
+                html += `<tr><td>Total animales en nube</td><td><strong>${cloudTotal}</strong></td></tr>`;
+                html += '</table>';
+                
+                // Compare
+                if (cloudTotal === 0 && localTotal > 0) {
+                    html += `<div class="warning">⚠️ La nube está vacía pero tienes ${localTotal} animales locales</div>`;
+                } else if (cloudTotal > 0 && localTotal === 0) {
+                    html += `<div class="warning">⚠️ La nube tiene ${cloudTotal} animales pero no hay datos locales</div>`;
+                } else if (cloudTotal === localTotal) {
+                    html += `<div class="success">✅ Local y nube tienen la misma cantidad de animales (${cloudTotal})</div>`;
+                } else {
+                    html += `<div class="warning">⚠️ Diferencia: Local=${localTotal}, Nube=${cloudTotal}</div>`;
+                }
+                
+                firebaseDiv.innerHTML = html;
+                
+                // Recommendations
+                let recs = '';
+                if (cloudTotal === 0 && localTotal > 0) {
+                    recs = `
+                        <div class="warning">
+                            <strong>🔧 Acción requerida:</strong>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>En ESTE dispositivo: Config → Cloud Sync → "Sincronizar Ahora"</li>
+                                <li>Espera el mensaje de éxito</li>
+                                <li>En el OTRO dispositivo: Recarga la página</li>
+                                <li>Los datos deberían aparecer automáticamente</li>
+                            </ol>
+                        </div>
+                    `;
+                } else if (cloudTotal > 0 && localTotal === 0) {
+                    recs = `
+                        <div class="warning">
+                            <strong>🔧 Acción requerida:</strong>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>Recarga esta página (F5 o pull-to-refresh)</li>
+                                <li>Si no aparecen datos: Config → Cloud Sync → "Sincronizar Ahora"</li>
+                                <li>Espera 10 segundos</li>
+                                <li>Recarga de nuevo</li>
+                            </ol>
+                        </div>
+                    `;
+                } else if (cloudTotal === localTotal && cloudTotal > 0) {
+                    recs = `
+                        <div class="success">
+                            <strong>✅ ¡Todo está sincronizado!</strong>
+                            <p>Si no ves los animales en la interfaz, intenta:</p>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>Cambiar de finca en el selector</li>
+                                <li>Ir a la pestaña "Inventario"</li>
+                                <li>Recargar la página (F5)</li>
+                            </ol>
+                        </div>
+                    `;
+                } else {
+                    recs = `
+                        <div class="warning">
+                            <strong>🔧 Hay una diferencia:</strong>
+                            <ol style="margin-left: 20px; margin-top: 10px;">
+                                <li>Decide qué dispositivo tiene los datos correctos</li>
+                                <li>En ese dispositivo: Config → Cloud Sync → "Sincronizar Ahora"</li>
+                                <li>En el otro: Recarga y espera 15 segundos</li>
+                                <li>Los datos se deberían igualar</li>
+                            </ol>
+                        </div>
+                    `;
+                }
+                
+                recsDiv.innerHTML = recs;
+                
+            } catch (error) {
+                firebaseDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                recsDiv.innerHTML = `
+                    <div class="error">
+                        <strong>🔧 Problema de conexión:</strong>
+                        <p>${error.message}</p>
+                        <ol style="margin-left: 20px; margin-top: 10px;">
+                            <li>Verifica tu conexión a internet</li>
+                            <li>Verifica que Firebase esté configurado correctamente</li>
+                            <li>Ve a Config → Firebase Configuration → "Probar Conexión"</li>
+                        </ol>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostic, 500);
+        });
+    </script>
+</body>
+</html>

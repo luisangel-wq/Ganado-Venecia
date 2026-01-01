@@ -3597,11 +3597,15 @@
             if (saved) {
                 data = JSON.parse(saved);
                 // Ensure all arrays exist
+                if (!data.entradas) data.entradas = [];
+                if (!data.salidas) data.salidas = [];
                 if (!data.saludEventos) data.saludEventos = [];
                 if (!data.potreros) data.potreros = [];
                 if (!data.rotaciones) data.rotaciones = [];
                 if (!data.animalPotreros) data.animalPotreros = {};
                 if (!data.weatherHistory) data.weatherHistory = [];
+                if (!data.pesoUpdates) data.pesoUpdates = [];
+                if (!data.fotoSesiones) data.fotoSesiones = [];
                 
                 // Ensure config has all fields including new weather-related fields
                 if (!data.config) data.config = {};
@@ -5721,6 +5725,150 @@
             saveData();
             showToast('Configuración guardada', 'success');
         }
+        
+        // ==================== CLOUD SYNC UI FUNCTIONS ====================
+        async function manualSync() {
+            if (typeof cloudSync === 'undefined') {
+                showToast('⚠️ Cloud sync no está disponible', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('manualSyncBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '🔄 Sincronizando...';
+                
+                // Initialize if not already done
+                if (!cloudSync.enabled) {
+                    if (typeof firebaseConfig === 'undefined') {
+                        showToast('⚠️ Configuración de Firebase no encontrada', 'error');
+                        return;
+                    }
+                    
+                    showToast('📡 Iniciando conexión...', 'info');
+                    const initialized = await cloudSync.initialize(firebaseConfig);
+                    
+                    if (!initialized) {
+                        showToast('❌ Error al inicializar sincronización', 'error');
+                        return;
+                    }
+                }
+                
+                // Now sync
+                await cloudSync.syncToCloud();
+                await cloudSync.syncFromCloud();
+                
+                showToast('✅ Sincronización completada', 'success');
+                updateSyncStatus();
+            } catch (error) {
+                console.error('Manual sync error:', error);
+                showToast('❌ Error al sincronizar: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        function viewSyncHistory() {
+            if (typeof cloudSync === 'undefined' || !cloudSync.isInitialized) {
+                showToast('⚠️ Cloud sync no está inicializado', 'error');
+                return;
+            }
+            
+            const history = cloudSync.getSyncHistory ? cloudSync.getSyncHistory() : [];
+            
+            if (history.length === 0) {
+                alert('📜 HISTORIAL DE SINCRONIZACIÓN\n\nNo hay registros de sincronización aún.');
+                return;
+            }
+            
+            let message = '📜 HISTORIAL DE SINCRONIZACIÓN\n\n';
+            message += 'Últimas 10 sincronizaciones:\n\n';
+            
+            history.slice(-10).reverse().forEach((entry, index) => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleString('es-CO');
+                const status = entry.success ? '✅' : '❌';
+                message += `${index + 1}. ${status} ${timeStr}\n`;
+                if (entry.error) {
+                    message += `   Error: ${entry.error}\n`;
+                }
+            });
+            
+            alert(message);
+        }
+        
+        function toggleAutoSync() {
+            if (typeof cloudSync === 'undefined') {
+                showToast('⚠️ Cloud sync no disponible', 'error');
+                return;
+            }
+            
+            const checkbox = document.getElementById('autoSyncEnabled');
+            const enabled = checkbox.checked;
+            
+            if (cloudSync.setAutoSync) {
+                cloudSync.setAutoSync(enabled);
+            }
+            
+            localStorage.setItem('cloudSync_autoSync', enabled ? 'true' : 'false');
+            showToast(enabled ? '✅ Sincronización automática activada' : '⏸️ Sincronización automática desactivada', 'info');
+        }
+        
+        function updateSyncStatus() {
+            if (typeof cloudSync === 'undefined') return;
+            
+            const statusEl = document.getElementById('syncStatus');
+            const lastSyncEl = document.getElementById('lastSyncTime');
+            const pendingEl = document.getElementById('pendingChanges');
+            
+            if (statusEl) {
+                // Check if cloud sync exists and has synced (more reliable than isInitialized)
+                const isConnected = cloudSync && cloudSync.lastSync !== undefined;
+                if (isConnected) {
+                    statusEl.innerHTML = '🟢 Conectado';
+                    statusEl.style.color = '#10b981';
+                } else {
+                    statusEl.innerHTML = '⚫ Desconectado';
+                    statusEl.style.color = '#ef4444';
+                }
+            }
+            
+            if (lastSyncEl) {
+                const lastSync = cloudSync.getLastSyncTime ? cloudSync.getLastSyncTime() : null;
+                if (lastSync) {
+                    const date = new Date(lastSync);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000);
+                    
+                    let timeStr;
+                    if (diff < 60) timeStr = 'hace unos segundos';
+                    else if (diff < 3600) timeStr = `hace ${Math.floor(diff / 60)} minutos`;
+                    else if (diff < 86400) timeStr = `hace ${Math.floor(diff / 3600)} horas`;
+                    else timeStr = `hace ${Math.floor(diff / 86400)} días`;
+                    
+                    lastSyncEl.textContent = timeStr;
+                } else {
+                    lastSyncEl.textContent = 'Nunca';
+                }
+            }
+            
+            if (pendingEl) {
+                pendingEl.textContent = '0'; // Cloud sync handles this automatically
+            }
+        }
+        
+        // Update sync status every 30 seconds
+        setInterval(updateSyncStatus, 30000);
+        
+        // Update status on page load and when cloud sync is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit for cloud-sync.js to initialize
+            setTimeout(updateSyncStatus, 1000);
+            setTimeout(updateSyncStatus, 3000);
+        });
         
         function clearAllData() {
             if (confirm('¿Está seguro de borrar TODOS los datos? Esta acción no se puede deshacer.')) {

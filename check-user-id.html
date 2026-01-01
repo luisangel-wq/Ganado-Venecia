@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar User ID</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .user-id {
+            font-family: monospace;
+            font-size: 16px;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:active {
+            background: #5568d3;
+            transform: scale(0.98);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:active {
+            background: #218838;
+            transform: scale(0.98);
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: black;
+        }
+        
+        .btn-warning:active {
+            background: #e0a800;
+            transform: scale(0.98);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:active {
+            background: #c82333;
+            transform: scale(0.98);
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .input-group {
+            margin: 20px 0;
+        }
+        
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .emoji {
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        #changeSection {
+            display: none;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificador de User ID</h1>
+        
+        <div class="info-box">
+            <p><strong>Tu User ID actual es:</strong></p>
+            <div class="user-id" id="currentUserId">Cargando...</div>
+        </div>
+        
+        <button class="btn-primary" onclick="copyUserId()">
+            📋 Copiar User ID
+        </button>
+        
+        <button class="btn-success" onclick="showChangeSection()">
+            🔄 Cambiar User ID (Sincronizar con otro dispositivo)
+        </button>
+        
+        <div id="changeSection">
+            <div class="instructions">
+                <strong>📌 Instrucciones:</strong>
+                <ol style="margin-left: 20px; margin-top: 10px;">
+                    <li>Copia el User ID del dispositivo principal (desktop)</li>
+                    <li>Pégalo en el campo de abajo</li>
+                    <li>Presiona "Aplicar y Recargar"</li>
+                </ol>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" 
+                       id="newUserId" 
+                       placeholder="Pega aquí el User ID del desktop"
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false">
+            </div>
+            
+            <button class="btn-warning" onclick="changeUserId()">
+                ✅ Aplicar y Recargar
+            </button>
+        </div>
+        
+        <button class="btn-danger" onclick="resetAll()" style="margin-top: 30px;">
+            🗑️ Borrar Todo y Reiniciar
+        </button>
+        
+        <div class="instructions" style="margin-top: 20px; background: #d1ecf1; border-color: #0dcaf0;">
+            <strong>💡 Consejo:</strong> Para que dos dispositivos se sincronicen, deben tener el MISMO User ID.
+        </div>
+    </div>
+
+    <script>
+        // Display current User ID
+        function displayUserId() {
+            const userId = localStorage.getItem('cloudSync_userId');
+            const display = document.getElementById('currentUserId');
+            
+            if (userId) {
+                display.textContent = userId;
+            } else {
+                display.textContent = 'No hay User ID configurado';
+                display.style.color = '#dc3545';
+            }
+        }
+        
+        // Copy User ID to clipboard
+        function copyUserId() {
+            const userId = localStorage.getItem('cloudSync_userId');
+            
+            if (!userId) {
+                alert('❌ No hay User ID para copiar');
+                return;
+            }
+            
+            // Try modern clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(userId).then(() => {
+                    alert('✅ User ID copiado al portapapeles!\n\n' + userId);
+                }).catch(() => {
+                    fallbackCopy(userId);
+                });
+            } else {
+                fallbackCopy(userId);
+            }
+        }
+        
+        // Fallback copy method for older browsers
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                alert('✅ User ID copiado!\n\n' + text);
+            } catch (err) {
+                alert('❌ No se pudo copiar. User ID:\n\n' + text + '\n\nCópialo manualmente');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // Show change section
+        function showChangeSection() {
+            const section = document.getElementById('changeSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Change User ID
+        function changeUserId() {
+            const newUserId = document.getElementById('newUserId').value.trim();
+            
+            if (!newUserId) {
+                alert('❌ Por favor ingresa un User ID válido');
+                return;
+            }
+            
+            if (!newUserId.startsWith('user_')) {
+                alert('⚠️ El User ID debe empezar con "user_"\n\n¿Estás seguro que es correcto?');
+            }
+            
+            const confirmed = confirm(
+                '🔄 ¿Cambiar User ID?\n\n' +
+                'Actual: ' + localStorage.getItem('cloudSync_userId') + '\n\n' +
+                'Nuevo: ' + newUserId + '\n\n' +
+                'La página se recargará automáticamente.'
+            );
+            
+            if (confirmed) {
+                localStorage.setItem('cloudSync_userId', newUserId);
+                alert('✅ User ID actualizado!\n\nRecargando...');
+                location.reload();
+            }
+        }
+        
+        // Reset all data
+        function resetAll() {
+            const confirmed = confirm(
+                '⚠️ ADVERTENCIA ⚠️\n\n' +
+                'Esto borrará TODOS los datos locales:\n' +
+                '• User ID\n' +
+                '• Datos de animales\n' +
+                '• Fotos\n' +
+                '• Configuración\n\n' +
+                '¿Estás SEGURO?\n\n' +
+                '(Los datos en la nube NO se borrarán)'
+            );
+            
+            if (confirmed) {
+                const doubleConfirmed = confirm('¿Realmente seguro? Esta acción no se puede deshacer.');
+                
+                if (doubleConfirmed) {
+                    localStorage.clear();
+                    alert('✅ Todo borrado!\n\nRecargando...');
+                    location.reload();
+                }
+            }
+        }
+        
+        // Initialize on page load
+        displayUserId();
+    </script>
+</body>
+</html>

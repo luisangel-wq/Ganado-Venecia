@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrucciones de Sincronización</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .step h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-check {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-check:hover {
+            background: #5568d3;
+        }
+        
+        .result {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 16px;
+            word-break: break-all;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .code {
+            font-family: monospace;
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .emoji {
+            font-size: 32px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔄 Guía de Sincronización</h1>
+        
+        <div class="step">
+            <h2><span class="emoji">1️⃣</span> Verificar User ID del Desktop</h2>
+            <p>Haz clic en el botón para ver tu User ID actual en este dispositivo:</p>
+            <button class="btn-check" onclick="checkUserId()">🔍 Mostrar Mi User ID</button>
+            <div id="desktopUserId" class="result"></div>
+            <button class="btn-check" onclick="copyDesktopId()" style="display: none;" id="copyBtn">📋 Copiar User ID</button>
+        </div>
+        
+        <div class="step">
+            <h2><span class="emoji">2️⃣</span> Comparar con el Teléfono</h2>
+            <p><strong>User ID del teléfono:</strong></p>
+            <div class="code">1767288157472_qpz46pexz</div>
+            
+            <div id="comparison" style="display: none; margin-top: 20px;">
+                <div id="matchResult"></div>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h2><span class="emoji">3️⃣</span> Siguiente Paso</h2>
+            <div id="nextSteps">
+                <p>Primero verifica tu User ID del desktop haciendo clic en el botón arriba ☝️</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let desktopId = null;
+        const phoneId = '1767288157472_qpz46pexz';
+        
+        function checkUserId() {
+            desktopId = localStorage.getItem('cloudSync_userId');
+            const display = document.getElementById('desktopUserId');
+            const copyBtn = document.getElementById('copyBtn');
+            const comparison = document.getElementById('comparison');
+            
+            if (desktopId) {
+                display.textContent = desktopId;
+                display.style.display = 'block';
+                copyBtn.style.display = 'block';
+                comparison.style.display = 'block';
+                
+                compareIds();
+            } else {
+                display.innerHTML = '<strong style="color: #dc3545;">⚠️ No hay User ID configurado en este dispositivo</strong>';
+                display.style.display = 'block';
+                document.getElementById('nextSteps').innerHTML = `
+                    <div class="warning">
+                        <strong>⚠️ Este dispositivo no tiene User ID</strong>
+                        <p>Necesitas inicializar la sincronización en la nube primero:</p>
+                        <ol style="margin-left: 20px;">
+                            <li>Ve a la página principal de Ganado Finca</li>
+                            <li>Abre Config → Cloud Sync</li>
+                            <li>Inicializa la sincronización</li>
+                            <li>Luego regresa aquí</li>
+                        </ol>
+                    </div>
+                `;
+            }
+        }
+        
+        function compareIds() {
+            const matchResult = document.getElementById('matchResult');
+            const nextSteps = document.getElementById('nextSteps');
+            
+            if (desktopId === phoneId) {
+                matchResult.innerHTML = `
+                    <div class="success">
+                        <strong>✅ ¡PERFECTO! Los User IDs coinciden</strong>
+                        <p>Ambos dispositivos ya están sincronizados correctamente.</p>
+                    </div>
+                `;
+                
+                nextSteps.innerHTML = `
+                    <div class="success">
+                        <strong>🎉 ¡Todo Listo!</strong>
+                        <p><strong>Tus dispositivos están sincronizados.</strong></p>
+                        <p>Ahora puedes:</p>
+                        <ol style="margin-left: 20px;">
+                            <li>Hacer cambios en cualquier dispositivo</li>
+                            <li>Ir a Config → Cloud Sync</li>
+                            <li>Clic en "Sincronizar Ahora"</li>
+                            <li>Los cambios aparecerán automáticamente en el otro dispositivo</li>
+                        </ol>
+                        <p style="margin-top: 15px;"><strong>💡 Tip:</strong> La sincronización también ocurre automáticamente cada 30 segundos.</p>
+                    </div>
+                `;
+            } else {
+                matchResult.innerHTML = `
+                    <div class="warning">
+                        <strong>⚠️ Los User IDs son DIFERENTES</strong>
+                        <p>Los dispositivos no están sincronizados.</p>
+                        <p><strong>Desktop:</strong> ${desktopId}</p>
+                        <p><strong>Teléfono:</strong> ${phoneId}</p>
+                    </div>
+                `;
+                
+                nextSteps.innerHTML = `
+                    <div class="warning">
+                        <strong>🔄 Necesitas sincronizar los IDs</strong>
+                        <p><strong>En el teléfono:</strong></p>
+                        <ol style="margin-left: 20px;">
+                            <li>Abre: <code>http://192.168.1.57:8000/check-user-id.html</code></li>
+                            <li>Clic en "🔄 Cambiar User ID"</li>
+                            <li>Pega este ID del desktop: <br><code style="background: #2d2d2d; color: #f8f8f2; padding: 5px; border-radius: 4px; display: inline-block; margin-top: 5px;">${desktopId}</code></li>
+                            <li>Clic en "✅ Aplicar y Recargar"</li>
+                        </ol>
+                        <p style="margin-top: 15px;"><strong>Después:</strong></p>
+                        <ol style="margin-left: 20px;">
+                            <li>El teléfono se recargará con el nuevo ID</li>
+                            <li>En el desktop, ve a Config → Cloud Sync → "Sincronizar Ahora"</li>
+                            <li>En el teléfono, espera 10 segundos y recarga la página</li>
+                            <li>¡Deberías ver todos los datos del desktop en el teléfono! 🎉</li>
+                        </ol>
+                    </div>
+                `;
+            }
+        }
+        
+        function copyDesktopId() {
+            if (!desktopId) return;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(desktopId).then(() => {
+                    alert('✅ User ID copiado al portapapeles!\n\nAhora pégalo en el teléfono.');
+                });
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = desktopId;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    alert('✅ User ID copiado!\n\nAhora pégalo en el teléfono.');
+                } catch (err) {
+                    alert('User ID:\n\n' + desktopId + '\n\nCópialo manualmente');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+        }
+    </script>
+</body>
+</html>
