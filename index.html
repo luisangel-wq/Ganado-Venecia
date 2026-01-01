@@ -16,6 +16,16 @@
     <title>Ganado Finca - Sistema de Gestión</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+    
+    <!-- Cloud Sync Module -->
+    <script src="cloud-sync.js"></script>
+    
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3083,6 +3093,136 @@
         
         <!-- Tab: Configuración -->
         <div id="tab-config" class="tab-content">
+            <!-- Cloud Sync Section -->
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <span>☁️ Sincronización en la Nube</span>
+                </div>
+                <div class="card-body">
+                    <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border-left: 4px solid #10b981;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #2e7d32;">✅ Sincronización Configurada</h4>
+                        <p style="margin: 0; color: #555; font-size: 0.9rem;">
+                            Sus datos se sincronizan automáticamente con Firebase cuando hay conexión a internet.
+                        </p>
+                    </div>
+                    
+                    <!-- Firebase Configuration Section -->
+                    <div class="card" style="border: 2px solid #10b981; margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669); cursor: pointer;" onclick="toggleFirebaseConfig()">
+                            <span>🔧 Configuración de Firebase</span>
+                            <span id="firebaseConfigToggle" style="float: right;">▼</span>
+                        </div>
+                        <div class="card-body" id="firebaseConfigBody" style="display: none;">
+                            <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #ff9800;">
+                                <strong>⚠️ IMPORTANTE:</strong>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                                    Esta configuración se guarda en firebase-config.js. No comparta esta información públicamente.
+                                </p>
+                            </div>
+                            
+                            <form id="firebaseConfigForm" onsubmit="saveFirebaseConfig(event)">
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label class="form-label">API Key <span class="required">*</span></label>
+                                        <input type="text" class="form-input" id="fbApiKey" required>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Auth Domain <span class="required">*</span></label>
+                                        <input type="text" class="form-input" id="fbAuthDomain" required>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Database URL</label>
+                                        <input type="text" class="form-input" id="fbDatabaseURL">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Project ID <span class="required">*</span></label>
+                                        <input type="text" class="form-input" id="fbProjectId" required>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Storage Bucket</label>
+                                        <input type="text" class="form-input" id="fbStorageBucket">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Messaging Sender ID</label>
+                                        <input type="text" class="form-input" id="fbMessagingSenderId">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">App ID <span class="required">*</span></label>
+                                        <input type="text" class="form-input" id="fbAppId" required>
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label class="form-label">Measurement ID</label>
+                                        <input type="text" class="form-input" id="fbMeasurementId">
+                                    </div>
+                                </div>
+                                
+                                <div class="btn-group" style="margin-top: 1rem;">
+                                    <button type="button" class="btn btn-secondary" onclick="loadFirebaseConfig()">
+                                        🔄 Recargar Configuración
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        💾 Guardar Configuración
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="testFirebaseConnection()">
+                                        🧪 Probar Conexión
+                                    </button>
+                                </div>
+                                
+                                <div id="firebaseConfigStatus" style="margin-top: 1rem; padding: 1rem; border-radius: 8px; display: none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Sync Status -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Estado</div>
+                            <div id="syncStatus" style="font-size: 1.1rem; font-weight: 600; color: #10b981;">● En línea</div>
+                        </div>
+                        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Última Sincronización</div>
+                            <div id="lastSyncTime" style="font-size: 1.1rem; font-weight: 600; color: #333;">Nunca</div>
+                        </div>
+                        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Datos Pendientes</div>
+                            <div id="pendingChanges" style="font-size: 1.1rem; font-weight: 600; color: #333;">0</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sync Controls -->
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;">
+                            <input type="checkbox" id="autoSyncEnabled" checked onchange="toggleAutoSync()" style="width: 20px; height: 20px;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 0.25rem;">Sincronización Automática</div>
+                                <div style="font-size: 0.85rem; color: #666;">Los cambios se guardan automáticamente en la nube</div>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <!-- Manual Sync Button -->
+                    <div class="btn-group" style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="manualSync()" id="manualSyncBtn">
+                            ☁️ Sincronizar Ahora
+                        </button>
+                        <button class="btn btn-secondary" onclick="viewSyncHistory()">
+                            📜 Ver Historial
+                        </button>
+                    </div>
+                    
+                    <!-- Sync Info -->
+                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem;">
+                        <strong>ℹ️ Información de Sincronización:</strong>
+                        <ul style="margin: 0.5rem 0 0 1.5rem; color: #666;">
+                            <li>Los datos se guardan localmente y en la nube</li>
+                            <li>Funciona sin conexión - se sincroniza cuando hay internet</li>
+                            <li>Todos sus dispositivos tendrán la misma información</li>
+                            <li>Las fotos se comprimen antes de subir para ahorrar espacio</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Weather Condition Selector -->
             <div class="card">
                 <div class="card-header" style="background: linear-gradient(135deg, #2196F3, #1565C0);">
@@ -8819,6 +8959,185 @@ INSTRUCCIONES:
             } catch (error) {
                 console.error('Error importing Santa Catalina data:', error);
                 showToast('❌ Error al importar datos: ' + error.message, 'error');
+            }
+        }
+        
+        // ==================== FIREBASE CONFIGURATION FUNCTIONS ====================
+        
+        function toggleFirebaseConfig() {
+            const body = document.getElementById('firebaseConfigBody');
+            const toggle = document.getElementById('firebaseConfigToggle');
+            
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                toggle.textContent = '▲';
+                loadFirebaseConfig();
+            } else {
+                body.style.display = 'none';
+                toggle.textContent = '▼';
+            }
+        }
+        
+        function loadFirebaseConfig() {
+            // Load from firebase-config.js global variable if available
+            if (typeof firebaseConfig !== 'undefined') {
+                document.getElementById('fbApiKey').value = firebaseConfig.apiKey || '';
+                document.getElementById('fbAuthDomain').value = firebaseConfig.authDomain || '';
+                document.getElementById('fbDatabaseURL').value = firebaseConfig.databaseURL || '';
+                document.getElementById('fbProjectId').value = firebaseConfig.projectId || '';
+                document.getElementById('fbStorageBucket').value = firebaseConfig.storageBucket || '';
+                document.getElementById('fbMessagingSenderId').value = firebaseConfig.messagingSenderId || '';
+                document.getElementById('fbAppId').value = firebaseConfig.appId || '';
+                document.getElementById('fbMeasurementId').value = firebaseConfig.measurementId || '';
+                
+                showToast('✅ Configuración cargada desde firebase-config.js', 'success');
+            } else {
+                showToast('⚠️ No se pudo cargar la configuración. Asegúrese de que firebase-config.js esté incluido.', 'warning');
+            }
+        }
+        
+        function saveFirebaseConfig(event) {
+            event.preventDefault();
+            
+            const newConfig = {
+                apiKey: document.getElementById('fbApiKey').value.trim(),
+                authDomain: document.getElementById('fbAuthDomain').value.trim(),
+                databaseURL: document.getElementById('fbDatabaseURL').value.trim(),
+                projectId: document.getElementById('fbProjectId').value.trim(),
+                storageBucket: document.getElementById('fbStorageBucket').value.trim(),
+                messagingSenderId: document.getElementById('fbMessagingSenderId').value.trim(),
+                appId: document.getElementById('fbAppId').value.trim(),
+                measurementId: document.getElementById('fbMeasurementId').value.trim()
+            };
+            
+            // Validate required fields
+            if (!newConfig.apiKey || !newConfig.authDomain || !newConfig.projectId || !newConfig.appId) {
+                showToast('⚠️ Complete todos los campos requeridos', 'error');
+                return;
+            }
+            
+            // Generate the new firebase-config.js content
+            const configContent = `/**
+ * FIREBASE CONFIGURATION
+ * Your Firebase project configuration for cloud sync
+ * 
+ * IMPORTANT: Keep this file private - don't share it publicly
+ */
+
+const firebaseConfig = {
+  apiKey: "${newConfig.apiKey}",
+  authDomain: "${newConfig.authDomain}",
+  databaseURL: "${newConfig.databaseURL}",
+  projectId: "${newConfig.projectId}",
+  storageBucket: "${newConfig.storageBucket}",
+  messagingSenderId: "${newConfig.messagingSenderId}",
+  appId: "${newConfig.appId}",
+  measurementId: "${newConfig.measurementId}"
+};
+
+// Auto-initialize cloud sync if enabled
+document.addEventListener('DOMContentLoaded', async function() {
+  const syncEnabled = localStorage.getItem('cloudSync_enabled') === 'true';
+  
+  if (syncEnabled && typeof cloudSync !== 'undefined') {
+    console.log('Auto-initializing cloud sync...');
+    try {
+      await cloudSync.initialize(firebaseConfig);
+      console.log('Cloud sync initialized successfully');
+      
+      // Update UI if it exists
+      if (typeof updateSyncStatus === 'function') {
+        updateSyncStatus();
+      }
+    } catch (error) {
+      console.error('Error initializing cloud sync:', error);
+    }
+  }
+});
+`;
+            
+            // Show instructions to save the file manually
+            const statusDiv = document.getElementById('firebaseConfigStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#e3f2fd';
+            statusDiv.style.borderLeft = '4px solid #2196f3';
+            statusDiv.innerHTML = `
+                <strong>📝 Instrucciones para guardar:</strong>
+                <ol style="margin: 0.5rem 0 0.5rem 1.5rem; font-size: 0.9rem;">
+                    <li>Copie el código generado abajo</li>
+                    <li>Abra el archivo <code>firebase-config.js</code> en su editor</li>
+                    <li>Reemplace todo el contenido con el nuevo código</li>
+                    <li>Guarde el archivo</li>
+                    <li>Recargue esta página</li>
+                </ol>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-secondary" onclick="copyFirebaseConfig()" style="font-size: 0.9rem;">
+                        📋 Copiar Código
+                    </button>
+                </div>
+                <textarea id="generatedConfigCode" readonly style="width: 100%; height: 300px; margin-top: 1rem; font-family: monospace; font-size: 0.85rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">${configContent}</textarea>
+            `;
+            
+            showToast('✅ Configuración generada. Siga las instrucciones para guardarla.', 'success');
+        }
+        
+        function copyFirebaseConfig() {
+            const textarea = document.getElementById('generatedConfigCode');
+            textarea.select();
+            document.execCommand('copy');
+            showToast('📋 Código copiado al portapapeles', 'success');
+        }
+        
+        async function testFirebaseConnection() {
+            const statusDiv = document.getElementById('firebaseConfigStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = '#fff3e0';
+            statusDiv.innerHTML = '<div style="text-align: center;">🔄 Probando conexión...</div>';
+            
+            try {
+                // Check if Firebase config is loaded
+                if (typeof firebaseConfig === 'undefined') {
+                    throw new Error('Configuración de Firebase no encontrada');
+                }
+                
+                // Check if cloud-sync.js is loaded
+                if (typeof cloudSync === 'undefined') {
+                    throw new Error('Módulo cloud-sync.js no cargado');
+                }
+                
+                // Try to initialize (this will validate the config)
+                await cloudSync.initialize(firebaseConfig);
+                
+                statusDiv.style.background = '#e8f5e9';
+                statusDiv.style.borderLeft = '4px solid #4caf50';
+                statusDiv.innerHTML = `
+                    <strong style="color: #2e7d32;">✅ Conexión Exitosa</strong>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                        <li>Firebase inicializado correctamente</li>
+                        <li>Proyecto: ${firebaseConfig.projectId}</li>
+                        <li>Base de datos: Conectada</li>
+                        <li>Autenticación: Disponible</li>
+                    </ul>
+                `;
+                
+                showToast('✅ Firebase conectado exitosamente', 'success');
+                
+            } catch (error) {
+                console.error('Firebase connection test failed:', error);
+                statusDiv.style.background = '#ffebee';
+                statusDiv.style.borderLeft = '4px solid #f44336';
+                statusDiv.innerHTML = `
+                    <strong style="color: #c62828;">❌ Error de Conexión</strong>
+                    <p style="margin: 0.5rem 0; font-size: 0.9rem;">${error.message}</p>
+                    <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.85rem;">
+                        <li>Verifique que todos los campos estén correctos</li>
+                        <li>Asegúrese de que el proyecto Firebase esté activo</li>
+                        <li>Revise las reglas de seguridad en Firebase Console</li>
+                        <li>Verifique su conexión a internet</li>
+                    </ul>
+                `;
+                
+                showToast('❌ Error al conectar con Firebase', 'error');
             }
         }
         

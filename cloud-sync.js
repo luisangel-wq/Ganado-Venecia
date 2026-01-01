@@ -100,6 +100,12 @@ class CloudSync {
         try {
             this.syncInProgress = true;
             
+            // Check if RANCHES is defined
+            if (typeof RANCHES === 'undefined') {
+                console.error('RANCHES object not found - sync cannot proceed');
+                return false;
+            }
+            
             const allData = {
                 ranches: {},
                 photos: {},
@@ -112,14 +118,22 @@ class CloudSync {
                 const ranch = RANCHES[ranchId];
                 const ranchData = localStorage.getItem(ranch.storageKey);
                 if (ranchData) {
-                    allData.ranches[ranchId] = JSON.parse(ranchData);
+                    try {
+                        allData.ranches[ranchId] = JSON.parse(ranchData);
+                    } catch (e) {
+                        console.error(`Error parsing data for ranch ${ranchId}:`, e);
+                    }
                 }
 
                 // Collect photos
                 const photosKey = 'animalPhotos_' + ranchId;
                 const photos = localStorage.getItem(photosKey);
                 if (photos) {
-                    allData.photos[ranchId] = JSON.parse(photos);
+                    try {
+                        allData.photos[ranchId] = JSON.parse(photos);
+                    } catch (e) {
+                        console.error(`Error parsing photos for ranch ${ranchId}:`, e);
+                    }
                 }
             });
 
@@ -133,6 +147,9 @@ class CloudSync {
             return true;
         } catch (error) {
             console.error('Error syncing to cloud:', error);
+            if (error.code === 'PERMISSION_DENIED') {
+                console.error('Firebase permission denied - check database rules');
+            }
             return false;
         } finally {
             this.syncInProgress = false;
@@ -176,6 +193,12 @@ class CloudSync {
     applySyncData(cloudData, showNotification = true) {
         if (!cloudData) return;
 
+        // Check if RANCHES is defined
+        if (typeof RANCHES === 'undefined') {
+            console.error('RANCHES object not found - cannot apply sync data');
+            return;
+        }
+
         let changesCount = 0;
 
         // Restore ranch data
@@ -183,12 +206,16 @@ class CloudSync {
             Object.keys(cloudData.ranches).forEach(ranchId => {
                 const ranch = RANCHES[ranchId];
                 if (ranch) {
-                    const newData = JSON.stringify(cloudData.ranches[ranchId]);
-                    const oldData = localStorage.getItem(ranch.storageKey);
-                    
-                    if (newData !== oldData) {
-                        localStorage.setItem(ranch.storageKey, newData);
-                        changesCount++;
+                    try {
+                        const newData = JSON.stringify(cloudData.ranches[ranchId]);
+                        const oldData = localStorage.getItem(ranch.storageKey);
+                        
+                        if (newData !== oldData) {
+                            localStorage.setItem(ranch.storageKey, newData);
+                            changesCount++;
+                        }
+                    } catch (e) {
+                        console.error(`Error applying sync data for ranch ${ranchId}:`, e);
                     }
                 }
             });
@@ -198,12 +225,16 @@ class CloudSync {
         if (cloudData.photos) {
             Object.keys(cloudData.photos).forEach(ranchId => {
                 const photosKey = 'animalPhotos_' + ranchId;
-                const newPhotos = JSON.stringify(cloudData.photos[ranchId]);
-                const oldPhotos = localStorage.getItem(photosKey);
-                
-                if (newPhotos !== oldPhotos) {
-                    localStorage.setItem(photosKey, newPhotos);
-                    changesCount++;
+                try {
+                    const newPhotos = JSON.stringify(cloudData.photos[ranchId]);
+                    const oldPhotos = localStorage.getItem(photosKey);
+                    
+                    if (newPhotos !== oldPhotos) {
+                        localStorage.setItem(photosKey, newPhotos);
+                        changesCount++;
+                    }
+                } catch (e) {
+                    console.error(`Error applying sync photos for ranch ${ranchId}:`, e);
                 }
             });
         }
@@ -266,7 +297,7 @@ class CloudSync {
     /**
      * Force immediate sync
      */
-    async forcSync() {
+    async forceSync() {
         if (!this.enabled) {
             console.error('Cloud sync is not enabled');
             return false;
