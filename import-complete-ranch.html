@@ -274,15 +274,15 @@
                 log(`📥 Procesando hoja: ${entradasSheet} (${rows.length} filas)`);
                 
                 parsedData.entradas = rows.map(row => ({
-                    numero: String(row.numero || row.Numero || row.chapeta || row.Chapeta || ''),
-                    peso: Number(row.peso || row.Peso || 0),
-                    sexo: String(row.sexo || row.Sexo || 'MACHO').toUpperCase(),
-                    raza: String(row.raza || row.Raza || ''),
-                    lote: String(row.lote || row.Lote || ''),
-                    fechaEntrada: formatDate(row.fechaEntrada || row.FechaEntrada || row.fecha || new Date()),
-                    precioKilo: Number(row.precioKilo || row.PrecioKilo || row.precio || 0),
-                    vendedor: String(row.vendedor || row.Vendedor || ''),
-                    costoTotal: Number(row.costoTotal || row.CostoTotal || 0),
+                    numero: String(row['Número'] || row.Numero || row.numero || row.chapeta || row.Chapeta || ''),
+                    peso: Number(row['Peso Inicial'] || row.Peso || row.peso || 0),
+                    sexo: String(row.Sexo || row.sexo || 'MACHO').toUpperCase(),
+                    raza: String(row.Raza || row.raza || ''),
+                    lote: String(row.Lote || row.lote || ''),
+                    fechaEntrada: formatDate(row['Fecha de entrada'] || row.FechaEntrada || row.fechaEntrada || row.Fecha || row.fecha || new Date()),
+                    precioKilo: Number(row['Precio/Kilo'] || row.PrecioKilo || row.precioKilo || row.precio || 0),
+                    vendedor: String(row.Vendedor || row.vendedor || ''),
+                    costoTotal: Number(row['Costo Total'] || row.CostoTotal || row.costoTotal || 0),
                     tipo: 'compra'
                 })).filter(e => e.numero && e.peso);
 
@@ -295,12 +295,12 @@
                 log(`📤 Procesando hoja: ${salidasSheet} (${rows.length} filas)`);
                 
                 parsedData.salidas = rows.map(row => ({
-                    numero: String(row.numero || row.Numero || row.chapeta || row.Chapeta || ''),
-                    peso: Number(row.peso || row.Peso || row.pesoSalida || 0),
-                    fechaSalida: formatDate(row.fechaSalida || row.FechaSalida || row.fecha || new Date()),
-                    precioKiloVenta: Number(row.precioKiloVenta || row.PrecioKilo || row.precio || 0),
-                    comprador: String(row.comprador || row.Comprador || row.tipo || ''),
-                    costoVenta: Number(row.costoVenta || row.CostoVenta || row.total || 0)
+                    numero: String(row['Número'] || row.Numero || row.numero || row.chapeta || row.Chapeta || ''),
+                    peso: Number(row.Peso || row.peso || row.pesoSalida || 0),
+                    fechaSalida: formatDate(row['Fecha Salida'] || row.FechaSalida || row.fechaSalida || row.Fecha || row.fecha || new Date()),
+                    precioKiloVenta: Number(row['Precio/Kilo Venta'] || row.PrecioKilo || row.precioKiloVenta || row.precio || 0),
+                    comprador: String(row.Comprador || row.comprador || row.tipo || ''),
+                    costoVenta: Number(row['Costo de venta'] || row.CostoVenta || row.costoVenta || row.total || 0)
                 })).filter(s => s.numero && s.peso);
 
                 log(`✅ ${parsedData.salidas.length} salidas procesadas`);
