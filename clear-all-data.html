@@ -201,7 +201,7 @@
         const RANCHES = {
             'SantaCatalina': { name: 'Santa Catalina', icon: '🏠', key: 'ganadoFinca_SantaCatalina' },
             'LaVega': { name: 'La Vega', icon: '🌾', key: 'ganadoFinca_LaVega' },
-            'ElParaiso': { name: 'El Paraiso', icon: '🌴', key: 'ganadoFinca_ElParaiso' }
+            'LaCoruna': { name: 'La Coruña', icon: '⛰️', key: 'ganadoFinca_LaCoruna' }
         };
 
         function log(message) {
@@ -342,7 +342,7 @@
         }
 
         function clearAllRanches() {
-            if (!confirm('🚨 ⚠️ ADVERTENCIA CRÍTICA ⚠️ 🚨\n\n¿Está ABSOLUTAMENTE SEGURO de que desea eliminar TODOS LOS DATOS de TODAS LAS FINCAS?\n\nEsto incluye:\n- Santa Catalina\n- La Vega\n- El Paraiso\n\nTodos los animales, ventas, fotos, y configuraciones serán eliminados PERMANENTEMENTE.')) {
+            if (!confirm('🚨 ⚠️ ADVERTENCIA CRÍTICA ⚠️ 🚨\n\n¿Está ABSOLUTAMENTE SEGURO de que desea eliminar TODOS LOS DATOS de TODAS LAS FINCAS?\n\nEsto incluye:\n- Santa Catalina\n- La Vega\n- La Coruña\n\nTodos los animales, ventas, fotos, y configuraciones serán eliminados PERMANENTEMENTE.')) {
                 log('❌ Operación cancelada por el usuario');
                 return;
             }
