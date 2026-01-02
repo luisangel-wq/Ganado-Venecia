@@ -159,6 +159,13 @@
 
     <div class="card">
         <h2>📊 Estado Actual de las Fincas</h2>
+        
+        <!-- Completion Banner (hidden by default) -->
+        <div id="completionBanner" style="display: none; background: #4caf50; color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-size: 1.2rem; font-weight: bold;">
+            ✅ ELIMINACIÓN COMPLETADA<br>
+            <span style="font-size: 1rem; font-weight: normal;">Todos los datos han sido eliminados. La aplicación está lista para datos nuevos.</span>
+        </div>
+        
         <div id="ranchesStatus">Cargando...</div>
     </div>
 
@@ -234,6 +241,9 @@
         function refreshStatus() {
             log('🔄 Actualizando estado de todas las fincas...');
             
+            // Hide completion banner when refreshing
+            document.getElementById('completionBanner').style.display = 'none';
+            
             let html = '';
             let hasData = false;
 
@@ -308,9 +318,19 @@
             log(`  - ${stats.fotos} sesiones de fotos eliminadas`);
             log(`  - ${stats.potreros} potreros eliminados`);
 
+            // Show completion banner
+            document.getElementById('completionBanner').style.display = 'block';
+            document.getElementById('completionBanner').innerHTML = `
+                ✅ ${ranch.icon} ${ranch.name} LIMPIADA COMPLETAMENTE<br>
+                <span style="font-size: 1rem; font-weight: normal;">Todos los datos de ${ranch.name} han sido eliminados exitosamente.</span>
+            `;
+            
             alert(`✅ ${ranch.icon} ${ranch.name} limpiada completamente.\n\nTodos los datos han sido eliminados.`);
             
             refreshStatus();
+            
+            // Scroll to top to show banner
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function clearAllRanches() {
@@ -375,9 +395,22 @@
             log(`  🌾 ${totalStats.potreros} potreros eliminados`);
             log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
+            // Show large completion banner
+            document.getElementById('completionBanner').style.display = 'block';
+            document.getElementById('completionBanner').innerHTML = `
+                🎉 ✅ ELIMINACIÓN TOTAL COMPLETADA ✅ 🎉<br>
+                <span style="font-size: 1rem; font-weight: normal;">
+                    Eliminados: ${totalStats.entradas} entradas • ${totalStats.ventas} ventas • ${totalStats.muertes} muertes<br>
+                    ${totalStats.salud} eventos de salud • ${totalStats.fotos} fotos • ${totalStats.potreros} potreros
+                </span>
+            `;
+            
             alert(`✅ ELIMINACIÓN COMPLETADA\n\nTodos los datos de todas las fincas han sido eliminados:\n\n📥 ${totalStats.entradas} entradas\n💵 ${totalStats.ventas} ventas\n✝️ ${totalStats.muertes} muertes\n💉 ${totalStats.salud} eventos de salud\n📷 ${totalStats.fotos} fotos\n🌾 ${totalStats.potreros} potreros\n\nLa aplicación está lista para ingresar datos frescos.`);
             
             refreshStatus();
+            
+            // Scroll to top to show banner
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function goToApp() {
