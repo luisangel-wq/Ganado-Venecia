@@ -5,6 +5,12 @@
  * - Chapeta number from tag photo (OCR)
  */
 
+// Model fallback configuration - UPDATED TO LATEST STABLE MODELS (Jan 2026)
+const MODEL_FALLBACKS = [
+    { name: 'gemini-2.5-flash', label: 'Flash 2.5 (recomendado)', endpoint: 'v1' },
+    { name: 'gemini-2.5-pro', label: 'Pro 2.5 (mejor calidad)', endpoint: 'v1' }
+];
+
 // Global state for photo batch
 let photoBatch = {
     photos: [],
@@ -112,7 +118,48 @@ async function retryWithBackoff(fn, maxRetries = 4) {
 }
 
 /**
- * Call Gemini AI to classify photos and detect chapeta number
+ * Call specific Gemini model
+ */
+async function callGeminiModel(modelConfig, prompt, imageParts, apiKey) {
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/${modelConfig.endpoint}/models/${modelConfig.name}:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        ...imageParts
+                    ]
+                }],
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 1024
+                }
+            })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+        
+        if (response.status === 429) {
+            throw new Error(`429: ${errorMsg}`);
+        }
+        
+        throw new Error(errorMsg);
+    }
+
+    const data = await response.json();
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    return parseClassificationResponse(aiText);
+}
+
+/**
+ * Call Gemini AI with model fallback to classify photos and detect chapeta number
  */
 async function classifyPhotosWithAI(photoDataArray) {
     const apiKey = localStorage.getItem('googleApiKey');
@@ -130,51 +177,51 @@ async function classifyPhotosWithAI(photoDataArray) {
         }
     }));
 
-    // Wait for rate limit if needed
-    await waitForRateLimit();
-
-    // Wrap API call with retry logic
-    return await retryWithBackoff(async () => {
+    let lastError = null;
+    
+    // Try each model in the fallback chain
+    for (let i = 0; i < MODEL_FALLBACKS.length; i++) {
+        const model = MODEL_FALLBACKS[i];
+        
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            ...imageParts
-                        ]
-                    }],
-                    generationConfig: {
-                        temperature: 0.1,
-                        maxOutputTokens: 1024
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
-                
-                if (response.status === 429) {
-                    throw new Error(`429: ${errorMsg}`);
-                }
-                
-                throw new Error(errorMsg);
-            }
-
-            const data = await response.json();
-            const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            console.log(`🤖 Intentando clasificación con ${model.label}...`);
             
-            return parseClassificationResponse(aiText);
+            // Show user which model we're trying (if not first)
+            if (i > 0 && typeof showToast === 'function') {
+                showToast(`🔄 Intentando con modelo alternativo ${model.label}...`, 'info');
+            }
+            
+            // Wait for rate limit if needed
+            await waitForRateLimit();
+            
+            // Try this model with retry logic
+            const result = await retryWithBackoff(async () => {
+                return await callGeminiModel(model, prompt, imageParts, apiKey);
+            });
+            
+            // Success! Log which model worked
+            console.log(`✅ Clasificación exitosa con ${model.label}`);
+            if (i > 0 && typeof showToast === 'function') {
+                showToast(`✅ Clasificación completada con ${model.label}`, 'success');
+            }
+            
+            return result;
+            
         } catch (error) {
-            console.error('AI Classification Error:', error);
-            throw error;
+            lastError = error;
+            console.warn(`❌ Modelo ${model.label} falló:`, error.message);
+            
+            // If this isn't the last model, wait a bit before trying next
+            if (i < MODEL_FALLBACKS.length - 1) {
+                console.log(`⏳ Esperando 2s antes de intentar siguiente modelo...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
         }
-    });
+    }
+    
+    // All models failed
+    console.error('❌ Todos los modelos fallaron');
+    throw new Error(`Todos los modelos de IA fallaron. Último error: ${lastError?.message || 'Desconocido'}`);
 }
 
 /**

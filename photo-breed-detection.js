@@ -2,11 +2,17 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * 🧬 BREED DETECTION & CLASSIFICATION MODULE
  * ═══════════════════════════════════════════════════════════════════════════
- * Uses Gemini 2.0 Flash Exp for improved breed detection
+ * Uses Gemini with model fallback for improved reliability
  */
 
 (function(global) {
     'use strict';
+
+    // Model fallback configuration - UPDATED TO LATEST STABLE MODELS (Jan 2026)
+    const MODEL_FALLBACKS = [
+        { name: 'gemini-2.5-flash', label: 'Flash 2.5 (recomendado)', endpoint: 'v1' },
+        { name: 'gemini-2.5-pro', label: 'Pro 2.5 (mejor calidad)', endpoint: 'v1' }
+    ];
 
     const BREED_DETECTION = {
         
@@ -98,7 +104,43 @@ ONLY respond with the JSON, no additional text.`;
         },
 
         /**
-         * Detect breed from photos using Gemini 2.0 Flash Exp
+         * Call specific Gemini model for breed detection
+         */
+        async callBreedModel(modelConfig, prompt, imageParts, apiKey) {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/${modelConfig.endpoint}/models/${modelConfig.name}:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                ...imageParts
+                            ]
+                        }],
+                        generationConfig: {
+                            temperature: 0.1, // Low temperature for consistency
+                            maxOutputTokens: 1024
+                        }
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+                throw new Error(`API Error ${response.status}: ${errorMsg}`);
+            }
+
+            const data = await response.json();
+            const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            
+            return this.parseBreedResponse(aiText);
+        },
+
+        /**
+         * Detect breed from photos using Gemini with model fallback
          */
         async detectBreed(photos) {
             const apiKey = localStorage.getItem('googleApiKey');
@@ -128,39 +170,46 @@ ONLY respond with the JSON, no additional text.`;
                     return null;
                 }
 
-                // Use Gemini 2.0 Flash Exp for better accuracy
-                const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: prompt },
-                                    ...imageParts
-                                ]
-                            }],
-                            generationConfig: {
-                                temperature: 0.1, // Low temperature for consistency
-                                maxOutputTokens: 1024
-                            }
-                        })
+                let lastError = null;
+                
+                // Try each model in the fallback chain
+                for (let i = 0; i < MODEL_FALLBACKS.length; i++) {
+                    const model = MODEL_FALLBACKS[i];
+                    
+                    try {
+                        console.log(`🧬 Intentando detección de raza con ${model.label}...`);
+                        
+                        // Show user which model we're trying (if not first)
+                        if (i > 0 && typeof showToast === 'function') {
+                            showToast(`🔄 Intentando detección con modelo ${model.label}...`, 'info');
+                        }
+                        
+                        // Try this model
+                        const result = await this.callBreedModel(model, prompt, imageParts, apiKey);
+                        
+                        // Success! Log which model worked
+                        console.log(`✅ Raza detectada con ${model.label}:`, result);
+                        if (i > 0 && typeof showToast === 'function') {
+                            showToast(`✅ Raza detectada con ${model.label}`, 'success');
+                        }
+                        
+                        return result;
+                        
+                    } catch (error) {
+                        lastError = error;
+                        console.warn(`❌ Modelo ${model.label} falló para detección de raza:`, error.message);
+                        
+                        // If this isn't the last model, wait a bit before trying next
+                        if (i < MODEL_FALLBACKS.length - 1) {
+                            console.log(`⏳ Esperando 2s antes de intentar siguiente modelo...`);
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        }
                     }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
                 }
-
-                const data = await response.json();
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
                 
-                // Parse JSON response
-                const parsed = this.parseBreedResponse(aiText);
-                
-                console.log('🧬 Breed detected:', parsed);
-                return parsed;
+                // All models failed
+                console.error('❌ Todos los modelos fallaron para detección de raza');
+                throw lastError;
 
             } catch (error) {
                 console.error('Breed detection error:', error);
