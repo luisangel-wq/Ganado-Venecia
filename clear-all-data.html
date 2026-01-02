@@ -222,19 +222,27 @@
 
         function getRanchStats(ranchKey) {
             const data = loadRanchData(ranchKey);
-            const inventario = data.entradas.filter(e => !data.salidas.some(s => s.numero == e.numero));
-            const ventas = data.salidas.filter(s => s.comprador !== 'MUERTE');
-            const muertes = data.salidas.filter(s => s.comprador === 'MUERTE');
+            
+            // Ensure arrays exist
+            const entradas = data.entradas || [];
+            const salidas = data.salidas || [];
+            const saludEventos = data.saludEventos || [];
+            const fotoSesiones = data.fotoSesiones || [];
+            const potreros = data.potreros || [];
+            
+            const inventario = entradas.filter(e => !salidas.some(s => s.numero == e.numero));
+            const ventas = salidas.filter(s => s.comprador !== 'MUERTE');
+            const muertes = salidas.filter(s => s.comprador === 'MUERTE');
             
             return {
                 inventario: inventario.length,
-                entradas: data.entradas.length,
+                entradas: entradas.length,
                 ventas: ventas.length,
                 muertes: muertes.length,
-                salud: (data.saludEventos || []).length,
-                fotos: (data.fotoSesiones || []).length,
-                potreros: (data.potreros || []).length,
-                isEmpty: data.entradas.length === 0 && data.salidas.length === 0
+                salud: saludEventos.length,
+                fotos: fotoSesiones.length,
+                potreros: potreros.length,
+                isEmpty: entradas.length === 0 && salidas.length === 0
             };
         }
 
