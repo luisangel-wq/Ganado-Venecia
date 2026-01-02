@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Datos Locales - Santa Catalina</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .data-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .data-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stat:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin: 10px 10px 10px 0;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #218838;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .code-box {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .ranch-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .ranch-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .ranch-card.active {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .ranch-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico de Datos Locales</h1>
+        <p class="subtitle">Verificando qué datos tiene guardados en este navegador</p>
+
+        <div id="results"></div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="location.reload()">🔄 Actualizar</button>
+            <button onclick="window.location.href='index.html'" class="success">🏠 Ir a la App</button>
+        </div>
+    </div>
+
+    <script>
+        function checkLocalData() {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+
+            try {
+                // Obtener datos de localStorage
+                const cattle = JSON.parse(localStorage.getItem('cattle') || '[]');
+                const sales = JSON.parse(localStorage.getItem('sales') || '[]');
+                const deaths = JSON.parse(localStorage.getItem('deaths') || '[]');
+                const currentRanch = localStorage.getItem('currentRanch') || 'Santa Catalina';
+
+                // Contar animales por finca
+                const ranchCounts = {
+                    'Santa Catalina': { total: 0, active: 0, sold: 0, dead: 0 },
+                    'La Coruña': { total: 0, active: 0, sold: 0, dead: 0 },
+                    'La Vega': { total: 0, active: 0, sold: 0, dead: 0 }
+                };
+
+                // Crear conjunto de chapetas vendidas y muertas
+                const soldChapetas = new Set(sales.map(s => s.chapeta));
+                const deadChapetas = new Set(deaths.map(d => d.chapeta));
+
+                cattle.forEach(animal => {
+                    const ranch = animal.finca || 'Santa Catalina';
+                    if (ranchCounts[ranch]) {
+                        ranchCounts[ranch].total++;
+                        
+                        if (soldChapetas.has(animal.chapeta)) {
+                            ranchCounts[ranch].sold++;
+                        } else if (deadChapetas.has(animal.chapeta)) {
+                            ranchCounts[ranch].dead++;
+                        } else {
+                            ranchCounts[ranch].active++;
+                        }
+                    }
+                });
+
+                // Información general
+                html += `<div class="info-box">
+                    <strong>📍 Ubicación:</strong> ${window.location.href}<br>
+                    <strong>🏡 Finca Actual:</strong> ${currentRanch}
+                </div>`;
+
+                // Total general
+                const totalAnimals = cattle.length;
+                const totalSales = sales.length;
+                const totalDeaths = deaths.length;
+
+                if (totalAnimals === 0) {
+                    html += `<div class="error-box">
+                        <strong>⚠️ NO HAY DATOS GUARDADOS</strong><br>
+                        Este navegador no tiene ningún animal registrado. Los datos del CSV no están aquí.
+                    </div>`;
+                } else {
+                    html += `<div class="success-box">
+                        <strong>✅ Datos encontrados</strong><br>
+                        Este navegador tiene ${totalAnimals} animales guardados
+                    </div>`;
+                }
+
+                // Tarjetas por finca
+                html += '<div class="ranch-data">';
+                for (const [ranchName, counts] of Object.entries(ranchCounts)) {
+                    const isActive = ranchName === currentRanch;
+                    html += `
+                        <div class="ranch-card ${isActive ? 'active' : ''}">
+                            <div class="ranch-name">${ranchName}</div>
+                            <div class="stat">
+                                <span class="stat-label">🐄 Total registrados:</span>
+                                <span class="stat-value">${counts.total}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">✅ Activos:</span>
+                                <span class="stat-value">${counts.active}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">💰 Vendidos:</span>
+                                <span class="stat-value">${counts.sold}</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">☠️ Muertos:</span>
+                                <span class="stat-value">${counts.dead}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+
+                // Detalles de Santa Catalina
+                if (ranchCounts['Santa Catalina'].total > 0) {
+                    html += `<div class="data-section">
+                        <h3>⛪ Detalles de Santa Catalina</h3>`;
+                    
+                    const santaCatalinaCattle = cattle.filter(a => (a.finca || 'Santa Catalina') === 'Santa Catalina');
+                    const santaCatalinaSales = sales.filter(s => {
+                        const animal = cattle.find(a => a.chapeta === s.chapeta);
+                        return animal && (animal.finca || 'Santa Catalina') === 'Santa Catalina';
+                    });
+
+                    html += `
+                        <div class="stat">
+                            <span class="stat-label">📊 Total animales registrados:</span>
+                            <span class="stat-value">${ranchCounts['Santa Catalina'].total}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">✅ Animales activos (inventario):</span>
+                            <span class="stat-value">${ranchCounts['Santa Catalina'].active}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">📤 Salidas (ventas + muertes):</span>
+                            <span class="stat-value">${ranchCounts['Santa Catalina'].sold + ranchCounts['Santa Catalina'].dead}</span>
+                        </div>`;
+
+                    if (santaCatalinaSales.length > 0) {
+                        html += `<div style="margin-top: 15px;">
+                            <strong>Últimas 5 ventas:</strong>
+                            <ul style="margin: 10px 0; padding-left: 20px;">`;
+                        santaCatalinaSales.slice(-5).reverse().forEach(sale => {
+                            html += `<li>${sale.chapeta} - ${sale.fecha} - $${sale.precioKg.toLocaleString()}/kg</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+
+                    html += `</div>`;
+                }
+
+                // Comparación con lo esperado
+                if (ranchCounts['Santa Catalina'].total !== 97) {
+                    html += `<div class="warning-box">
+                        <strong>⚠️ DISCREPANCIA DETECTADA</strong><br>
+                        Se esperaban 97 animales en Santa Catalina, pero solo hay ${ranchCounts['Santa Catalina'].total} registrados.<br><br>
+                        <strong>Posibles causas:</strong><br>
+                        • Los datos del CSV se importaron en otro navegador o perfil<br>
+                        • El import no se completó correctamente<br>
+                        • Los datos se borraron accidentalmente<br><br>
+                        <strong>Solución:</strong> Vuelva a importar el archivo CSV de Santa Catalina.
+                    </div>`;
+                }
+
+                // Información de almacenamiento
+                const storageSize = new Blob([JSON.stringify(cattle)]).size;
+                html += `<div class="info-box">
+                    <strong>💾 Información de almacenamiento:</strong><br>
+                    • Tamaño de datos: ${(storageSize / 1024).toFixed(2)} KB<br>
+                    • Total animales en todas las fincas: ${totalAnimals}<br>
+                    • Total ventas registradas: ${totalSales}<br>
+                    • Total muertes registradas: ${totalDeaths}
+                </div>`;
+
+            } catch (error) {
+                html = `<div class="error-box">
+                    <strong>❌ Error al leer datos:</strong><br>
+                    ${error.message}
+                </div>`;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Ejecutar al cargar
+        checkLocalData();
+    </script>
+</body>
+</html>

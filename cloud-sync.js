@@ -218,6 +218,35 @@ class CloudSync {
         const RANCHES = this.getRanches();
         let changesCount = 0;
 
+        // DATA VALIDATION: Check if cloud data is suspicious (empty or too small)
+        const cloudAnimalCount = this.countAnimalsInData(cloudData);
+        const localAnimalCount = this.countLocalAnimals();
+        
+        // Prevent overwriting good data with empty/minimal data
+        if (localAnimalCount > 10 && cloudAnimalCount < localAnimalCount * 0.5) {
+            console.warn('⚠️ SYNC BLOCKED: Cloud data appears incomplete');
+            console.warn(`Local has ${localAnimalCount} animals, cloud has ${cloudAnimalCount}`);
+            
+            if (showNotification && typeof showToast === 'function') {
+                showToast('⚠️ Sincronización bloqueada: Los datos en la nube parecen incompletos. Use Backup/Restore manual.', 'warning');
+            }
+            
+            // Optionally ask user what to do
+            if (showNotification && confirm(
+                `ADVERTENCIA: Sincronización bloqueada\n\n` +
+                `Datos locales: ${localAnimalCount} animales\n` +
+                `Datos en la nube: ${cloudAnimalCount} animales\n\n` +
+                `Los datos de la nube parecen estar incompletos o vacíos.\n\n` +
+                `¿Desea SOBRESCRIBIR la nube con sus datos locales?\n` +
+                `(Recomendado si sus datos locales son correctos)`
+            )) {
+                // Upload local data to cloud instead
+                this.syncToCloud();
+            }
+            
+            return; // Don't apply cloud data
+        }
+
         // Restore ranch data
         if (cloudData.ranches) {
             Object.keys(cloudData.ranches).forEach(ranchId => {
@@ -285,6 +314,48 @@ class CloudSync {
     }
 
     /**
+     * Count animals in cloud data
+     */
+    countAnimalsInData(cloudData) {
+        if (!cloudData || !cloudData.ranches) return 0;
+        
+        let count = 0;
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranchData = cloudData.ranches[ranchId];
+            if (ranchData && ranchData.cattle && Array.isArray(ranchData.cattle)) {
+                count += ranchData.cattle.length;
+            }
+        });
+        
+        return count;
+    }
+
+    /**
+     * Count animals in local storage
+     */
+    countLocalAnimals() {
+        const RANCHES = this.getRanches();
+        let count = 0;
+        
+        Object.keys(RANCHES).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            const ranchData = localStorage.getItem(ranch.storageKey);
+            if (ranchData) {
+                try {
+                    const data = JSON.parse(ranchData);
+                    if (data && data.cattle && Array.isArray(data.cattle)) {
+                        count += data.cattle.length;
+                    }
+                } catch (e) {
+                    console.error(`Error counting animals for ranch ${ranchId}:`, e);
+                }
+            }
+        });
+        
+        return count;
+    }
+
+    /**
      * Get unique device identifier
      */
     getDeviceId() {
@@ -341,32 +412,10 @@ class CloudSync {
 // Create global instance
 window.cloudSync = new CloudSync();
 
-// Auto-initialize on page load if Firebase config is available
+// DISABLED: Auto-initialization to prevent accidental data loss
+// Users must manually enable cloud sync from Config tab
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔄 Checking for cloud sync auto-initialization...');
-    
-    // Wait a bit for firebase-config.js to load
-    setTimeout(async () => {
-        if (typeof firebaseConfig !== 'undefined' && typeof firebase !== 'undefined') {
-            console.log('✅ Firebase config found, auto-initializing cloud sync...');
-            
-            try {
-                const initialized = await window.cloudSync.initialize(firebaseConfig);
-                if (initialized) {
-                    console.log('✅ Cloud sync auto-initialized successfully');
-                    
-                    // Show subtle notification on mobile
-                    if (typeof showToast === 'function') {
-                        showToast('☁️ Sincronización automática activa', 'info');
-                    }
-                } else {
-                    console.warn('⚠️ Cloud sync auto-initialization failed');
-                }
-            } catch (error) {
-                console.error('❌ Error auto-initializing cloud sync:', error);
-            }
-        } else {
-            console.log('ℹ️ Firebase config not found - cloud sync will initialize manually');
-        }
-    }, 1000);
+    console.log('🔄 Cloud Sync: Auto-initialization is DISABLED');
+    console.log('ℹ️ To enable sync, go to Config tab and manually activate it');
+    console.log('⚠️ WARNING: Only enable if you understand the risks of data synchronization');
 });
