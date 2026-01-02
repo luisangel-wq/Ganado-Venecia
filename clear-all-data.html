@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗑️ Limpiar Todos los Datos - Ganado Venecia</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #fce4ec, #f8bbd0);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            color: #c62828;
+            margin: 0 0 0.5rem 0;
+        }
+        h2 {
+            color: #d32f2f;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .danger {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .ranch-section {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .ranch-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .ranch-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1976d2;
+        }
+        .stat {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin: 0.25rem;
+            font-size: 0.9rem;
+        }
+        .stat strong {
+            color: #1976d2;
+        }
+        #log {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🗑️ Limpiar Todos los Datos</h1>
+        <p style="color: #666; margin-top: 0.5rem;">
+            Herramienta para eliminar todos los datos de todas las fincas y empezar de cero.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>⚠️ ADVERTENCIA IMPORTANTE</h2>
+        <div class="danger">
+            <strong>🚨 PRECAUCIÓN:</strong> Esta herramienta eliminará PERMANENTEMENTE todos los datos:
+            <ul style="margin: 0.5rem 0;">
+                <li>✗ Todos los animales del inventario</li>
+                <li>✗ Todas las compras (entradas)</li>
+                <li>✗ Todas las ventas (salidas)</li>
+                <li>✗ Todos los eventos de salud</li>
+                <li>✗ Todas las fotos</li>
+                <li>✗ Todos los registros de potreros</li>
+                <li>✗ Configuraciones de finca</li>
+            </ul>
+            <strong>Esta acción NO se puede deshacer.</strong>
+        </div>
+        <div class="warning">
+            💡 <strong>Sugerencia:</strong> Si solo necesita corregir datos específicos, considere usar las herramientas de edición en lugar de borrar todo.
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📊 Estado Actual de las Fincas</h2>
+        <div id="ranchesStatus">Cargando...</div>
+    </div>
+
+    <div class="card">
+        <h2>🗑️ Acciones de Limpieza</h2>
+        
+        <div style="margin: 1.5rem 0;">
+            <h3 style="color: #666; font-size: 1rem;">Limpiar por Finca:</h3>
+            <div id="individualActions"></div>
+        </div>
+
+        <div style="margin: 1.5rem 0; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+            <h3 style="color: #c62828; font-size: 1rem;">⚠️ Acción Nuclear:</h3>
+            <button class="btn btn-danger" onclick="clearAllRanches()" style="font-size: 1.1rem;">
+                🗑️ ELIMINAR TODOS LOS DATOS DE TODAS LAS FINCAS
+            </button>
+        </div>
+
+        <div style="margin: 1.5rem 0; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+            <button class="btn btn-primary" onclick="refreshStatus()">
+                🔄 Actualizar Estado
+            </button>
+            
+            <button class="btn btn-success" onclick="goToApp()">
+                ✅ Ir a la Aplicación
+            </button>
+        </div>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { name: 'Santa Catalina', icon: '🏠', key: 'ganadoFinca_SantaCatalina' },
+            'LaVega': { name: 'La Vega', icon: '🌾', key: 'ganadoFinca_LaVega' },
+            'ElParaiso': { name: 'El Paraiso', icon: '🌴', key: 'ganadoFinca_ElParaiso' }
+        };
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function loadRanchData(ranchKey) {
+            const saved = localStorage.getItem(ranchKey);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { entradas: [], salidas: [], saludEventos: [], fotoSesiones: [], potreros: [], animalPotreros: {} };
+        }
+
+        function getRanchStats(ranchKey) {
+            const data = loadRanchData(ranchKey);
+            const inventario = data.entradas.filter(e => !data.salidas.some(s => s.numero == e.numero));
+            const ventas = data.salidas.filter(s => s.comprador !== 'MUERTE');
+            const muertes = data.salidas.filter(s => s.comprador === 'MUERTE');
+            
+            return {
+                inventario: inventario.length,
+                entradas: data.entradas.length,
+                ventas: ventas.length,
+                muertes: muertes.length,
+                salud: (data.saludEventos || []).length,
+                fotos: (data.fotoSesiones || []).length,
+                potreros: (data.potreros || []).length,
+                isEmpty: data.entradas.length === 0 && data.salidas.length === 0
+            };
+        }
+
+        function refreshStatus() {
+            log('🔄 Actualizando estado de todas las fincas...');
+            
+            let html = '';
+            let hasData = false;
+
+            Object.entries(RANCHES).forEach(([id, ranch]) => {
+                const stats = getRanchStats(ranch.key);
+                
+                if (!stats.isEmpty) hasData = true;
+
+                html += `
+                    <div class="ranch-section">
+                        <div class="ranch-header">
+                            <div class="ranch-title">${ranch.icon} ${ranch.name}</div>
+                            <button class="btn btn-warning" onclick="clearRanch('${id}')" ${stats.isEmpty ? 'disabled' : ''}>
+                                🗑️ Limpiar ${ranch.name}
+                            </button>
+                        </div>
+                        ${stats.isEmpty ? `
+                            <div class="empty-state">✅ Sin datos - Finca vacía</div>
+                        ` : `
+                            <div>
+                                <div class="stat">🐂 <strong>${stats.inventario}</strong> en inventario</div>
+                                <div class="stat">📥 <strong>${stats.entradas}</strong> entradas</div>
+                                <div class="stat">💵 <strong>${stats.ventas}</strong> ventas</div>
+                                <div class="stat">✝️ <strong>${stats.muertes}</strong> muertes</div>
+                                <div class="stat">💉 <strong>${stats.salud}</strong> eventos salud</div>
+                                <div class="stat">📷 <strong>${stats.fotos}</strong> fotos</div>
+                                <div class="stat">🌾 <strong>${stats.potreros}</strong> potreros</div>
+                            </div>
+                        `}
+                    </div>
+                `;
+            });
+
+            if (!hasData) {
+                html += `
+                    <div class="success">
+                        ✅ <strong>Todas las fincas están vacías</strong><br>
+                        No hay datos para eliminar. La aplicación está lista para ingresar datos frescos.
+                    </div>
+                `;
+            }
+
+            document.getElementById('ranchesStatus').innerHTML = html;
+            log('✅ Estado actualizado');
+        }
+
+        function clearRanch(ranchId) {
+            const ranch = RANCHES[ranchId];
+            
+            if (!confirm(`⚠️ ¿Eliminar TODOS los datos de ${ranch.icon} ${ranch.name}?\n\nEsta acción es PERMANENTE y no se puede deshacer.`)) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            if (!confirm(`⚠️ ÚLTIMA CONFIRMACIÓN:\n\n¿Realmente desea eliminar todos los datos de ${ranch.name}?\n\nSe eliminarán:\n- Todos los animales\n- Todas las ventas\n- Todos los eventos\n- Todas las fotos\n- Todas las configuraciones`)) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            log(`🗑️ Eliminando todos los datos de ${ranch.icon} ${ranch.name}...`);
+
+            const stats = getRanchStats(ranch.key);
+            
+            // Clear the ranch data
+            localStorage.removeItem(ranch.key);
+
+            log(`✅ ${ranch.name} limpiada completamente:`);
+            log(`  - ${stats.entradas} entradas eliminadas`);
+            log(`  - ${stats.ventas} ventas eliminadas`);
+            log(`  - ${stats.muertes} muertes eliminadas`);
+            log(`  - ${stats.salud} eventos de salud eliminados`);
+            log(`  - ${stats.fotos} sesiones de fotos eliminadas`);
+            log(`  - ${stats.potreros} potreros eliminados`);
+
+            alert(`✅ ${ranch.icon} ${ranch.name} limpiada completamente.\n\nTodos los datos han sido eliminados.`);
+            
+            refreshStatus();
+        }
+
+        function clearAllRanches() {
+            if (!confirm('🚨 ⚠️ ADVERTENCIA CRÍTICA ⚠️ 🚨\n\n¿Está ABSOLUTAMENTE SEGURO de que desea eliminar TODOS LOS DATOS de TODAS LAS FINCAS?\n\nEsto incluye:\n- Santa Catalina\n- La Vega\n- El Paraiso\n\nTodos los animales, ventas, fotos, y configuraciones serán eliminados PERMANENTEMENTE.')) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN FINAL ⚠️\n\nEscriba mentalmente "SÍ" si está seguro.\n\nEsta es su última oportunidad para cancelar.\n\n¿Proceder con la eliminación TOTAL?')) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            const password = prompt('⚠️ CONFIRMACIÓN DE SEGURIDAD:\n\nPara continuar, escriba la palabra: ELIMINAR\n\n(en mayúsculas)');
+            
+            if (password !== 'ELIMINAR') {
+                alert('❌ Contraseña incorrecta. Operación cancelada.');
+                log('❌ Contraseña de seguridad incorrecta');
+                return;
+            }
+
+            log('🗑️ Iniciando eliminación TOTAL de todas las fincas...');
+
+            let totalStats = {
+                entradas: 0,
+                ventas: 0,
+                muertes: 0,
+                salud: 0,
+                fotos: 0,
+                potreros: 0
+            };
+
+            Object.entries(RANCHES).forEach(([id, ranch]) => {
+                const stats = getRanchStats(ranch.key);
+                totalStats.entradas += stats.entradas;
+                totalStats.ventas += stats.ventas;
+                totalStats.muertes += stats.muertes;
+                totalStats.salud += stats.salud;
+                totalStats.fotos += stats.fotos;
+                totalStats.potreros += stats.potreros;
+
+                localStorage.removeItem(ranch.key);
+                log(`✅ ${ranch.icon} ${ranch.name} eliminada`);
+            });
+
+            // Also clear any other related data
+            const keysToCheck = Object.keys(localStorage);
+            keysToCheck.forEach(key => {
+                if (key.includes('ganado') || key.includes('Finca')) {
+                    localStorage.removeItem(key);
+                    log(`  - Eliminado: ${key}`);
+                }
+            });
+
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            log('✅ ELIMINACIÓN COMPLETA:');
+            log(`  📥 ${totalStats.entradas} entradas eliminadas`);
+            log(`  💵 ${totalStats.ventas} ventas eliminadas`);
+            log(`  ✝️ ${totalStats.muertes} muertes eliminadas`);
+            log(`  💉 ${totalStats.salud} eventos de salud eliminados`);
+            log(`  📷 ${totalStats.fotos} sesiones de fotos eliminadas`);
+            log(`  🌾 ${totalStats.potreros} potreros eliminados`);
+            log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            alert(`✅ ELIMINACIÓN COMPLETADA\n\nTodos los datos de todas las fincas han sido eliminados:\n\n📥 ${totalStats.entradas} entradas\n💵 ${totalStats.ventas} ventas\n✝️ ${totalStats.muertes} muertes\n💉 ${totalStats.salud} eventos de salud\n📷 ${totalStats.fotos} fotos\n🌾 ${totalStats.potreros} potreros\n\nLa aplicación está lista para ingresar datos frescos.`);
+            
+            refreshStatus();
+        }
+
+        function goToApp() {
+            window.location.href = 'index.html';
+        }
+
+        // Initialize
+        refreshStatus();
+        log('🚀 Herramienta de limpieza iniciada');
+        log('⚠️ Use con precaución - las eliminaciones son permanentes');
+    </script>
+</body>
+</html>
