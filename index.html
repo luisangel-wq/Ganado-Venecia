@@ -4096,18 +4096,29 @@
         };
         
         function getNextLoteNumber() {
+            // Set minimum lote number based on ranch
+            const minLotePorFinca = {
+                'SantaCatalina': 58,
+                'LaCoruna': 173,
+                'LaVega': 241
+            };
+            
+            const minLote = minLotePorFinca[currentRanch] || 1;
+            
             // Get all unique lote numbers that start with "L-"
             const loteNumbers = data.entradas
                 .filter(e => e.lote && e.lote.startsWith('L-'))
                 .map(e => parseInt(e.lote.replace('L-', '')))
                 .filter(n => !isNaN(n));
-            
+
             if (loteNumbers.length === 0) {
-                return 'L-1';
+                return `L-${minLote}`;
             }
-            
+
             const maxLote = Math.max(...loteNumbers);
-            return `L-${maxLote + 1}`;
+            // Use the higher of maxLote+1 or minLote
+            const nextLote = Math.max(maxLote + 1, minLote);
+            return `L-${nextLote}`;
         }
         
         function initCompraForm() {
