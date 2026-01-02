@@ -8330,18 +8330,16 @@
                 console.log('AI provider elements not yet loaded:', error);
             }
             
-            // Load Google API Key - with default key pre-configured
+            // Load Google API Key - NO DEFAULT KEY FOR SECURITY
             let googleKey = localStorage.getItem('googleApiKey');
-            if (!googleKey) {
-                // Pre-configure with provided API key
-                googleKey = 'AIzaSyCdpo1fa-GFuffCzKTgR8igr0HQ1VqT-Ik';
-                localStorage.setItem('googleApiKey', googleKey);
-            }
             if (googleKey) {
                 const googleKeyInput = document.getElementById('googleApiKey');
                 const googleKeyStatus = document.getElementById('googleApiKeyStatus');
                 if (googleKeyInput) googleKeyInput.value = googleKey;
-                if (googleKeyStatus) googleKeyStatus.innerHTML = '<span style="color: #4caf50;">✅ API Key configurada y lista para usar</span>';
+                if (googleKeyStatus) googleKeyStatus.innerHTML = '<span style="color: #4caf50;">✅ API Key configurada</span>';
+            } else {
+                const googleKeyStatus = document.getElementById('googleApiKeyStatus');
+                if (googleKeyStatus) googleKeyStatus.innerHTML = '<span style="color: #ff9800;">⚠️ Configure su API Key para usar IA</span>';
             }
             
             // Load Anthropic API Key
