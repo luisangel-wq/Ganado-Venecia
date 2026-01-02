@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar Ventas - Santa Catalina</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            color: #1976d2;
+            margin: 0 0 0.5rem 0;
+        }
+        h2 {
+            color: #1565c0;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .danger {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        .stat {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        .stat strong {
+            color: #1976d2;
+        }
+        #log {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🧹 Limpiar Ventas de Santa Catalina</h1>
+        <p style="color: #666; margin-top: 0.5rem;">
+            Herramienta para eliminar ventas registradas incorrectamente y poder rehacer el proceso.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>📊 Estado Actual de Santa Catalina</h2>
+        <div id="currentStatus">Cargando...</div>
+    </div>
+
+    <div class="card">
+        <h2>📤 Ventas Registradas</h2>
+        <div id="salesList">Cargando...</div>
+    </div>
+
+    <div class="card">
+        <h2>🗑️ Acciones de Limpieza</h2>
+        <div class="danger">
+            <strong>⚠️ ADVERTENCIA:</strong> Esta acción eliminará las ventas de Santa Catalina. Los animales volverán al inventario.
+            Asegúrese de que realmente desea hacer esto antes de continuar.
+        </div>
+        
+        <button class="btn btn-danger" onclick="clearTodaySales()">
+            🗑️ Eliminar Ventas de Hoy (01/02/2026)
+        </button>
+        
+        <button class="btn btn-danger" onclick="clearAllSales()">
+            🗑️ Eliminar TODAS las Ventas
+        </button>
+        
+        <button class="btn btn-primary" onclick="refreshStatus()">
+            🔄 Actualizar Estado
+        </button>
+        
+        <button class="btn btn-success" onclick="goToApp()">
+            ✅ Ir a la Aplicación
+        </button>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const RANCH_KEY = 'ganadoFinca_SantaCatalina';
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem(RANCH_KEY);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return { entradas: [], salidas: [] };
+        }
+
+        function saveData(data) {
+            localStorage.setItem(RANCH_KEY, JSON.stringify(data));
+            log('✅ Datos guardados en localStorage');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-CO');
+        }
+
+        function formatCurrency(value) {
+            return '$' + Math.round(value).toLocaleString('es-CO');
+        }
+
+        function refreshStatus() {
+            log('🔄 Actualizando estado...');
+            
+            const data = loadData();
+            const inventario = data.entradas.filter(e => !data.salidas.some(s => s.numero == e.numero));
+            const ventas = data.salidas.filter(s => s.comprador !== 'MUERTE');
+            const muertes = data.salidas.filter(s => s.comprador === 'MUERTE');
+            
+            const totalEntradas = data.entradas.length;
+            const totalKg = inventario.reduce((sum, a) => sum + a.peso, 0);
+            const totalInversion = inventario.reduce((sum, a) => sum + (a.costoTotal || 0), 0);
+
+            document.getElementById('currentStatus').innerHTML = `
+                <div class="stat">🐂 <strong>${inventario.length}</strong> animales en inventario</div>
+                <div class="stat">📥 <strong>${totalEntradas}</strong> entradas totales</div>
+                <div class="stat">💵 <strong>${ventas.length}</strong> ventas</div>
+                <div class="stat">✝️ <strong>${muertes.length}</strong> muertes</div>
+                <div class="stat">⚖️ <strong>${totalKg.toFixed(0)}</strong> kg totales</div>
+                <div class="stat">💰 <strong>${formatCurrency(totalInversion)}</strong> inversión</div>
+            `;
+
+            const today = new Date().toISOString().split('T')[0];
+            const todaySales = ventas.filter(v => v.fechaSalida === today);
+
+            if (ventas.length === 0) {
+                document.getElementById('salesList').innerHTML = `
+                    <div class="success">
+                        ✅ <strong>No hay ventas registradas en Santa Catalina</strong>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div class="warning">
+                        📊 <strong>${ventas.length} ventas registradas</strong>
+                        ${todaySales.length > 0 ? `<br>⚠️ ${todaySales.length} de hoy (${formatDate(today)})` : ''}
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Chapeta</th>
+                                <th>Fecha</th>
+                                <th>Comprador</th>
+                                <th>Peso</th>
+                                <th>$/Kg</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                ventas.slice(-20).reverse().forEach(venta => {
+                    const isToday = venta.fechaSalida === today;
+                    html += `
+                        <tr style="${isToday ? 'background: #fff3e0;' : ''}">
+                            <td><strong>${venta.numero}</strong></td>
+                            <td>${formatDate(venta.fechaSalida)} ${isToday ? '⚠️' : ''}</td>
+                            <td>${venta.comprador}</td>
+                            <td>${venta.peso} kg</td>
+                            <td>${formatCurrency(venta.precioKiloVenta)}</td>
+                            <td>${formatCurrency(venta.costoVenta || 0)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                if (ventas.length > 20) {
+                    html += `<p style="color: #666; font-size: 0.9rem;">Mostrando las últimas 20 de ${ventas.length} ventas</p>`;
+                }
+
+                document.getElementById('salesList').innerHTML = html;
+            }
+
+            log('✅ Estado actualizado');
+        }
+
+        function clearTodaySales() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            if (!confirm(`⚠️ ¿Eliminar las ventas de HOY (${formatDate(today)})?\n\nLos animales volverán al inventario.`)) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            log('🗑️ Eliminando ventas de hoy...');
+
+            const data = loadData();
+            const todaySales = data.salidas.filter(s => s.fechaSalida === today && s.comprador !== 'MUERTE');
+            
+            if (todaySales.length === 0) {
+                alert('ℹ️ No hay ventas de hoy para eliminar');
+                log('ℹ️ No hay ventas de hoy');
+                return;
+            }
+
+            log(`📊 Encontradas ${todaySales.length} ventas de hoy`);
+
+            // Remove today's sales
+            data.salidas = data.salidas.filter(s => s.fechaSalida !== today || s.comprador === 'MUERTE');
+
+            log(`✅ ${todaySales.length} ventas eliminadas`);
+            todaySales.forEach(v => log(`  - Animal #${v.numero}: ${v.peso} kg a ${v.comprador}`));
+
+            saveData(data);
+
+            alert(`✅ ${todaySales.length} ventas de hoy eliminadas.\n\nLos animales ahora están de vuelta en el inventario.`);
+            
+            refreshStatus();
+        }
+
+        function clearAllSales() {
+            if (!confirm('⚠️ ¿ELIMINAR TODAS LAS VENTAS de Santa Catalina?\n\nEsta acción no se puede deshacer.')) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            if (!confirm('⚠️ ÚLTIMA CONFIRMACIÓN: ¿Realmente desea eliminar TODAS las ventas?')) {
+                log('❌ Operación cancelada por el usuario');
+                return;
+            }
+
+            log('🗑️ Eliminando TODAS las ventas...');
+
+            const data = loadData();
+            const ventasCount = data.salidas.filter(s => s.comprador !== 'MUERTE').length;
+            
+            log(`📊 Encontradas ${ventasCount} ventas totales`);
+
+            // Keep deaths, remove sales
+            data.salidas = data.salidas.filter(s => s.comprador === 'MUERTE');
+
+            log(`✅ ${ventasCount} ventas eliminadas`);
+
+            saveData(data);
+
+            alert(`✅ ${ventasCount} ventas eliminadas.\n\nTodos los animales vendidos ahora están de vuelta en el inventario.`);
+            
+            refreshStatus();
+        }
+
+        function goToApp() {
+            window.location.href = 'index.html';
+        }
+
+        // Initialize
+        refreshStatus();
+        log('🚀 Herramienta iniciada');
+    </script>
+</body>
+</html>
