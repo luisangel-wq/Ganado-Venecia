@@ -3727,6 +3727,12 @@
         function saveData() {
             const ranch = RANCHES[currentRanch];
             localStorage.setItem(ranch.storageKey, JSON.stringify(data));
+            
+            // 🔄 Trigger immediate cloud sync
+            if (window.cloudSync && window.cloudSync.enabled) {
+                window.cloudSync.syncToCloud().catch(err => console.error('Cloud sync error:', err));
+            }
+            
             updateAllViews();
         }
         
@@ -4826,37 +4832,7 @@
             
             document.getElementById('ventaPesoAnimal').focus();
         }
-            
-            const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
-            const pesoEstimado = animal.peso + (diasEnFinca * data.config.gdp);
-            
-            // Store selected animal
-            document.getElementById('ventaSelectedNumero').value = numero;
-            
-            // Show add animal form
-            document.getElementById('ventaAddAnimalForm').style.display = 'block';
-            document.getElementById('ventaSelectedAnimalInfo').innerHTML = 
-                `<span style="font-size: 1.1rem;">#${numero}</span> | ${animal.raza || '-'} | ${animal.sexo === 'MACHO' ? '♂️' : '♀️'} | Lote: ${animal.lote || '-'}`;
-            
-            // Pre-fill estimated weight
-            document.getElementById('ventaPesoAnimal').value = Math.round(pesoEstimado);
-            document.getElementById('ventaPesoEstimadoHint').textContent = `Peso entrada: ${animal.peso} kg | Estimado: ${pesoEstimado.toFixed(0)} kg | ${diasEnFinca} días`;
-            
-            // Update remaining count on button
-            const remaining = currentVenta.cantidadEsperada - currentVenta.animales.length;
-            document.getElementById('ventaAnimalCountRemaining').textContent = remaining;
-            
-            // Highlight selected
-            document.querySelectorAll('#ventaAnimalSelectorLote .animal-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.querySelector('strong')?.textContent === `#${numero}`) {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            document.getElementById('ventaPesoAnimal').focus();
-        }
-        
+
         function clearVentaSelection() {
             document.getElementById('ventaSelectedNumero').value = '';
             document.getElementById('ventaAddAnimalForm').style.display = 'none';
