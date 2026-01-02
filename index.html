@@ -8543,6 +8543,12 @@ INSTRUCCIONES:
         }
         
         // ========== GOOGLE GEMINI API WITH RETRY ==========
+        // UPDATED TO LATEST STABLE MODELS (Jan 2026)
+        const GEMINI_MODEL_FALLBACKS = [
+            { name: 'gemini-2.5-flash', label: 'Flash 2.5 (recomendado)', endpoint: 'v1' },
+            { name: 'gemini-2.5-pro', label: 'Pro 2.5 (mejor calidad)', endpoint: 'v1' }
+        ];
+
         async function callGoogleGeminiAPI(prompt) {
             const apiKey = localStorage.getItem('googleApiKey');
             
@@ -8555,37 +8561,62 @@ INSTRUCCIONES:
                 const dataSummary = getDataSummaryForAI();
                 const systemPrompt = getSystemPrompt(dataSummary);
                 const fullPrompt = `${systemPrompt}\n\n---\n\nSOLICITUD DEL USUARIO:\n${prompt}`;
+
+                const callGeminiModel = async (modelConfig) => {
+                    const url = `https://generativelanguage.googleapis.com/${modelConfig.endpoint}/models/${modelConfig.name}:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{ text: fullPrompt }]
+                            }],
+                            generationConfig: {
+                                temperature: 0.7,
+                                maxOutputTokens: 2048
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('API Error:', errorData);
+                        throw new Error(errorData.error?.message || 'Error en la API de Google');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates[0] && result.candidates[0].content) {
+                        return result.candidates[0].content.parts[0].text;
+                    }
+                    
+                    throw new Error('Respuesta inesperada de Google Gemini');
+                };
+
+                let lastError = null;
                 
-                // Use gemini-1.5-flash on v1beta API (most stable and available)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: fullPrompt }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 2048
-                        }
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('API Error:', errorData);
-                    throw new Error(errorData.error?.message || 'Error en la API de Google');
+                for (let i = 0; i < GEMINI_MODEL_FALLBACKS.length; i++) {
+                    const modelConfig = GEMINI_MODEL_FALLBACKS[i];
+                    
+                    if (i > 0) {
+                        showToast(`🔄 Intentando con modelo alternativo ${modelConfig.label}...`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                    
+                    try {
+                        const responseText = await retryWithBackoff(
+                            () => callGeminiModel(modelConfig),
+                            4
+                        );
+                        return responseText;
+                    } catch (error) {
+                        lastError = error;
+                        console.error(`Gemini model failed (${modelConfig.name}):`, error);
+                    }
                 }
                 
-                const result = await response.json();
-                
-                if (result.candidates && result.candidates[0] && result.candidates[0].content) {
-                    return result.candidates[0].content.parts[0].text;
-                }
-                
-                throw new Error('Respuesta inesperada de Google Gemini');
+                throw lastError || new Error('Error en la API de Google');
                 
             } catch (error) {
                 console.error('Error:', error);
