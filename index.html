@@ -4679,6 +4679,26 @@
             populateVentaAnimalSelector();
         }
         
+        // Check which ranch an animal belongs to
+        function getAnimalOriginRanch(numero) {
+            // Check all ranches for this animal
+            for (const ranchId in RANCHES) {
+                const ranch = RANCHES[ranchId];
+                const ranchData = localStorage.getItem(ranch.storageKey);
+                if (ranchData) {
+                    const parsed = JSON.parse(ranchData);
+                    if (parsed.entradas && parsed.entradas.some(e => e.numero == numero && !isAnimalSoldInRanch(numero, parsed))) {
+                        return ranchId;
+                    }
+                }
+            }
+            return null;
+        }
+        
+        function isAnimalSoldInRanch(numero, ranchData) {
+            return ranchData.salidas && ranchData.salidas.some(s => s.numero == numero);
+        }
+        
         function selectAnimalForVenta(numero) {
             // Check if venta is already complete
             if (currentVenta.animales.length >= currentVenta.cantidadEsperada) {
@@ -4686,8 +4706,126 @@
                 return;
             }
             
+            // Check if animal belongs to a different ranch
+            const originRanch = getAnimalOriginRanch(numero);
+            if (originRanch && originRanch !== currentRanch) {
+                showCrossRanchSaleWarning(numero, originRanch, () => {
+                    // User confirmed, proceed with sale
+                    selectAnimalForVentaInternal(numero, originRanch);
+                });
+                return;
+            }
+            
+            // Same ranch or not found, proceed normally
+            selectAnimalForVentaInternal(numero, null);
+        }
+        
+        function showCrossRanchSaleWarning(numero, originRanchId, onConfirm) {
+            const originRanchName = RANCHES[originRanchId].name;
+            const currentRanchName = RANCHES[currentRanch].name;
+            
+            // Create warning modal
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
+                        <span>⚠️ Animal de Otra Finca</span>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background: #fff3e0; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #ff9800;">
+                            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                                🏠 El animal #${numero} pertenece a ${RANCHES[originRanchId].icon} ${originRanchName}
+                            </div>
+                            <div style="font-size: 0.95rem; color: #666;">
+                                Estás en ${RANCHES[currentRanch].icon} ${currentRanchName}, pero este animal está registrado en otra finca.
+                            </div>
+                        </div>
+                        
+                        <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #2196f3;">
+                            <strong>📋 ¿Qué significa esto?</strong>
+                            <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                                <li>El animal se venderá desde ${currentRanchName}</li>
+                                <li>Se registrará como salida en ${originRanchName}</li>
+                                <li>Se mantendrá el registro del origen</li>
+                            </ul>
+                        </div>
+                        
+                        <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <strong>✅ ¿Deseas proceder con la venta?</strong>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">
+                                Se registrará automáticamente en ambas fincas.
+                            </p>
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button class="btn btn-warning" onclick="confirmCrossRanchSale()" style="flex: 1; color: #333;">
+                                ✅ Sí, Proceder con la Venta
+                            </button>
+                            <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Store callback for confirmation
+            window.tempCrossRanchCallback = onConfirm;
+        }
+        
+        function confirmCrossRanchSale() {
+            if (window.tempCrossRanchCallback) {
+                window.tempCrossRanchCallback();
+                delete window.tempCrossRanchCallback;
+            }
+            document.querySelector('.modal.active')?.remove();
+        }
+        
+        function selectAnimalForVentaInternal(numero, originRanchId) {
             const animal = getInventario().find(a => a.numero == numero);
             if (!animal) return;
+            
+            const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+            const pesoEstimado = animal.peso + (diasEnFinca * data.config.gdp);
+            
+            // Store selected animal with origin ranch info
+            document.getElementById('ventaSelectedNumero').value = numero;
+            if (originRanchId) {
+                document.getElementById('ventaSelectedNumero').dataset.originRanch = originRanchId;
+            }
+            
+            // Show add animal form
+            document.getElementById('ventaAddAnimalForm').style.display = 'block';
+            
+            // Update info display with cross-ranch indicator
+            const crossRanchLabel = originRanchId && originRanchId !== currentRanch ? 
+                ` <span style="color: #ff9800;">⚠️ (${RANCHES[originRanchId].icon} ${RANCHES[originRanchId].name})</span>` : '';
+            
+            document.getElementById('ventaSelectedAnimalInfo').innerHTML = 
+                `<span style="font-size: 1.1rem;">#${numero}</span> | ${animal.raza || '-'} | ${animal.sexo === 'MACHO' ? '♂️' : '♀️'} | Lote: ${animal.lote || '-'}${crossRanchLabel}`;
+            
+            // Pre-fill estimated weight
+            document.getElementById('ventaPesoAnimal').value = Math.round(pesoEstimado);
+            document.getElementById('ventaPesoEstimadoHint').textContent = `Peso entrada: ${animal.peso} kg | Estimado: ${pesoEstimado.toFixed(0)} kg | ${diasEnFinca} días`;
+            
+            // Update remaining count on button
+            const remaining = currentVenta.cantidadEsperada - currentVenta.animales.length;
+            document.getElementById('ventaAnimalCountRemaining').textContent = remaining;
+            
+            // Highlight selected
+            document.querySelectorAll('#ventaAnimalSelectorLote .animal-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.querySelector('strong')?.textContent === `#${numero}`) {
+                    opt.classList.add('selected');
+                }
+            });
+            
+            document.getElementById('ventaPesoAnimal').focus();
+        }
             
             const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
             const pesoEstimado = animal.peso + (diasEnFinca * data.config.gdp);
@@ -8376,6 +8514,52 @@
             localStorage.setItem('googleApiKey', apiKey);
             document.getElementById('googleApiKeyStatus').innerHTML = '<span style="color: #4caf50;">✅ API Key de Google guardada correctamente</span>';
             showToast('API Key de Google guardada', 'success');
+        }
+        
+        async function testGoogleApiKey() {
+            const apiKey = document.getElementById('googleApiKey').value.trim();
+            if (!apiKey) {
+                showToast('Primero ingrese una API Key', 'error');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('googleApiKeyStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<span style="color: #ff9800;">🔄 Probando conexión con Google Gemini...</span>';
+            
+            try {
+                // Test with a simple prompt
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: 'Responde solo con "OK" si puedes leer este mensaje.' }]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Error al conectar con Google Gemini');
+                }
+                
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates[0]) {
+                    statusDiv.innerHTML = '<span style="color: #4caf50;">✅ Conexión exitosa - API Key válida y funcionando</span>';
+                    showToast('✅ API Key de Google Gemini verificada correctamente', 'success');
+                } else {
+                    throw new Error('Respuesta inesperada de la API');
+                }
+                
+            } catch (error) {
+                console.error('API Key test error:', error);
+                statusDiv.innerHTML = `<span style="color: #f44336;">❌ Error: ${error.message}</span>`;
+                showToast('❌ API Key inválida o error de conexión', 'error');
+            }
         }
         
         function saveAnthropicApiKey() {
