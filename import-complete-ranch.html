@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📥 Importar Datos Completos de Finca</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            color: #1976d2;
+            margin: 0 0 0.5rem 0;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .file-input {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 2px dashed #2196f3;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .file-input:hover {
+            background: #e3f2fd;
+        }
+        .preview-table {
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        .stat-box {
+            display: inline-block;
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem;
+            text-align: center;
+        }
+        .stat-box strong {
+            display: block;
+            font-size: 1.5rem;
+            color: #1976d2;
+        }
+        #log {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📥 Importar Datos Completos de Finca</h1>
+        <p style="color: #666;">
+            Importa un archivo Excel con múltiples hojas (entradas, salidas, inventario) para cargar todos los datos de una finca de una sola vez.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>📋 Formato del Archivo Excel</h2>
+        <div class="info">
+            <strong>Tu archivo Excel debe tener estas hojas (tabs):</strong>
+            <ul>
+                <li><strong>Entradas</strong> o <strong>Compras</strong>: Animales comprados/ingresados</li>
+                <li><strong>Salidas</strong> o <strong>Ventas</strong>: Animales vendidos</li>
+                <li><strong>Inventario</strong>: Estado actual (opcional)</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Columnas requeridas por hoja:</strong>
+            <br><br>
+            <strong>Entradas/Compras:</strong> numero, peso, sexo, raza, lote, fechaEntrada, precioKilo, vendedor
+            <br>
+            <strong>Salidas/Ventas:</strong> numero, peso, fechaSalida, precioKiloVenta, comprador
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🎯 Seleccionar Finca</h2>
+        <select id="ranchSelector" class="btn btn-primary" style="width: 100%; max-width: 300px;">
+            <option value="SantaCatalina">🏠 Santa Catalina</option>
+            <option value="LaVega">🌾 La Vega</option>
+            <option value="LaCoruna">⛰️ La Coruña</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h2>📂 Cargar Archivo Excel</h2>
+        <div class="file-input" onclick="document.getElementById('fileInput').click()">
+            <p style="margin: 0;">📄 Click aquí para seleccionar archivo Excel (.xlsx, .xls)</p>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleFile(event)">
+        </div>
+        <div id="fileName" style="margin-top: 0.5rem; color: #666;"></div>
+    </div>
+
+    <div id="previewSection" style="display: none;">
+        <div class="card">
+            <h2>👀 Vista Previa de Datos</h2>
+            <div id="stats"></div>
+            <div id="preview"></div>
+        </div>
+
+        <div class="card">
+            <h2>💾 Importar Datos</h2>
+            <div class="warning">
+                <strong>⚠️ Advertencia:</strong> Esto reemplazará todos los datos existentes de la finca seleccionada.
+            </div>
+            <button class="btn btn-success" onclick="importData()" style="font-size: 1.1rem;">
+                ✅ IMPORTAR DATOS A LA FINCA
+            </button>
+            <button class="btn btn-primary" onclick="resetForm()">
+                🔄 Cargar Otro Archivo
+            </button>
+        </div>
+    </div>
+
+    <div id="resultSection" style="display: none;">
+        <div class="card">
+            <div id="resultMessage"></div>
+            <div id="log"></div>
+            <button class="btn btn-success" onclick="goToApp()">
+                ✅ Ir a la Aplicación
+            </button>
+            <button class="btn btn-primary" onclick="resetForm()">
+                📥 Importar Otra Finca
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { name: 'Santa Catalina', icon: '🏠', key: 'ganadoFinca_SantaCatalina' },
+            'LaVega': { name: 'La Vega', icon: '🌾', key: 'ganadoFinca_LaVega' },
+            'LaCoruna': { name: 'La Coruña', icon: '⛰️', key: 'ganadoFinca_LaCoruna' }
+        };
+
+        let parsedData = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('fileName').textContent = `Archivo: ${file.name}`;
+            log(`📂 Procesando archivo: ${file.name}`);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    log(`✅ Archivo Excel leído correctamente`);
+                    log(`📋 Hojas encontradas: ${workbook.SheetNames.join(', ')}`);
+
+                    parseExcelData(workbook);
+                } catch (error) {
+                    alert('Error al leer el archivo: ' + error.message);
+                    log(`❌ Error: ${error.message}`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseExcelData(workbook) {
+            parsedData = {
+                entradas: [],
+                salidas: []
+            };
+
+            // Find Entradas/Compras sheet
+            const entradasSheet = workbook.SheetNames.find(name => 
+                name.toLowerCase().includes('entrada') || 
+                name.toLowerCase().includes('compra')
+            );
+
+            // Find Salidas/Ventas sheet
+            const salidasSheet = workbook.SheetNames.find(name => 
+                name.toLowerCase().includes('salida') || 
+                name.toLowerCase().includes('venta')
+            );
+
+            if (entradasSheet) {
+                const sheet = workbook.Sheets[entradasSheet];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                log(`📥 Procesando hoja: ${entradasSheet} (${rows.length} filas)`);
+                
+                parsedData.entradas = rows.map(row => ({
+                    numero: String(row.numero || row.Numero || row.chapeta || row.Chapeta || ''),
+                    peso: Number(row.peso || row.Peso || 0),
+                    sexo: String(row.sexo || row.Sexo || 'MACHO').toUpperCase(),
+                    raza: String(row.raza || row.Raza || ''),
+                    lote: String(row.lote || row.Lote || ''),
+                    fechaEntrada: formatDate(row.fechaEntrada || row.FechaEntrada || row.fecha || new Date()),
+                    precioKilo: Number(row.precioKilo || row.PrecioKilo || row.precio || 0),
+                    vendedor: String(row.vendedor || row.Vendedor || ''),
+                    costoTotal: Number(row.costoTotal || row.CostoTotal || 0),
+                    tipo: 'compra'
+                })).filter(e => e.numero && e.peso);
+
+                log(`✅ ${parsedData.entradas.length} entradas procesadas`);
+            }
+
+            if (salidasSheet) {
+                const sheet = workbook.Sheets[salidasSheet];
+                const rows = XLSX.utils.sheet_to_json(sheet);
+                log(`📤 Procesando hoja: ${salidasSheet} (${rows.length} filas)`);
+                
+                parsedData.salidas = rows.map(row => ({
+                    numero: String(row.numero || row.Numero || row.chapeta || row.Chapeta || ''),
+                    peso: Number(row.peso || row.Peso || row.pesoSalida || 0),
+                    fechaSalida: formatDate(row.fechaSalida || row.FechaSalida || row.fecha || new Date()),
+                    precioKiloVenta: Number(row.precioKiloVenta || row.PrecioKilo || row.precio || 0),
+                    comprador: String(row.comprador || row.Comprador || row.tipo || ''),
+                    costoVenta: Number(row.costoVenta || row.CostoVenta || row.total || 0)
+                })).filter(s => s.numero && s.peso);
+
+                log(`✅ ${parsedData.salidas.length} salidas procesadas`);
+            }
+
+            showPreview();
+        }
+
+        function formatDate(dateValue) {
+            if (!dateValue) return new Date().toISOString().split('T')[0];
+            
+            if (typeof dateValue === 'number') {
+                // Excel date serial number
+                const date = XLSX.SSF.parse_date_code(dateValue);
+                return `${date.y}-${String(date.m).padStart(2,'0')}-${String(date.d).padStart(2,'0')}`;
+            }
+            
+            if (dateValue instanceof Date) {
+                return dateValue.toISOString().split('T')[0];
+            }
+            
+            return String(dateValue);
+        }
+
+        function showPreview() {
+            document.getElementById('previewSection').style.display = 'block';
+
+            // Show stats
+            const inventario = parsedData.entradas.filter(e => 
+                !parsedData.salidas.some(s => s.numero === e.numero)
+            );
+
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-box">
+                    <strong>${parsedData.entradas.length}</strong>
+                    <span>Entradas</span>
+                </div>
+                <div class="stat-box">
+                    <strong>${parsedData.salidas.length}</strong>
+                    <span>Salidas</span>
+                </div>
+                <div class="stat-box">
+                    <strong>${inventario.length}</strong>
+                    <span>En Inventario</span>
+                </div>
+            `;
+
+            // Show preview table
+            let html = '<h3>Entradas (primeras 10):</h3><div class="preview-table"><table><thead><tr>';
+            html += '<th>Número</th><th>Peso</th><th>Sexo</th><th>Raza</th><th>Lote</th><th>Fecha</th><th>Precio/Kg</th></tr></thead><tbody>';
+            
+            parsedData.entradas.slice(0, 10).forEach(e => {
+                html += `<tr><td>${e.numero}</td><td>${e.peso}</td><td>${e.sexo}</td><td>${e.raza}</td><td>${e.lote}</td><td>${e.fechaEntrada}</td><td>$${e.precioKilo}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            if (parsedData.salidas.length > 0) {
+                html += '<h3>Salidas (primeras 10):</h3><div class="preview-table"><table><thead><tr>';
+                html += '<th>Número</th><th>Peso</th><th>Fecha</th><th>Precio/Kg</th><th>Comprador</th></tr></thead><tbody>';
+                
+                parsedData.salidas.slice(0, 10).forEach(s => {
+                    html += `<tr><td>${s.numero}</td><td>${s.peso}</td><td>${s.fechaSalida}</td><td>$${s.precioKiloVenta}</td><td>${s.comprador}</td></tr>`;
+                });
+                html += '</tbody></table></div>';
+            }
+
+            document.getElementById('preview').innerHTML = html;
+
+            log(`📊 Vista previa generada`);
+        }
+
+        function importData() {
+            if (!parsedData) {
+                alert('No hay datos para importar');
+                return;
+            }
+
+            const ranchId = document.getElementById('ranchSelector').value;
+            const ranch = RANCHES[ranchId];
+
+            if (!confirm(`⚠️ ¿Importar datos a ${ranch.icon} ${ranch.name}?\n\nEsto reemplazará todos los datos existentes de esta finca.`)) {
+                log('❌ Importación cancelada');
+                return;
+            }
+
+            log(`🚀 Iniciando importación a ${ranch.name}...`);
+
+            const ranchData = {
+                entradas: parsedData.entradas,
+                salidas: parsedData.salidas,
+                saludEventos: [],
+                fotoSesiones: [],
+                potreros: [],
+                animalPotreros: {},
+                config: {
+                    gdp: 0.31,
+                    precioVenta: 9000
+                }
+            };
+
+            // Calculate totals
+            ranchData.entradas.forEach(e => {
+                if (!e.costoTotal) {
+                    e.costoTotal = e.peso * e.precioKilo;
+                }
+            });
+
+            ranchData.salidas.forEach(s => {
+                if (!s.costoVenta) {
+                    s.costoVenta = s.peso * s.precioKiloVenta;
+                }
+            });
+
+            // Save to localStorage
+            localStorage.setItem(ranch.key, JSON.stringify(ranchData));
+
+            log(`✅ ${ranchData.entradas.length} entradas importadas`);
+            log(`✅ ${ranchData.salidas.length} salidas importadas`);
+            log(`✅ Datos guardados en ${ranch.key}`);
+
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('resultMessage').innerHTML = `
+                <div class="success">
+                    <h2>🎉 ✅ IMPORTACIÓN EXITOSA</h2>
+                    <p><strong>${ranch.icon} ${ranch.name}</strong> ahora tiene:</p>
+                    <ul>
+                        <li>📥 ${ranchData.entradas.length} entradas</li>
+                        <li>📤 ${ranchData.salidas.length} salidas</li>
+                        <li>🐂 ${ranchData.entradas.length - ranchData.salidas.length} animales en inventario</li>
+                    </ul>
+                    <p>Puedes ir a la aplicación para verificar los datos.</p>
+                </div>
+            `;
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            parsedData = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('log').innerHTML = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goToApp() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
