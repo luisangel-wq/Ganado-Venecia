@@ -434,6 +434,22 @@
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background: var(--white);
+        }
+
+        thead .sticky-col {
+            z-index: 4;
+            background: var(--light);
+        }
+
+        tfoot .sticky-col {
+            z-index: 3;
+        }
         
         th {
             background: var(--light);
@@ -475,6 +491,22 @@
         
         tr:hover {
             background: #f8fff8;
+        }
+
+        tfoot .summary-row td {
+            background: #f3f7f2;
+            font-weight: 600;
+            border-top: 2px solid var(--border);
+        }
+
+        tfoot .summary-row.summary-average td {
+            background: #f8faf8;
+            font-weight: 500;
+        }
+
+        .summary-label {
+            color: var(--primary-dark);
+            white-space: nowrap;
         }
         
         .text-right {
@@ -2358,6 +2390,7 @@
                         <table id="entradasTableContainer">
                             <thead>
                                 <tr>
+                                    <th class="text-center sticky-col">#</th>
                                     <th class="sortable" data-sort="numero" data-type="number">Chapeta</th>
                                     <th class="sortable" data-sort="tipo" data-type="text">Tipo</th>
                                     <th class="sortable" data-sort="lote" data-type="text">Lote</th>
@@ -2372,8 +2405,38 @@
                                 </tr>
                             </thead>
                             <tbody id="entradasTable">
-                                <tr><td colspan="11" class="text-center">No hay datos</td></tr>
+                                <tr><td colspan="12" class="text-center">No hay datos</td></tr>
                             </tbody>
+                            <tfoot id="entradasSummary">
+                                <tr class="summary-row summary-total">
+                                    <td class="summary-label sticky-col" data-summary="label">Totales (0)</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="peso">-</td>
+                                    <td class="text-right" data-summary="precio">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="costo">-</td>
+                                    <td></td>
+                                </tr>
+                                <tr class="summary-row summary-average">
+                                    <td class="summary-label sticky-col">Promedios</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="peso-avg">-</td>
+                                    <td class="text-right" data-summary="precio-avg">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="costo-avg">-</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -2414,6 +2477,7 @@
                         <table id="salidasTableContainer">
                             <thead>
                                 <tr>
+                                    <th class="text-center sticky-col">#</th>
                                     <th class="sortable" data-sort="numero" data-type="number">Chapeta</th>
                                     <th class="sortable" data-sort="tipo" data-type="text">Tipo</th>
                                     <th class="sortable text-right" data-sort="peso" data-type="number">Peso</th>
@@ -2425,8 +2489,32 @@
                                 </tr>
                             </thead>
                             <tbody id="salidasTable">
-                                <tr><td colspan="8" class="text-center">No hay datos</td></tr>
+                                <tr><td colspan="9" class="text-center">No hay datos</td></tr>
                             </tbody>
+                            <tfoot id="salidasSummary">
+                                <tr class="summary-row summary-total">
+                                    <td class="summary-label sticky-col" data-summary="label">Totales (0)</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="peso">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="precio">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="valor">-</td>
+                                    <td class="text-right" data-summary="gdp">-</td>
+                                </tr>
+                                <tr class="summary-row summary-average">
+                                    <td class="summary-label sticky-col">Promedios</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="peso-avg">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="precio-avg">-</td>
+                                    <td></td>
+                                    <td class="text-right" data-summary="valor-avg">-</td>
+                                    <td class="text-right" data-summary="gdp-avg">-</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -5233,7 +5321,8 @@
             const tbody = document.getElementById('entradasTable');
             
             if (data.entradas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" class="text-center">No hay entradas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center">No hay entradas registradas</td></tr>';
+                updateEntradasSummary();
                 return;
             }
             
@@ -5247,13 +5336,14 @@
                 sorted = [...data.entradas].sort((a, b) => new Date(b.fechaEntrada) - new Date(a.fechaEntrada));
             }
             
-            tbody.innerHTML = sorted.map(entrada => {
+            tbody.innerHTML = sorted.map((entrada, index) => {
                 const tipo = entrada.numeroVaca ? 'nacimiento' : 'compra';
                 const vendedorMadre = entrada.numeroVaca ? `Madre: ${entrada.numeroVaca}` : entrada.vendedor;
                 const sold = isAnimalSold(entrada.numero);
                 
                 return `
                     <tr class="clickable-row" onclick="showAnimalProfile('${entrada.numero}')" title="Ver perfil del animal" style="cursor: pointer;">
+                        <td class="text-center sticky-col">${index + 1}</td>
                         <td><strong>${entrada.numero}</strong></td>
                         <td><span class="badge ${tipo === 'compra' ? 'badge-success' : 'badge-info'}">${tipo === 'compra' ? '🛒' : '🐣'}</span></td>
                         <td>${entrada.lote || '-'}</td>
@@ -5268,13 +5358,17 @@
                     </tr>
                 `;
             }).join('');
+
+            // Re-apply filters after rendering (using setTimeout to ensure DOM is updated)
+            setTimeout(() => filterEntradas(), 0);
         }
         
         function updateSalidasTable() {
             const tbody = document.getElementById('salidasTable');
             
             if (data.salidas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay salidas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay salidas registradas</td></tr>';
+                updateSalidasSummary();
                 return;
             }
             
@@ -5293,11 +5387,12 @@
                 sorted.sort((a, b) => new Date(b.fechaSalida) - new Date(a.fechaSalida));
             }
             
-            tbody.innerHTML = sorted.map(salida => {
+            tbody.innerHTML = sorted.map((salida, index) => {
                 const tipo = salida.comprador === 'MUERTE' ? 'muerte' : 'venta';
                 
                 return `
                     <tr class="clickable-row" onclick="showAnimalProfile('${salida.numero}')" title="Ver perfil del animal" style="cursor: pointer;">
+                        <td class="text-center sticky-col">${index + 1}</td>
                         <td><strong>${salida.numero}</strong></td>
                         <td><span class="badge ${tipo === 'venta' ? 'badge-warning' : 'badge-danger'}">${tipo === 'venta' ? '💵' : '✝️'}</span></td>
                         <td class="text-right">${salida.peso} kg</td>
@@ -5550,6 +5645,120 @@
             // Apply filter
             filterSalidas();
         }
+
+        function parseIntegerFromText(text) {
+            if (!text) return 0;
+            const cleaned = text.replace(/[^\d-]/g, '');
+            const value = parseInt(cleaned, 10);
+            return Number.isNaN(value) ? 0 : value;
+        }
+
+        function parseFloatFromText(text) {
+            if (!text) return 0;
+            const cleaned = text.replace(/[^\d,.-]/g, '');
+            if (!cleaned) return 0;
+            let normalized = cleaned;
+            if (normalized.includes(',') && normalized.includes('.')) {
+                normalized = normalized.replace(/\./g, '').replace(',', '.');
+            } else if (normalized.includes(',') && !normalized.includes('.')) {
+                normalized = normalized.replace(',', '.');
+            }
+            const value = parseFloat(normalized);
+            return Number.isNaN(value) ? 0 : value;
+        }
+
+        function updateEntradasSummary() {
+            const summary = document.getElementById('entradasSummary');
+            if (!summary) return;
+
+            const rows = document.querySelectorAll('#entradasTable tr');
+            let count = 0;
+            let totalPeso = 0;
+            let totalPrecio = 0;
+            let totalCosto = 0;
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 12) return;
+
+                totalPeso += parseIntegerFromText(cells[7]?.textContent || '');
+                totalPrecio += parseIntegerFromText(cells[8]?.textContent || '');
+                totalCosto += parseIntegerFromText(cells[10]?.textContent || '');
+                count += 1;
+            });
+
+            const avgPeso = count ? totalPeso / count : 0;
+            const avgPrecio = count ? totalPrecio / count : 0;
+            const avgCosto = count ? totalCosto / count : 0;
+
+            const labelCell = summary.querySelector('[data-summary="label"]');
+            if (labelCell) labelCell.textContent = `Totales (${count})`;
+
+            const pesoTotalCell = summary.querySelector('[data-summary="peso"]');
+            if (pesoTotalCell) pesoTotalCell.textContent = count ? `${formatNumber(totalPeso)} kg` : '-';
+            const precioTotalCell = summary.querySelector('[data-summary="precio"]');
+            if (precioTotalCell) precioTotalCell.textContent = count ? formatCurrency(totalPrecio) : '-';
+            const costoTotalCell = summary.querySelector('[data-summary="costo"]');
+            if (costoTotalCell) costoTotalCell.textContent = count ? formatCurrency(totalCosto) : '-';
+
+            const pesoAvgCell = summary.querySelector('[data-summary="peso-avg"]');
+            if (pesoAvgCell) pesoAvgCell.textContent = count ? `${formatNumber(avgPeso)} kg` : '-';
+            const precioAvgCell = summary.querySelector('[data-summary="precio-avg"]');
+            if (precioAvgCell) precioAvgCell.textContent = count ? formatCurrency(avgPrecio) : '-';
+            const costoAvgCell = summary.querySelector('[data-summary="costo-avg"]');
+            if (costoAvgCell) costoAvgCell.textContent = count ? formatCurrency(avgCosto) : '-';
+        }
+
+        function updateSalidasSummary() {
+            const summary = document.getElementById('salidasSummary');
+            if (!summary) return;
+
+            const rows = document.querySelectorAll('#salidasTable tr');
+            let count = 0;
+            let totalPeso = 0;
+            let totalPrecio = 0;
+            let totalValor = 0;
+            let totalGdp = 0;
+
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 9) return;
+
+                totalPeso += parseIntegerFromText(cells[3]?.textContent || '');
+                totalPrecio += parseIntegerFromText(cells[5]?.textContent || '');
+                totalValor += parseIntegerFromText(cells[7]?.textContent || '');
+                totalGdp += parseFloatFromText(cells[8]?.textContent || '');
+                count += 1;
+            });
+
+            const avgPeso = count ? totalPeso / count : 0;
+            const avgPrecio = count ? totalPrecio / count : 0;
+            const avgValor = count ? totalValor / count : 0;
+            const avgGdp = count ? totalGdp / count : 0;
+
+            const labelCell = summary.querySelector('[data-summary="label"]');
+            if (labelCell) labelCell.textContent = `Totales (${count})`;
+
+            const pesoTotalCell = summary.querySelector('[data-summary="peso"]');
+            if (pesoTotalCell) pesoTotalCell.textContent = count ? `${formatNumber(totalPeso)} kg` : '-';
+            const precioTotalCell = summary.querySelector('[data-summary="precio"]');
+            if (precioTotalCell) precioTotalCell.textContent = count ? formatCurrency(totalPrecio) : '-';
+            const valorTotalCell = summary.querySelector('[data-summary="valor"]');
+            if (valorTotalCell) valorTotalCell.textContent = count ? formatCurrency(totalValor) : '-';
+            const gdpTotalCell = summary.querySelector('[data-summary="gdp"]');
+            if (gdpTotalCell) gdpTotalCell.textContent = count ? totalGdp.toFixed(3) : '-';
+
+            const pesoAvgCell = summary.querySelector('[data-summary="peso-avg"]');
+            if (pesoAvgCell) pesoAvgCell.textContent = count ? `${formatNumber(avgPeso)} kg` : '-';
+            const precioAvgCell = summary.querySelector('[data-summary="precio-avg"]');
+            if (precioAvgCell) precioAvgCell.textContent = count ? formatCurrency(avgPrecio) : '-';
+            const valorAvgCell = summary.querySelector('[data-summary="valor-avg"]');
+            if (valorAvgCell) valorAvgCell.textContent = count ? formatCurrency(avgValor) : '-';
+            const gdpAvgCell = summary.querySelector('[data-summary="gdp-avg"]');
+            if (gdpAvgCell) gdpAvgCell.textContent = count ? avgGdp.toFixed(3) : '-';
+        }
         
         function filterEntradas() {
             const search = document.getElementById('entradasSearch').value.toLowerCase();
@@ -5575,7 +5784,7 @@
                 let matchTipo = true; // Default to true if no filter
                 if (tipo) {
                     matchTipo = false; // Start false when filtering
-                    const tipoBadge = cells[1]?.querySelector('.badge');
+                    const tipoBadge = cells[2]?.querySelector('.badge');
                     if (tipoBadge) {
                         if (tipo === 'compra') {
                             matchTipo = tipoBadge.classList.contains('badge-success');
@@ -5586,7 +5795,7 @@
                 }
                 
                 // Get the fecha from the row (assuming it's in column 9 - Fecha)
-                const fechaCell = cells[8]?.textContent.trim();
+                const fechaCell = cells[9]?.textContent.trim();
                 let matchPeriodo = true;
                 
                 if (periodo && fechaCell) {
@@ -5613,7 +5822,7 @@
                                 if (lotes.length > 0) {
                                     lotes.sort((a, b) => b.fecha - a.fecha);
                                     const ultimoLote = lotes[0].lote;
-                                    const loteCell = cells[2]?.textContent.trim();
+                                    const loteCell = cells[3]?.textContent.trim();
                                     matchPeriodo = loteCell === ultimoLote;
                                 }
                                 break;
@@ -5641,6 +5850,8 @@
                 
                 row.style.display = matchSearch && matchTipo && matchPeriodo ? '' : 'none';
             });
+
+            updateEntradasSummary();
         }
         
         function filterSalidas() {
@@ -5666,7 +5877,7 @@
                 let matchTipo = !tipo; // If no filter selected, match all (true)
                 if (tipo) {
                     // When filter is selected, check the badge class
-                    const tipoBadge = cells[1]?.querySelector('.badge');
+                    const tipoBadge = cells[2]?.querySelector('.badge');
                     if (tipoBadge) {
                         const isVenta = tipoBadge.classList.contains('badge-warning');
                         const isMuerte = tipoBadge.classList.contains('badge-danger');
@@ -5680,7 +5891,7 @@
                 }
                 
                 // Get the fecha from the row (assuming it's in column 3 - Fecha)
-                const fechaCell = cells[3]?.textContent.trim();
+                const fechaCell = cells[4]?.textContent.trim();
                 let matchPeriodo = true;
                 
                 if (periodo && fechaCell) {
@@ -5722,6 +5933,8 @@
                 
                 row.style.display = matchSearch && matchTipo && matchPeriodo ? '' : 'none';
             });
+
+            updateSalidasSummary();
         }
         
         // ==================== QUICK ACTIONS ====================
