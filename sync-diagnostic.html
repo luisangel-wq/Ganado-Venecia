@@ -143,6 +143,7 @@
     <div class="container">
         <h1>🔍 Diagnóstico de Sincronización</h1>
         
+        <button onclick="enableSync()">✅ Habilitar Cloud Sync</button>
         <button onclick="runDiagnostic()">🔄 Ejecutar Diagnóstico Completo</button>
         
         <div id="results"></div>
@@ -150,9 +151,36 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="cloud-sync.js"></script>
     <script src="firebase-config.js"></script>
     
     <script>
+        async function enableSync() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="info-box">🔄 Habilitando Cloud Sync...</div>';
+
+            localStorage.setItem('cloudSync_enabled', 'true');
+
+            if (typeof cloudSync === 'undefined') {
+                resultsDiv.innerHTML = '<div class="error">❌ CloudSync no está cargado. Recarga la página e intenta de nuevo.</div>';
+                return;
+            }
+
+            if (!cloudSync.enabled) {
+                try {
+                    const ok = await cloudSync.initialize(firebaseConfig);
+                    if (!ok) {
+                        resultsDiv.innerHTML = '<div class="error">❌ No se pudo inicializar Cloud Sync.</div>';
+                        return;
+                    }
+                } catch (error) {
+                    resultsDiv.innerHTML = `<div class="error">❌ Error al inicializar: ${error.message || error}</div>`;
+                    return;
+                }
+            }
+
+            resultsDiv.innerHTML = '<div class="success">✅ Cloud Sync habilitado. Ejecuta el diagnóstico para verificar.</div>';
+        }
         async function runDiagnostic() {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '<div class="info-box">🔄 Ejecutando diagnóstico...</div>';
