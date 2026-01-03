@@ -3952,19 +3952,13 @@
             // Note: With lote-based workflows, calculations happen when adding animals
             // These listeners are kept for backward compatibility but check if elements exist
             
-            const compraPeso = document.getElementById('compraPeso');
             const compraPrecioKilo = document.getElementById('compraPrecioKilo');
             
-            if (compraPeso) compraPeso.addEventListener('input', calcCompraTotal);
-            if (compraPrecioKilo) compraPrecioKilo.addEventListener('input', calcCompraTotal);
+            if (compraPrecioKilo) compraPrecioKilo.addEventListener('input', updateLotePrecioHint);
             
             // Venta is now lote-based, no individual calculation needed
         }
         
-        function calcCompraTotal() {
-            // This is called when peso changes in the animal entry form
-            // Not used in lote workflow but kept for safety
-        }
         
         function calcVentaTotal() {
             // Not used in lote-based venta workflow
@@ -4195,9 +4189,9 @@
         function getNextLoteNumber() {
             // Set minimum lote number based on ranch
             const minLotePorFinca = {
-                'SantaCatalina': 59,
-                'LaCoruna': 173,
-                'LaVega': 241
+                santa_catalina: 59,
+                la_coruna: 173,
+                la_vega: 241
             };
             
             const minLote = minLotePorFinca[currentRanch] || 1;
@@ -4439,66 +4433,6 @@
             }
         }
         
-        function addAnimalToLote(event) {
-            event.preventDefault();
-            
-            // Check if lote is already complete
-            if (currentLote.animales.length >= currentLote.cantidadEsperada) {
-                showToast('El lote ya está completo', 'warning');
-                return;
-            }
-            
-            const numero = document.getElementById('compraNumero').value.trim();
-            const raza = document.getElementById('compraRaza').value;
-            const sexo = document.getElementById('compraSexo').value;
-            const peso = parseFloat(document.getElementById('compraPeso').value);
-            
-            if (!numero) {
-                showToast('Ingrese el número de chapeta', 'error');
-                return;
-            }
-            if (!peso || peso <= 0) {
-                showToast('Ingrese el peso', 'error');
-                return;
-            }
-            
-            // Check if chapeta already exists in inventory or current lote
-            if (data.entradas.some(e => e.numero == numero && !isAnimalSold(e.numero))) {
-                showToast('Ya existe un animal con ese número de chapeta en el inventario', 'error');
-                return;
-            }
-            if (currentLote.animales.some(a => a.numero == numero)) {
-                showToast('Ya agregaste un animal con ese número en este lote', 'error');
-                return;
-            }
-            
-            // Add to current lote
-            currentLote.animales.push({
-                numero: numero,
-                raza: raza,
-                sexo: sexo,
-                peso: peso,
-                costoTotal: peso * currentLote.precioKilo
-            });
-            
-            // Update table and progress
-            updateLoteTable();
-            updateLoteProgress();
-            
-            const remaining = currentLote.cantidadEsperada - currentLote.animales.length;
-            
-            if (remaining > 0) {
-                // Prepare for next animal
-                const nextChapeta = parseInt(numero) + 1;
-                document.getElementById('compraNumero').value = nextChapeta;
-                document.getElementById('compraPeso').value = '';
-                document.getElementById('compraPeso').focus();
-                
-                showToast(`✅ Animal #${numero} agregado (${remaining} restantes)`, 'success');
-            } else {
-                showToast(`✅ Animal #${numero} agregado. ¡Lote completo! Puede finalizar.`, 'success');
-            }
-        }
         
         function updateLoteTable() {
             const tbody = document.getElementById('loteAnimalesTable');
