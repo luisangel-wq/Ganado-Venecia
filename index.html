@@ -4079,9 +4079,31 @@
         // Old calc functions removed - now using lote-based workflow
         
         function getDiasEnFinca(fechaEntrada) {
-            const entrada = new Date(fechaEntrada);
+            // Handle Excel serial dates and other formats
+            let fechaStr;
+            
+            // If it's a number (Excel serial), parse it first
+            if (typeof fechaEntrada === 'number') {
+                fechaStr = parseExcelDate(fechaEntrada);
+            } else if (fechaEntrada instanceof Date) {
+                fechaStr = fechaEntrada.toISOString().split('T')[0];
+            } else {
+                fechaStr = fechaEntrada;
+            }
+            
+            const entrada = new Date(fechaStr);
+            
+            // Validate date
+            if (isNaN(entrada.getTime())) {
+                console.warn('Fecha entrada inválida:', fechaEntrada);
+                return 0;
+            }
+            
             const hoy = new Date();
-            return Math.floor((hoy - entrada) / (1000 * 60 * 60 * 24));
+            const dias = Math.floor((hoy - entrada) / (1000 * 60 * 60 * 24));
+            
+            // Return 0 if negative (future date)
+            return dias >= 0 ? dias : 0;
         }
         
         // ==================== SAVE EVENTS ====================
@@ -5670,7 +5692,19 @@
                                 
                                 // Get other fields
                                 const peso = parseFloat(row['Peso Inicial'] || row['Peso inicial'] || row['Peso'] || 0);
-                                const precioKilo = parseFloat(row['Precio/Kilo'] || row['Precio/kilo'] || row['PrecioKilo'] || 0);
+                                // Try multiple column name variations for price/kg
+                                const precioKilo = parseFloat(
+                                    row['Precio/Kilo'] || 
+                                    row['Precio/kilo'] || 
+                                    row['PrecioKilo'] || 
+                                    row['Precio Kilo'] ||
+                                    row['$/Kg'] ||
+                                    row['$ / Kg'] ||
+                                    row['Precio x Kg'] ||
+                                    row['Precio por Kilo'] ||
+                                    row['Precio por kilo'] ||
+                                    0
+                                );
                                 
                                 if (peso <= 0 || precioKilo <= 0) {
                                     console.warn(`Fila ${index + 2}: Datos inválidos para #${numero} (peso: ${peso}, precio: ${precioKilo})`);
@@ -5721,7 +5755,20 @@
                                     numero: numero,
                                     peso: parseFloat(row['Peso']) || 0,
                                     fechaSalida: parseExcelDate(row['Fecha'] || row['Fecha Salida']),
-                                    precioKiloVenta: parseFloat(row['Precio/Kilo Venta'] || row['Precio/Kilo'] || 0),
+                                    // Try multiple column name variations for price/kg in sales
+                                    precioKiloVenta: parseFloat(
+                                        row['Precio/Kilo Venta'] || 
+                                        row['Precio/Kilo'] || 
+                                        row['Precio/kilo'] ||
+                                        row['PrecioKilo'] || 
+                                        row['Precio Kilo'] ||
+                                        row['$/Kg'] ||
+                                        row['$ / Kg'] ||
+                                        row['Precio x Kg'] ||
+                                        row['Precio por Kilo'] ||
+                                        row['Precio por kilo'] ||
+                                        0
+                                    ),
                                     comprador: row['Comprador'] || '',
                                     costoVenta: parseFloat(row['Costo de venta'] || row['Valor'] || 0),
                                     gananciaDay: parseFloat(row['Ganancia/Día'] || row['GDP'] || 0)

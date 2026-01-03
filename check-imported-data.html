@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Datos Importados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2e7d32; }
+        h2 { color: #1976d2; margin-top: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #2e7d32;
+            color: white;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .btn {
+            background: #2e7d32;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #1b5e20;
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Verificador de Datos Importados</h1>
+    
+    <div class="card">
+        <h2>📊 Diagnóstico de Precio/Kg</h2>
+        <p>Esta herramienta verifica si los datos de precio por kilo fueron importados correctamente.</p>
+        <button class="btn" onclick="checkData()">🔍 Analizar Datos</button>
+        <button class="btn btn-danger" onclick="fixPrices()">🔧 Intentar Reparar Precios</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        const RANCHES = {
+            la_coruna: { id: 'la_coruna', name: 'La Coruña', storageKey: 'ganadoFinca_LaCoruna' },
+            santa_catalina: { id: 'santa_catalina', name: 'Santa Catalina', storageKey: 'ganadoFinca_SantaCatalina' },
+            la_vega: { id: 'la_vega', name: 'La Vega', storageKey: 'ganadoFinca_LaVega' }
+        };
+        
+        function checkData() {
+            let html = '';
+            let totalIssues = 0;
+            
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const saved = localStorage.getItem(ranch.storageKey);
+                
+                if (!saved) {
+                    html += `<div class="card"><h2>${ranch.name}</h2><p style="color: #999;">Sin datos</p></div>`;
+                    return;
+                }
+                
+                const data = JSON.parse(saved);
+                const entradas = data.entradas || [];
+                
+                if (entradas.length === 0) {
+                    html += `<div class="card"><h2>${ranch.name}</h2><p style="color: #999;">Sin animales</p></div>`;
+                    return;
+                }
+                
+                // Check for missing prices
+                const missingPrice = entradas.filter(e => !e.precioKilo || e.precioKilo === 0);
+                const hasPrice = entradas.filter(e => e.precioKilo && e.precioKilo > 0);
+                
+                html += `<div class="card">`;
+                html += `<h2>${ranch.name}</h2>`;
+                html += `<p><strong>Total de animales:</strong> ${entradas.length}</p>`;
+                html += `<p><strong>Con precio/kg:</strong> ${hasPrice.length} ✅</p>`;
+                html += `<p><strong>Sin precio/kg:</strong> ${missingPrice.length} ${missingPrice.length > 0 ? '❌' : '✅'}</p>`;
+                
+                if (missingPrice.length > 0) {
+                    totalIssues += missingPrice.length;
+                    html += `<div class="warning">`;
+                    html += `<strong>⚠️ Problema encontrado:</strong><br>`;
+                    html += `${missingPrice.length} animales no tienen precio por kilo registrado.<br><br>`;
+                    html += `<strong>Posibles causas:</strong><br>`;
+                    html += `• La columna en el Excel se llama diferente (ej: "Precio Kilo", "$/Kg", "Precio x Kg")<br>`;
+                    html += `• La columna contiene datos no numéricos<br>`;
+                    html += `• La columna está vacía<br><br>`;
+                    html += `<strong>Animales afectados (primeros 10):</strong>`;
+                    html += `<table><thead><tr><th>Chapeta</th><th>Lote</th><th>Vendedor</th><th>Peso</th><th>Precio/Kg</th><th>Costo Total</th></tr></thead><tbody>`;
+                    
+                    missingPrice.slice(0, 10).forEach(animal => {
+                        html += `<tr>`;
+                        html += `<td><strong>${animal.numero}</strong></td>`;
+                        html += `<td>${animal.lote || '-'}</td>`;
+                        html += `<td>${animal.vendedor || '-'}</td>`;
+                        html += `<td>${animal.peso} kg</td>`;
+                        html += `<td style="color: red;">${animal.precioKilo || 0}</td>`;
+                        html += `<td>${animal.costoTotal ? '$' + animal.costoTotal.toLocaleString() : '-'}</td>`;
+                        html += `</tr>`;
+                    });
+                    
+                    html += `</tbody></table>`;
+                    html += `</div>`;
+                } else {
+                    html += `<div class="success">✅ Todos los animales tienen precio/kg registrado correctamente.</div>`;
+                }
+                
+                // Show sample of data with prices
+                if (hasPrice.length > 0) {
+                    html += `<h3>Ejemplo de datos correctos (primeros 5):</h3>`;
+                    html += `<table><thead><tr><th>Chapeta</th><th>Lote</th><th>Vendedor</th><th>Peso</th><th>Precio/Kg</th><th>Costo Total</th></tr></thead><tbody>`;
+                    
+                    hasPrice.slice(0, 5).forEach(animal => {
+                        html += `<tr>`;
+                        html += `<td><strong>${animal.numero}</strong></td>`;
+                        html += `<td>${animal.lote || '-'}</td>`;
+                        html += `<td>${animal.vendedor || '-'}</td>`;
+                        html += `<td>${animal.peso} kg</td>`;
+                        html += `<td style="color: green;"><strong>$${animal.precioKilo.toLocaleString()}</strong></td>`;
+                        html += `<td>$${(animal.costoTotal || (animal.peso * animal.precioKilo)).toLocaleString()}</td>`;
+                        html += `</tr>`;
+                    });
+                    
+                    html += `</tbody></table>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            if (totalIssues > 0) {
+                html = `<div class="error"><strong>❌ Se encontraron ${totalIssues} animales sin precio/kg</strong><br><br>
+                        <strong>Soluciones:</strong><br>
+                        1. <strong>Verificar el Excel:</strong> Abra su archivo Excel y verifique que la columna de precio/kg tenga datos<br>
+                        2. <strong>Nombre de columna:</strong> La columna debe llamarse: "Precio/Kilo", "Precio/kilo", o "PrecioKilo"<br>
+                        3. <strong>Formato:</strong> Los precios deben ser números (ej: 8500, no "$8,500")<br>
+                        4. <strong>Re-importar:</strong> Corrija el Excel y vuelva a importarlo<br>
+                        5. <strong>Reparación manual:</strong> Use el botón "🔧 Intentar Reparar Precios" si tiene el costo total
+                        </div>` + html;
+            }
+            
+            document.getElementById('results').innerHTML = html;
+        }
+        
+        function fixPrices() {
+            if (!confirm('🔧 REPARAR PRECIOS\n\nEsta función intentará calcular el precio/kg usando la fórmula:\nPrecio/Kg = Costo Total / Peso\n\nSolo funcionará si existe el "Costo Total" en los datos.\n\n¿Continuar?')) {
+                return;
+            }
+            
+            let fixedCount = 0;
+            let totalChecked = 0;
+            
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const saved = localStorage.getItem(ranch.storageKey);
+                if (!saved) return;
+                
+                const data = JSON.parse(saved);
+                const entradas = data.entradas || [];
+                
+                entradas.forEach(animal => {
+                    totalChecked++;
+                    // If no price but has cost total, calculate it
+                    if ((!animal.precioKilo || animal.precioKilo === 0) && animal.costoTotal && animal.peso) {
+                        animal.precioKilo = Math.round(animal.costoTotal / animal.peso);
+                        fixedCount++;
+                    }
+                    // If no cost total but has price, calculate it
+                    if ((!animal.costoTotal || animal.costoTotal === 0) && animal.precioKilo && animal.peso) {
+                        animal.costoTotal = Math.round(animal.peso * animal.precioKilo);
+                    }
+                });
+                
+                // Save back
+                localStorage.setItem(ranch.storageKey, JSON.stringify(data));
+            });
+            
+            if (fixedCount > 0) {
+                alert(`✅ REPARACIÓN COMPLETADA\n\n${fixedCount} de ${totalChecked} animales fueron reparados.\n\nRecargue la aplicación principal para ver los cambios.`);
+            } else {
+                alert(`⚠️ NO SE PUDO REPARAR\n\nNo se encontraron datos de "Costo Total" para calcular el precio/kg.\n\nDeberá re-importar el Excel con la columna de precio/kg correcta.`);
+            }
+            
+            checkData();
+        }
+        
+        // Auto-check on load
+        window.onload = checkData;
+    </script>
+</body>
+</html>

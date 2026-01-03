@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Importar Datos Excel de Finca</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            color: #2e7d32;
+            margin: 0 0 0.5rem 0;
+        }
+        .info {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .error {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-weight: 600;
+        }
+        .btn-primary {
+            background: #2e7d32;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .file-section {
+            margin: 1.5rem 0;
+        }
+        .file-input {
+            padding: 2rem;
+            border: 3px dashed #4caf50;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-input:hover {
+            background: #e8f5e9;
+            border-color: #2e7d32;
+        }
+        .file-input.loaded {
+            border-color: #4caf50;
+            background: #e8f5e9;
+            border-style: solid;
+        }
+        .file-input p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .file-input .icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+        .preview-table {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 1rem 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        tr:hover {
+            background: #f9f9f9;
+        }
+        .stat-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #4caf50, #66bb6a);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 0.5rem;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .stat-box strong {
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        #log {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 1rem;
+            border: 1px solid #e0e0e0;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4caf50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .column-mapping {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .column-mapping h4 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+        .column-mapping code {
+            background: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📊 Importar Datos Excel de Finca</h1>
+        <p style="color: #666; font-size: 1.1rem;">
+            Importa archivos Excel (.xlsx) de Entradas y Salidas para cargar todos los datos de una finca de una sola vez.
+        </p>
+        <div class="info">
+            <strong>✨ Ventajas del Formato Excel:</strong>
+            <ul>
+                <li>✅ No necesitas convertir a CSV - carga tus archivos Excel directamente</li>
+                <li>✅ Soporta múltiples hojas en un mismo archivo</li>
+                <li>✅ Detecta automáticamente los nombres de columnas</li>
+                <li>✅ Maneja correctamente fechas y números</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Formato de Archivos Excel</h2>
+        <div class="info">
+            <strong>Necesitas preparar 2 archivos Excel (.xlsx o .xls):</strong>
+            <ul>
+                <li><strong>Entradas.xlsx</strong>: Animales comprados/ingresados a la finca (REQUERIDO)</li>
+                <li><strong>Salidas.xlsx</strong>: Animales vendidos (OPCIONAL)</li>
+            </ul>
+        </div>
+
+        <div class="column-mapping">
+            <h4>📥 Columnas para Entradas.xlsx:</h4>
+            <p>Tu archivo de Excel debe contener estas columnas (nombres pueden variar):</p>
+            <ul>
+                <li><code>Número</code> o <code>Chapeta</code> - Identificación del animal (REQUERIDO)</li>
+                <li><code>Peso Inicial</code> o <code>Peso</code> - Peso en kg (REQUERIDO)</li>
+                <li><code>Sexo</code> - MACHO o HEMBRA</li>
+                <li><code>Raza</code> - Raza del animal</li>
+                <li><code>Lote</code> - Lote o grupo</li>
+                <li><code>Fecha de entrada</code> o <code>Fecha</code> - Fecha de ingreso</li>
+                <li><code>Precio/Kilo</code> o <code>Precio</code> - Precio por kg en pesos</li>
+                <li><code>Vendedor</code> - Nombre del vendedor</li>
+                <li><code>Costo Total</code> - Costo total (se calcula si no se proporciona)</li>
+            </ul>
+        </div>
+
+        <div class="column-mapping">
+            <h4>📤 Columnas para Salidas.xlsx:</h4>
+            <p>Tu archivo de Excel debe contener estas columnas:</p>
+            <ul>
+                <li><code>Número</code> o <code>Chapeta</code> - Identificación del animal (REQUERIDO)</li>
+                <li><code>Peso</code> - Peso final en kg (REQUERIDO)</li>
+                <li><code>Fecha Salida</code> o <code>Fecha</code> - Fecha de venta</li>
+                <li><code>Precio/Kilo Venta</code> o <code>Precio</code> - Precio por kg de venta</li>
+                <li><code>Comprador</code> - Nombre del comprador</li>
+                <li><code>Costo de venta</code> - Valor total (se calcula si no se proporciona)</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Importante:</strong>
+            <ul>
+                <li>Los archivos deben estar en formato Excel (.xlsx o .xls)</li>
+                <li>La primera fila debe contener los nombres de las columnas</li>
+                <li>Los datos deben comenzar en la fila 2</li>
+                <li>Si tienes múltiples hojas, se usará la primera hoja</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🎯 Seleccionar Finca Destino</h2>
+        <select id="ranchSelector" class="btn btn-primary" style="width: 100%; max-width: 400px; font-size: 1.1rem;">
+            <option value="SantaCatalina">🏠 Santa Catalina</option>
+            <option value="LaVega">🌾 La Vega</option>
+            <option value="LaCoruna">⛰️ La Coruña</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h2>📂 Cargar Archivos Excel</h2>
+        
+        <div class="file-section">
+            <h3>1️⃣ Archivo de Entradas (Requerido)</h3>
+            <div class="file-input" id="entradasInputDiv" onclick="document.getElementById('entradasInput').click()">
+                <div class="icon">📊</div>
+                <p><strong>Click aquí para seleccionar Entradas.xlsx</strong></p>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Archivo Excel con animales ingresados</p>
+                <input type="file" id="entradasInput" accept=".xlsx,.xls" style="display:none;" onchange="handleEntradasFile(event)">
+            </div>
+            <div id="entradasFileName" style="margin-top: 0.5rem; color: #666; font-weight: 600;"></div>
+        </div>
+
+        <div class="file-section">
+            <h3>2️⃣ Archivo de Salidas (Opcional)</h3>
+            <div class="file-input" id="salidasInputDiv" onclick="document.getElementById('salidasInput').click()">
+                <div class="icon">📊</div>
+                <p><strong>Click aquí para seleccionar Salidas.xlsx</strong></p>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Archivo Excel con animales vendidos (opcional)</p>
+                <input type="file" id="salidasInput" accept=".xlsx,.xls" style="display:none;" onchange="handleSalidasFile(event)">
+            </div>
+            <div id="salidasFileName" style="margin-top: 0.5rem; color: #666; font-weight: 600;"></div>
+        </div>
+    </div>
+
+    <div id="loadingSection" style="display: none;">
+        <div class="card">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p id="loadingMessage">Procesando archivo Excel...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="previewSection" style="display: none;">
+        <div class="card">
+            <h2>👀 Vista Previa de Datos</h2>
+            <div id="stats"></div>
+            <div id="preview"></div>
+        </div>
+
+        <div class="card">
+            <h2>💾 Importar Datos</h2>
+            <div class="warning">
+                <strong>⚠️ Advertencia:</strong> Esto reemplazará todos los datos existentes de la finca seleccionada. Esta acción no se puede deshacer.
+            </div>
+            <button class="btn btn-success" onclick="importData()" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                ✅ IMPORTAR DATOS A LA FINCA
+            </button>
+            <button class="btn btn-primary" onclick="resetForm()">
+                🔄 Cargar Otros Archivos
+            </button>
+        </div>
+    </div>
+
+    <div id="resultSection" style="display: none;">
+        <div class="card">
+            <div id="resultMessage"></div>
+            <div id="log"></div>
+            <button class="btn btn-success" onclick="goToApp()" style="font-size: 1.1rem;">
+                ✅ Ir a la Aplicación
+            </button>
+            <button class="btn btn-primary" onclick="resetForm()">
+                📥 Importar Otra Finca
+            </button>
+        </div>
+    </div>
+
+    <!-- SheetJS Library -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { name: 'Santa Catalina', icon: '🏠', key: 'ganadoFinca_SantaCatalina' },
+            'LaVega': { name: 'La Vega', icon: '🌾', key: 'ganadoFinca_LaVega' },
+            'LaCoruna': { name: 'La Coruña', icon: '⛰️', key: 'ganadoFinca_LaCoruna' }
+        };
+
+        let parsedData = {
+            entradas: [],
+            salidas: []
+        };
+
+        let entradasLoaded = false;
+        let salidasLoaded = false;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            if (!logDiv) return;
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showLoading(message) {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingSection').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').style.display = 'none';
+        }
+
+        function parseExcelDate(excelDate) {
+            // Excel dates are stored as days since 1900-01-01
+            if (typeof excelDate === 'number') {
+                const excelEpoch = new Date(1899, 11, 30); // Excel epoch
+                const msPerDay = 86400000;
+                const date = new Date(excelEpoch.getTime() + excelDate * msPerDay);
+                return date.toISOString().split('T')[0];
+            }
+            // If already a string, try to parse it
+            if (typeof excelDate === 'string') {
+                const date = new Date(excelDate);
+                if (!isNaN(date.getTime())) {
+                    return date.toISOString().split('T')[0];
+                }
+                return excelDate;
+            }
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function getColumnValue(row, possibleNames) {
+            for (const name of possibleNames) {
+                if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+                    return row[name];
+                }
+            }
+            return null;
+        }
+
+        function handleEntradasFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showLoading('Leyendo archivo de entradas...');
+            document.getElementById('entradasFileName').textContent = `✅ Archivo: ${file.name}`;
+            document.getElementById('entradasInputDiv').classList.add('loaded');
+            log(`📂 Procesando entradas: ${file.name}`);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    
+                    log(`✅ Excel abierto correctamente`);
+                    log(`📄 Hojas encontradas: ${workbook.SheetNames.join(', ')}`);
+                    
+                    // Use first sheet
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    log(`📊 Procesando ${jsonData.length} filas...`);
+
+                    parsedData.entradas = jsonData.map((row, index) => {
+                        const numero = getColumnValue(row, ['Número', 'Numero', 'numero', 'chapeta', 'Chapeta', 'NUMERO', 'CHAPETA']);
+                        const peso = getColumnValue(row, ['Peso Inicial', 'Peso inicial', 'Peso', 'peso', 'PESO', 'Peso_Inicial']);
+                        
+                        if (!numero || !peso) {
+                            log(`⚠️ Fila ${index + 2}: Falta número o peso - ignorada`);
+                            return null;
+                        }
+
+                        const fechaRaw = getColumnValue(row, ['Fecha de entrada', 'Fecha de Entrada', 'FechaEntrada', 'Fecha', 'fecha', 'FECHA']);
+                        const fecha = fechaRaw ? parseExcelDate(fechaRaw) : new Date().toISOString().split('T')[0];
+
+                        return {
+                            numero: String(numero).trim(),
+                            peso: Number(peso) || 0,
+                            sexo: String(getColumnValue(row, ['Sexo', 'sexo', 'SEXO']) || 'MACHO').toUpperCase(),
+                            raza: String(getColumnValue(row, ['Raza', 'raza', 'RAZA']) || ''),
+                            lote: String(getColumnValue(row, ['Lote', 'lote', 'LOTE']) || ''),
+                            fechaEntrada: fecha,
+                            precioKilo: Number(getColumnValue(row, ['Precio/Kilo', 'PrecioKilo', 'Precio Kilo', 'precioKilo', 'Precio', 'precio', 'PRECIO']) || 0),
+                            vendedor: String(getColumnValue(row, ['Vendedor', 'vendedor', 'VENDEDOR']) || ''),
+                            costoTotal: Number(getColumnValue(row, ['Costo Total', 'CostoTotal', 'Costo_Total', 'costoTotal', 'COSTO']) || 0),
+                            tipo: 'compra'
+                        };
+                    }).filter(e => e !== null && e.numero && e.peso);
+
+                    log(`✅ ${parsedData.entradas.length} entradas válidas procesadas`);
+                    
+                    if (parsedData.entradas.length === 0) {
+                        alert('❌ No se encontraron entradas válidas. Verifica que el archivo tenga las columnas: Número y Peso');
+                        hideLoading();
+                        return;
+                    }
+
+                    entradasLoaded = true;
+                    hideLoading();
+                    checkAndShowPreview();
+                } catch (error) {
+                    hideLoading();
+                    alert('❌ Error al leer el archivo Excel de entradas:\n\n' + error.message);
+                    log(`❌ Error: ${error.message}`);
+                    console.error(error);
+                }
+            };
+            reader.onerror = function() {
+                hideLoading();
+                alert('❌ Error al leer el archivo');
+                log('❌ Error al leer el archivo');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handleSalidasFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showLoading('Leyendo archivo de salidas...');
+            document.getElementById('salidasFileName').textContent = `✅ Archivo: ${file.name}`;
+            document.getElementById('salidasInputDiv').classList.add('loaded');
+            log(`📂 Procesando salidas: ${file.name}`);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    
+                    log(`✅ Excel abierto correctamente`);
+                    log(`📄 Hojas encontradas: ${workbook.SheetNames.join(', ')}`);
+                    
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    log(`📊 Procesando ${jsonData.length} filas...`);
+
+                    parsedData.salidas = jsonData.map((row, index) => {
+                        const numero = getColumnValue(row, ['Número', 'Numero', 'numero', 'chapeta', 'Chapeta', 'NUMERO', 'CHAPETA']);
+                        const peso = getColumnValue(row, ['Peso', 'peso', 'PESO', 'Peso Salida', 'PesoSalida']);
+                        
+                        if (!numero || !peso) {
+                            log(`⚠️ Fila ${index + 2}: Falta número o peso - ignorada`);
+                            return null;
+                        }
+
+                        const fechaRaw = getColumnValue(row, ['Fecha Salida', 'Fecha de Salida', 'FechaSalida', 'Fecha', 'fecha', 'FECHA']);
+                        const fecha = fechaRaw ? parseExcelDate(fechaRaw) : new Date().toISOString().split('T')[0];
+
+                        return {
+                            numero: String(numero).trim(),
+                            peso: Number(peso) || 0,
+                            fechaSalida: fecha,
+                            precioKiloVenta: Number(getColumnValue(row, ['Precio/Kilo Venta', 'PrecioKiloVenta', 'Precio Kilo', 'Precio', 'precio', 'PRECIO']) || 0),
+                            comprador: String(getColumnValue(row, ['Comprador', 'comprador', 'COMPRADOR', 'Tipo', 'tipo']) || ''),
+                            costoVenta: Number(getColumnValue(row, ['Costo de venta', 'CostoVenta', 'Costo_Venta', 'Total', 'total', 'TOTAL']) || 0)
+                        };
+                    }).filter(s => s !== null && s.numero && s.peso);
+
+                    log(`✅ ${parsedData.salidas.length} salidas válidas procesadas`);
+                    salidasLoaded = true;
+                    hideLoading();
+                    checkAndShowPreview();
+                } catch (error) {
+                    hideLoading();
+                    alert('❌ Error al leer el archivo Excel de salidas:\n\n' + error.message);
+                    log(`❌ Error: ${error.message}`);
+                    console.error(error);
+                }
+            };
+            reader.onerror = function() {
+                hideLoading();
+                alert('❌ Error al leer el archivo');
+                log('❌ Error al leer el archivo');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function checkAndShowPreview() {
+            if (entradasLoaded) {
+                showPreview();
+            }
+        }
+
+        function showPreview() {
+            document.getElementById('previewSection').style.display = 'block';
+            window.scrollTo({ top: document.getElementById('previewSection').offsetTop - 20, behavior: 'smooth' });
+
+            // Calculate inventory
+            const inventario = parsedData.entradas.filter(e => 
+                !parsedData.salidas.some(s => s.numero === e.numero)
+            );
+
+            // Calculate totals
+            const totalEntradas = parsedData.entradas.reduce((sum, e) => sum + (e.costoTotal || e.peso * e.precioKilo), 0);
+            const totalSalidas = parsedData.salidas.reduce((sum, s) => sum + (s.costoVenta || s.peso * s.precioKiloVenta), 0);
+
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-box">
+                    <strong>${parsedData.entradas.length}</strong>
+                    <span>📥 Entradas</span>
+                </div>
+                <div class="stat-box">
+                    <strong>${parsedData.salidas.length}</strong>
+                    <span>📤 Salidas</span>
+                </div>
+                <div class="stat-box">
+                    <strong>${inventario.length}</strong>
+                    <span>🐂 En Inventario</span>
+                </div>
+                <div class="stat-box">
+                    <strong>$${totalEntradas.toLocaleString()}</strong>
+                    <span>💵 Total Compras</span>
+                </div>
+                ${parsedData.salidas.length > 0 ? `
+                <div class="stat-box">
+                    <strong>$${totalSalidas.toLocaleString()}</strong>
+                    <span>💰 Total Ventas</span>
+                </div>` : ''}
+            `;
+
+            // Show preview table for Entradas
+            let html = '<h3>📥 Entradas (primeras 15 filas):</h3><div class="preview-table"><table><thead><tr>';
+            html += '<th>Número</th><th>Peso (kg)</th><th>Sexo</th><th>Raza</th><th>Lote</th><th>Fecha</th><th>Precio/Kg</th><th>Vendedor</th></tr></thead><tbody>';
+            
+            parsedData.entradas.slice(0, 15).forEach(e => {
+                html += `<tr>
+                    <td><strong>${e.numero}</strong></td>
+                    <td>${e.peso}</td>
+                    <td>${e.sexo}</td>
+                    <td>${e.raza}</td>
+                    <td>${e.lote}</td>
+                    <td>${e.fechaEntrada}</td>
+                    <td>$${e.precioKilo.toLocaleString()}</td>
+                    <td>${e.vendedor}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            if (parsedData.entradas.length > 15) {
+                html += `<p style="color: #666; font-style: italic;">... y ${parsedData.entradas.length - 15} filas más</p>`;
+            }
+
+            // Show preview table for Salidas
+            if (parsedData.salidas.length > 0) {
+                html += '<h3 style="margin-top: 2rem;">📤 Salidas (primeras 15 filas):</h3><div class="preview-table"><table><thead><tr>';
+                html += '<th>Número</th><th>Peso (kg)</th><th>Fecha</th><th>Precio/Kg</th><th>Comprador</th><th>Total</th></tr></thead><tbody>';
+                
+                parsedData.salidas.slice(0, 15).forEach(s => {
+                    const total = s.costoVenta || s.peso * s.precioKiloVenta;
+                    html += `<tr>
+                        <td><strong>${s.numero}</strong></td>
+                        <td>${s.peso}</td>
+                        <td>${s.fechaSalida}</td>
+                        <td>$${s.precioKiloVenta.toLocaleString()}</td>
+                        <td>${s.comprador}</td>
+                        <td>$${total.toLocaleString()}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+
+                if (parsedData.salidas.length > 15) {
+                    html += `<p style="color: #666; font-style: italic;">... y ${parsedData.salidas.length - 15} filas más</p>`;
+                }
+            }
+
+            document.getElementById('preview').innerHTML = html;
+            log(`📊 Vista previa generada con éxito`);
+        }
+
+        function importData() {
+            if (parsedData.entradas.length === 0) {
+                alert('❌ No hay datos de entradas para importar');
+                return;
+            }
+
+            const ranchId = document.getElementById('ranchSelector').value;
+            const ranch = RANCHES[ranchId];
+
+            const inventario = parsedData.entradas.filter(e => 
+                !parsedData.salidas.some(s => s.numero === e.numero)
+            );
+
+            if (!confirm(`⚠️ CONFIRMAR IMPORTACIÓN\n\n` +
+                `Finca: ${ranch.icon} ${ranch.name}\n` +
+                `Entradas: ${parsedData.entradas.length} animales\n` +
+                `Salidas: ${parsedData.salidas.length} animales\n` +
+                `Inventario: ${inventario.length} animales\n\n` +
+                `Esto reemplazará TODOS los datos existentes de esta finca.\n` +
+                `¿Deseas continuar?`)) {
+                log('❌ Importación cancelada por el usuario');
+                return;
+            }
+
+            log(`🚀 Iniciando importación a ${ranch.name}...`);
+            showLoading('Importando datos...');
+
+            // Prepare ranch data
+            const ranchData = {
+                entradas: parsedData.entradas,
+                salidas: parsedData.salidas,
+                saludEventos: [],
+                fotoSesiones: [],
+                potreros: [],
+                animalPotreros: {},
+                config: {
+                    gdp: 0.31,
+                    precioVenta: 9000
+                }
+            };
+
+            // Calculate totals if not provided
+            ranchData.entradas.forEach(e => {
+                if (!e.costoTotal || e.costoTotal === 0) {
+                    e.costoTotal = e.peso * e.precioKilo;
+                }
+            });
+
+            ranchData.salidas.forEach(s => {
+                if (!s.costoVenta || s.costoVenta === 0) {
+                    s.costoVenta = s.peso * s.precioKiloVenta;
+                }
+            });
+
+            try {
+                // Save to localStorage
+                localStorage.setItem(ranch.key, JSON.stringify(ranchData));
+                
+                log(`✅ ${ranchData.entradas.length} entradas importadas`);
+                log(`✅ ${ranchData.salidas.length} salidas importadas`);
+                log(`✅ ${inventario.length} animales en inventario`);
+                log(`✅ Datos guardados en ${ranch.key}`);
+
+                hideLoading();
+                document.getElementById('previewSection').style.display = 'none';
+                document.getElementById('resultSection').style.display = 'block';
+                
+                const totalEntradas = ranchData.entradas.reduce((sum, e) => sum + (e.costoTotal || 0), 0);
+                const totalSalidas = ranchData.salidas.reduce((sum, s) => sum + (s.costoVenta || 0), 0);
+                
+                document.getElementById('resultMessage').innerHTML = `
+                    <div class="success">
+                        <h2 style="color: #2e7d32;">🎉 ✅ IMPORTACIÓN EXITOSA</h2>
+                        <p style="font-size: 1.1rem;"><strong>${ranch.icon} ${ranch.name}</strong> ahora tiene:</p>
+                        <ul style="font-size: 1rem;">
+                            <li>📥 <strong>${ranchData.entradas.length}</strong> entradas (compras)</li>
+                            <li>📤 <strong>${ranchData.salidas.length}</strong> salidas (ventas)</li>
+                            <li>🐂 <strong>${inventario.length}</strong> animales actualmente en inventario</li>
+                            <li>💵 <strong>$${totalEntradas.toLocaleString()}</strong> total en compras</li>
+                            ${ranchData.salidas.length > 0 ? `<li>💰 <strong>$${totalSalidas.toLocaleString()}</strong> total en ventas</li>` : ''}
+                        </ul>
+                        <p style="margin-top: 1rem;">✅ Los datos han sido guardados correctamente. Puedes ir a la aplicación para verificar y trabajar con los datos.</p>
+                    </div>
+                `;
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                hideLoading();
+                alert('❌ Error al guardar los datos:\n\n' + error.message);
+                log(`❌ Error al guardar: ${error.message}`);
+                console.error(error);
+            }
+        }
+
+        function resetForm() {
+            parsedData = { entradas: [], salidas: [] };
+            entradasLoaded = false;
+            salidasLoaded = false;
+            document.getElementById('entradasInput').value = '';
+            document.getElementById('salidasInput').value = '';
+            document.getElementById('entradasFileName').textContent = '';
+            document.getElementById('salidasFileName').textContent = '';
+            document.getElementById('entradasInputDiv').classList.remove('loaded');
+            document.getElementById('salidasInputDiv').classList.remove('loaded');
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'none';
+            const logDiv = document.getElementById('log');
+            if (logDiv) logDiv.innerHTML = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            log('🔄 Formulario reiniciado');
+        }
+
+        function goToApp() {
+            const ranchId = document.getElementById('ranchSelector').value;
+            window.location.href = `index.html`;
+        }
+
+        // Initialize
+        window.addEventListener('load', function() {
+            log('📊 Sistema de importación Excel listo');
+            log('✅ SheetJS cargado correctamente');
+        });
+    </script>
+</body>
+</html>
