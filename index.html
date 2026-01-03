@@ -3853,8 +3853,11 @@
                     }
                 } else if (tableId === 'salidas') {
                     if (column === 'tipo') {
+                        // Determine tipo from comprador field
                         valA = a.comprador === 'MUERTE' ? 'muerte' : 'venta';
                         valB = b.comprador === 'MUERTE' ? 'muerte' : 'venta';
+                        // For tipo, treat as text comparison
+                        type = 'text';
                     } else {
                         valA = a[column];
                         valB = b[column];
@@ -3864,18 +3867,23 @@
                     valB = b[column];
                 }
                 
-                // Handle null/undefined
+                // Handle null/undefined values
                 if (valA == null) valA = type === 'number' ? 0 : '';
                 if (valB == null) valB = type === 'number' ? 0 : '';
                 
                 // Compare based on type
                 let comparison = 0;
                 if (type === 'number') {
-                    comparison = parseFloat(valA) - parseFloat(valB);
+                    const numA = parseFloat(valA);
+                    const numB = parseFloat(valB);
+                    comparison = numA - numB;
                 } else if (type === 'date') {
-                    comparison = new Date(valA) - new Date(valB);
+                    const dateA = new Date(valA);
+                    const dateB = new Date(valB);
+                    comparison = dateA - dateB;
                 } else {
-                    comparison = String(valA).localeCompare(String(valB), 'es');
+                    // Text comparison (case-insensitive for Spanish)
+                    comparison = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase(), 'es');
                 }
                 
                 return direction === 'asc' ? comparison : -comparison;
@@ -5270,14 +5278,19 @@
                 return;
             }
             
-            // Default sort by date descending, or use active sort
-            let sorted;
+            // Apply sorting if active, otherwise sort by date descending
+            let sorted = [...data.salidas];
+            
             if (sortState.salidas.column) {
+                // Find the column header to get its type
                 const th = document.querySelector(`#salidasTableContainer th[data-sort="${sortState.salidas.column}"]`);
                 const type = th ? th.dataset.type : 'text';
-                sorted = sortData(data.salidas, sortState.salidas.column, sortState.salidas.direction, type, 'salidas');
+                
+                // Sort the data
+                sorted = sortData(sorted, sortState.salidas.column, sortState.salidas.direction, type, 'salidas');
             } else {
-                sorted = [...data.salidas].sort((a, b) => new Date(b.fechaSalida) - new Date(a.fechaSalida));
+                // Default: sort by date descending
+                sorted.sort((a, b) => new Date(b.fechaSalida) - new Date(a.fechaSalida));
             }
             
             tbody.innerHTML = sorted.map(salida => {
@@ -5296,6 +5309,9 @@
                     </tr>
                 `;
             }).join('');
+            
+            // Re-apply filters after rendering (using setTimeout to ensure DOM is updated)
+            setTimeout(() => filterSalidas(), 0);
         }
         
         function updateReports() {
@@ -5554,7 +5570,20 @@
                 
                 const text = row.textContent.toLowerCase();
                 const matchSearch = !search || text.includes(search);
-                const matchTipo = !tipo || text.includes(tipo);
+                
+                // Check tipo by badge class in second column (tipo column)
+                let matchTipo = true; // Default to true if no filter
+                if (tipo) {
+                    matchTipo = false; // Start false when filtering
+                    const tipoBadge = cells[1]?.querySelector('.badge');
+                    if (tipoBadge) {
+                        if (tipo === 'compra') {
+                            matchTipo = tipoBadge.classList.contains('badge-success');
+                        } else if (tipo === 'nacimiento') {
+                            matchTipo = tipoBadge.classList.contains('badge-info');
+                        }
+                    }
+                }
                 
                 // Get the fecha from the row (assuming it's in column 9 - Fecha)
                 const fechaCell = cells[8]?.textContent.trim();
@@ -5632,7 +5661,23 @@
                 
                 const text = row.textContent.toLowerCase();
                 const matchSearch = !search || text.includes(search);
-                const matchTipo = !tipo || text.includes(tipo);
+                
+                // Check tipo by badge in second column (index 1) - FIXED
+                let matchTipo = !tipo; // If no filter selected, match all (true)
+                if (tipo) {
+                    // When filter is selected, check the badge class
+                    const tipoBadge = cells[1]?.querySelector('.badge');
+                    if (tipoBadge) {
+                        const isVenta = tipoBadge.classList.contains('badge-warning');
+                        const isMuerte = tipoBadge.classList.contains('badge-danger');
+                        
+                        if (tipo === 'venta') {
+                            matchTipo = isVenta;
+                        } else if (tipo === 'muerte') {
+                            matchTipo = isMuerte;
+                        }
+                    }
+                }
                 
                 // Get the fecha from the row (assuming it's in column 3 - Fecha)
                 const fechaCell = cells[3]?.textContent.trim();
