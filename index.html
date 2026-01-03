@@ -2461,6 +2461,7 @@
                             <option value="">Todos los registros</option>
                             <option value="ano_actual">📅 Año en curso</option>
                             <option value="ultimo_mes">📆 Último mes</option>
+                            <option value="ultima_venta">💵 Últimas ventas</option>
                             <option value="ano_especifico">🗓️ Año específico</option>
                             <option value="rango_fechas">📊 Rango de fechas</option>
                         </select>
@@ -2485,11 +2486,12 @@
                                     <th class="sortable text-right" data-sort="precioKiloVenta" data-type="number">$/Kg</th>
                                     <th class="sortable" data-sort="comprador" data-type="text">Comprador</th>
                                     <th class="sortable text-right" data-sort="costoVenta" data-type="number">Valor</th>
+                                    <th class="text-right">Costo compra</th>
                                     <th class="sortable text-right" data-sort="gananciaDay" data-type="number">GDP</th>
                                 </tr>
                             </thead>
                             <tbody id="salidasTable">
-                                <tr><td colspan="9" class="text-center">No hay datos</td></tr>
+                                <tr><td colspan="10" class="text-center">No hay datos</td></tr>
                             </tbody>
                             <tfoot id="salidasSummary">
                                 <tr class="summary-row summary-total">
@@ -2501,6 +2503,7 @@
                                     <td class="text-right" data-summary="precio">-</td>
                                     <td></td>
                                     <td class="text-right" data-summary="valor">-</td>
+                                    <td class="text-right" data-summary="costo-compra">-</td>
                                     <td class="text-right" data-summary="gdp">-</td>
                                 </tr>
                                 <tr class="summary-row summary-average">
@@ -2512,6 +2515,7 @@
                                     <td class="text-right" data-summary="precio-avg">-</td>
                                     <td></td>
                                     <td class="text-right" data-summary="valor-avg">-</td>
+                                    <td class="text-right" data-summary="costo-compra-avg">-</td>
                                     <td class="text-right" data-summary="gdp-avg">-</td>
                                 </tr>
                             </tfoot>
@@ -3025,6 +3029,32 @@
                     <div class="summary-box-label">Total Muertes</div>
                 </div>
             </div>
+
+            <div class="filters" style="flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <input type="text" class="form-input" id="reportesSearch" placeholder="Buscar por vendedor o comprador..." oninput="filterReportes()" style="flex: 1; min-width: 240px;">
+                <select class="form-select" id="reportesTipoFilter" onchange="filterReportes()">
+                    <option value="">Todos los tipos</option>
+                    <option value="compra">Compras</option>
+                    <option value="nacimiento">Nacimientos</option>
+                    <option value="venta">Ventas</option>
+                    <option value="muerte">Muertes</option>
+                </select>
+                <select class="form-select" id="reportesPeriodoFilter" onchange="handleReportesPeriodoChange()" style="min-width: 150px;">
+                    <option value="">Todos los registros</option>
+                    <option value="ano_actual">📅 Año en curso</option>
+                    <option value="ultimo_mes">📆 Último mes</option>
+                    <option value="ano_especifico">🗓️ Año específico</option>
+                    <option value="rango_fechas">📊 Rango de fechas</option>
+                </select>
+                <select class="form-select" id="reportesYearSelect" style="display:none; min-width: 100px;" onchange="filterReportes()">
+                    <option value="">Seleccionar año</option>
+                </select>
+                <div id="reportesDateRange" style="display:none; display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="date" class="form-input" id="reportesDateFrom" onchange="filterReportes()" style="width: auto;">
+                    <span>a</span>
+                    <input type="date" class="form-input" id="reportesDateTo" onchange="filterReportes()" style="width: auto;">
+                </div>
+            </div>
             
             <div class="card">
                 <div class="card-header">
@@ -3156,6 +3186,9 @@
                         <button class="btn btn-secondary" onclick="quickAnalysis('recomendaciones')">
                             💡 Recomendaciones
                         </button>
+                        <button class="btn btn-secondary" onclick="quickAnalysis('peso_rentabilidad')">
+                            📊 Pesos de Compra más Rentables
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3186,8 +3219,22 @@
         <div id="tab-config" class="tab-content">
             <!-- Google Gemini API Key Section -->
             <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #4285f4, #1565c0);">
-                    <span>🤖 Google Gemini API Key</span>
+                <div class="card-header">
+                    <span>📊 Análisis de Rentabilidad por Peso de Compra</span>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-primary" onclick="generatePesoRentabilidadReport()" style="margin-bottom: 1rem;">
+                        📈 Generar Análisis Completo
+                    </button>
+                    <div id="pesoRentabilidadReport" style="display: none;">
+                        <!-- Report will be generated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span>🤝 Resumen por Comprador</span>
                 </div>
                 <div class="card-body">
                     <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border-left: 4px solid #2196f3;">
@@ -4088,8 +4135,15 @@
         }
         
         function hideEventForm(type) {
-            document.getElementById('form-' + type).style.display = 'none';
-            document.getElementById(type + 'Form').reset();
+            const formContainer = document.getElementById('form-' + type);
+            if (formContainer) {
+                formContainer.style.display = 'none';
+            }
+            
+            const form = document.getElementById(type + 'Form');
+            if (form) {
+                form.reset();
+            }
         }
         
         function updateDataLists() {
@@ -5367,7 +5421,7 @@
             const tbody = document.getElementById('salidasTable');
             
             if (data.salidas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No hay salidas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No hay salidas registradas</td></tr>';
                 updateSalidasSummary();
                 return;
             }
@@ -5389,6 +5443,10 @@
             
             tbody.innerHTML = sorted.map((salida, index) => {
                 const tipo = salida.comprador === 'MUERTE' ? 'muerte' : 'venta';
+                const entrada = data.entradas.find(e => e.numero == salida.numero);
+                const costoCompra = entrada
+                    ? (entrada.costoTotal || (entrada.peso * entrada.precioKilo) || 0)
+                    : null;
                 
                 return `
                     <tr class="clickable-row" onclick="showAnimalProfile('${salida.numero}')" title="Ver perfil del animal" style="cursor: pointer;">
@@ -5400,6 +5458,7 @@
                         <td class="text-right">${formatCurrency(salida.precioKiloVenta)}</td>
                         <td>${salida.comprador}${salida.causa ? ' (' + salida.causa + ')' : ''}</td>
                         <td class="text-right">${formatCurrency(salida.costoVenta)}</td>
+                        <td class="text-right">${costoCompra === null ? '-' : formatCurrency(costoCompra)}</td>
                         <td class="text-right">${salida.gananciaDay ? salida.gananciaDay.toFixed(3) : '-'}</td>
                     </tr>
                 `;
@@ -5410,10 +5469,11 @@
         }
         
         function updateReports() {
-            const compras = data.entradas.filter(e => !e.numeroVaca).length;
-            const nacimientos = data.entradas.filter(e => e.numeroVaca).length;
-            const ventas = data.salidas.filter(s => s.comprador !== 'MUERTE').length;
-            const muertes = data.salidas.filter(s => s.comprador === 'MUERTE').length;
+            const { entradasFiltered, salidasFiltered } = getReportesFilteredData();
+            const compras = entradasFiltered.filter(e => !e.numeroVaca).length;
+            const nacimientos = entradasFiltered.filter(e => e.numeroVaca).length;
+            const ventas = salidasFiltered.filter(s => s.comprador !== 'MUERTE').length;
+            const muertes = salidasFiltered.filter(s => s.comprador === 'MUERTE').length;
             
             document.getElementById('reportTotalCompras').textContent = compras;
             document.getElementById('reportTotalNacimientos').textContent = nacimientos;
@@ -5422,7 +5482,7 @@
             
             // Vendedores report
             const vendedoresData = {};
-            data.entradas.filter(e => !e.numeroVaca).forEach(e => {
+            entradasFiltered.filter(e => !e.numeroVaca).forEach(e => {
                 if (!vendedoresData[e.vendedor]) {
                     vendedoresData[e.vendedor] = { vendedor: e.vendedor, count: 0, kg: 0, inversion: 0 };
                 }
@@ -5464,7 +5524,7 @@
             
             // Compradores report
             const compradoresData = {};
-            data.salidas.filter(s => s.comprador !== 'MUERTE').forEach(s => {
+            salidasFiltered.filter(s => s.comprador !== 'MUERTE').forEach(s => {
                 if (!compradoresData[s.comprador]) {
                     compradoresData[s.comprador] = { comprador: s.comprador, count: 0, kg: 0, ingresos: 0, gdpSum: 0 };
                 }
@@ -5575,6 +5635,11 @@
             if (salidasYearSelect) {
                 salidasYearSelect.innerHTML = yearOptions;
             }
+
+            const reportesYearSelect = document.getElementById('reportesYearSelect');
+            if (reportesYearSelect) {
+                reportesYearSelect.innerHTML = yearOptions;
+            }
         }
         
         // ==================== FILTERS ====================
@@ -5646,6 +5711,101 @@
             filterSalidas();
         }
 
+        function handleReportesPeriodoChange() {
+            const periodo = document.getElementById('reportesPeriodoFilter').value;
+            const yearSelect = document.getElementById('reportesYearSelect');
+            const dateRange = document.getElementById('reportesDateRange');
+
+            // Hide all extra controls first
+            yearSelect.style.display = 'none';
+            dateRange.style.display = 'none';
+
+            // Show appropriate controls based on selection
+            if (periodo === 'ano_especifico') {
+                yearSelect.style.display = 'block';
+            } else if (periodo === 'rango_fechas') {
+                dateRange.style.display = 'flex';
+            }
+
+            filterReportes();
+        }
+
+        function getReportesFilteredData() {
+            const tipo = document.getElementById('reportesTipoFilter')?.value || '';
+            const periodo = document.getElementById('reportesPeriodoFilter')?.value || '';
+            const yearSelect = document.getElementById('reportesYearSelect')?.value || '';
+            const dateFrom = document.getElementById('reportesDateFrom')?.value || '';
+            const dateTo = document.getElementById('reportesDateTo')?.value || '';
+            const search = document.getElementById('reportesSearch')?.value.toLowerCase() || '';
+
+            const today = new Date();
+            const currentYear = today.getFullYear();
+
+            const filterByPeriodo = (fechaStr) => {
+                if (!periodo || !fechaStr) return true;
+                const fecha = new Date(fechaStr);
+                if (Number.isNaN(fecha.getTime())) return false;
+
+                switch (periodo) {
+                    case 'ano_actual':
+                        return fecha.getFullYear() === currentYear;
+                    case 'ultimo_mes': {
+                        const lastMonth = new Date(today);
+                        lastMonth.setMonth(lastMonth.getMonth() - 1);
+                        return fecha >= lastMonth;
+                    }
+                    case 'ano_especifico':
+                        return yearSelect ? fecha.getFullYear() === parseInt(yearSelect, 10) : true;
+                    case 'rango_fechas': {
+                        if (dateFrom && dateTo) {
+                            const from = new Date(dateFrom);
+                            const to = new Date(dateTo);
+                            return fecha >= from && fecha <= to;
+                        }
+                        if (dateFrom) {
+                            const from = new Date(dateFrom);
+                            return fecha >= from;
+                        }
+                        if (dateTo) {
+                            const to = new Date(dateTo);
+                            return fecha <= to;
+                        }
+                        return true;
+                    }
+                    default:
+                        return true;
+                }
+            };
+
+            let entradasFiltered = data.entradas.filter(e => filterByPeriodo(e.fechaEntrada));
+            let salidasFiltered = data.salidas.filter(s => filterByPeriodo(s.fechaSalida));
+
+            if (search) {
+                entradasFiltered = entradasFiltered.filter(e => (e.vendedor || '').toLowerCase().includes(search));
+                salidasFiltered = salidasFiltered.filter(s => (s.comprador || '').toLowerCase().includes(search));
+            }
+
+            if (tipo === 'compra') {
+                entradasFiltered = entradasFiltered.filter(e => !e.numeroVaca);
+                salidasFiltered = [];
+            } else if (tipo === 'nacimiento') {
+                entradasFiltered = entradasFiltered.filter(e => e.numeroVaca);
+                salidasFiltered = [];
+            } else if (tipo === 'venta') {
+                salidasFiltered = salidasFiltered.filter(s => s.comprador !== 'MUERTE');
+                entradasFiltered = [];
+            } else if (tipo === 'muerte') {
+                salidasFiltered = salidasFiltered.filter(s => s.comprador === 'MUERTE');
+                entradasFiltered = [];
+            }
+
+            return { entradasFiltered, salidasFiltered };
+        }
+
+        function filterReportes() {
+            updateReports();
+        }
+
         function parseIntegerFromText(text) {
             if (!text) return 0;
             const cleaned = text.replace(/[^\d-]/g, '');
@@ -5665,6 +5825,21 @@
             }
             const value = parseFloat(normalized);
             return Number.isNaN(value) ? 0 : value;
+        }
+
+        function getDateKey(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getDateKeyFromDisplay(dateText) {
+            if (!dateText) return null;
+            const [day, month, year] = dateText.split('/').map(Number);
+            if (!day || !month || !year) return null;
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
 
         function updateEntradasSummary() {
@@ -5719,23 +5894,26 @@
             let totalPeso = 0;
             let totalPrecio = 0;
             let totalValor = 0;
+            let totalCostoCompra = 0;
             let totalGdp = 0;
 
             rows.forEach(row => {
                 if (row.style.display === 'none') return;
                 const cells = row.querySelectorAll('td');
-                if (cells.length < 9) return;
+                if (cells.length < 10) return;
 
                 totalPeso += parseIntegerFromText(cells[3]?.textContent || '');
                 totalPrecio += parseIntegerFromText(cells[5]?.textContent || '');
                 totalValor += parseIntegerFromText(cells[7]?.textContent || '');
-                totalGdp += parseFloatFromText(cells[8]?.textContent || '');
+                totalCostoCompra += parseIntegerFromText(cells[8]?.textContent || '');
+                totalGdp += parseFloatFromText(cells[9]?.textContent || '');
                 count += 1;
             });
 
             const avgPeso = count ? totalPeso / count : 0;
             const avgPrecio = count ? totalPrecio / count : 0;
             const avgValor = count ? totalValor / count : 0;
+            const avgCostoCompra = count ? totalCostoCompra / count : 0;
             const avgGdp = count ? totalGdp / count : 0;
 
             const labelCell = summary.querySelector('[data-summary="label"]');
@@ -5747,6 +5925,8 @@
             if (precioTotalCell) precioTotalCell.textContent = count ? formatCurrency(totalPrecio) : '-';
             const valorTotalCell = summary.querySelector('[data-summary="valor"]');
             if (valorTotalCell) valorTotalCell.textContent = count ? formatCurrency(totalValor) : '-';
+            const costoCompraTotalCell = summary.querySelector('[data-summary="costo-compra"]');
+            if (costoCompraTotalCell) costoCompraTotalCell.textContent = count ? formatCurrency(totalCostoCompra) : '-';
             const gdpTotalCell = summary.querySelector('[data-summary="gdp"]');
             if (gdpTotalCell) gdpTotalCell.textContent = count ? totalGdp.toFixed(3) : '-';
 
@@ -5756,6 +5936,8 @@
             if (precioAvgCell) precioAvgCell.textContent = count ? formatCurrency(avgPrecio) : '-';
             const valorAvgCell = summary.querySelector('[data-summary="valor-avg"]');
             if (valorAvgCell) valorAvgCell.textContent = count ? formatCurrency(avgValor) : '-';
+            const costoCompraAvgCell = summary.querySelector('[data-summary="costo-compra-avg"]');
+            if (costoCompraAvgCell) costoCompraAvgCell.textContent = count ? formatCurrency(avgCostoCompra) : '-';
             const gdpAvgCell = summary.querySelector('[data-summary="gdp-avg"]');
             if (gdpAvgCell) gdpAvgCell.textContent = count ? avgGdp.toFixed(3) : '-';
         }
@@ -5865,6 +6047,14 @@
             const rows = document.querySelectorAll('#salidasTable tr');
             const today = new Date();
             const currentYear = today.getFullYear();
+            const latestSaleDate = data.salidas
+                .filter(s => s.comprador !== 'MUERTE')
+                .reduce((latest, salida) => {
+                    const date = new Date(salida.fechaSalida);
+                    if (Number.isNaN(date.getTime())) return latest;
+                    return latest && latest > date ? latest : date;
+                }, null);
+            const latestSaleKey = latestSaleDate ? getDateKey(latestSaleDate) : null;
             
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
@@ -5873,20 +6063,32 @@
                 const text = row.textContent.toLowerCase();
                 const matchSearch = !search || text.includes(search);
                 
-                // Check tipo by badge in second column (index 1) - FIXED
-                let matchTipo = !tipo; // If no filter selected, match all (true)
+                // Check tipo by badge class (column index 2)
+                let matchTipo = true; // Default to true (show all)
+                let isVenta = false;
+                
                 if (tipo) {
-                    // When filter is selected, check the badge class
+                    // When filter is selected, check the badge class in the Tipo column
                     const tipoBadge = cells[2]?.querySelector('.badge');
                     if (tipoBadge) {
-                        const isVenta = tipoBadge.classList.contains('badge-warning');
+                        isVenta = tipoBadge.classList.contains('badge-warning');
                         const isMuerte = tipoBadge.classList.contains('badge-danger');
                         
+                        // Set matchTipo based on selected filter
                         if (tipo === 'venta') {
                             matchTipo = isVenta;
                         } else if (tipo === 'muerte') {
                             matchTipo = isMuerte;
                         }
+                    } else {
+                        // If badge not found, don't match
+                        matchTipo = false;
+                    }
+                } else {
+                    // No filter selected - check badge for period filtering later
+                    const tipoBadge = cells[2]?.querySelector('.badge');
+                    if (tipoBadge) {
+                        isVenta = tipoBadge.classList.contains('badge-warning');
                     }
                 }
                 
@@ -5908,6 +6110,14 @@
                                 const lastMonth = new Date(today);
                                 lastMonth.setMonth(lastMonth.getMonth() - 1);
                                 matchPeriodo = fechaSalida >= lastMonth;
+                                break;
+                            case 'ultima_venta':
+                                if (!latestSaleKey) {
+                                    matchPeriodo = false;
+                                } else {
+                                    const rowKey = getDateKeyFromDisplay(fechaCell);
+                                    matchPeriodo = isVenta && rowKey === latestSaleKey;
+                                }
                                 break;
                             case 'ano_especifico':
                                 if (yearSelect) {
@@ -8506,10 +8716,7 @@
             // Simple chip-style selector - just chapeta numbers
             container.innerHTML = inventario.map(animal => {
                 return `
-                    <div class="animal-chip" data-numero="${animal.numero}" onclick="selectAnimalForPeso('${animal.numero}')" 
-                         style="display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 0.75rem; margin: 0.25rem; 
-                                background: white; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; 
-                                font-weight: 600; font-size: 0.95rem; transition: all 0.2s; min-width: 60px;">
+                    <div class="animal-chip" data-numero="${animal.numero}" onclick="selectAnimalForPeso('${animal.numero}')">
                         #${animal.numero}
                     </div>
                 `;
@@ -8539,10 +8746,17 @@
             document.getElementById('pesoAnimalNumero').value = numero;
             
             // Visual selection
-            document.querySelectorAll('#pesoAnimalSelector .animal-option').forEach(opt => {
+            document.querySelectorAll('#pesoAnimalSelector .animal-chip').forEach(opt => {
                 opt.classList.remove('selected');
+                opt.style.borderColor = '';
+                opt.style.background = '';
             });
-            document.querySelector(`#pesoAnimalSelector .animal-option[data-numero="${numero}"]`).classList.add('selected');
+            const selectedChip = document.querySelector(`#pesoAnimalSelector .animal-chip[data-numero="${numero}"]`);
+            if (selectedChip) {
+                selectedChip.style.borderColor = '';
+                selectedChip.style.background = '';
+                selectedChip.classList.add('selected');
+            }
             
             // Show animal info
             const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
@@ -8573,7 +8787,7 @@
         
         function filterAnimalsForPeso() {
             const search = document.getElementById('pesoSearchAnimal').value.toLowerCase();
-            document.querySelectorAll('#pesoAnimalSelector .animal-option').forEach(opt => {
+            document.querySelectorAll('#pesoAnimalSelector .animal-chip').forEach(opt => {
                 const numero = opt.dataset.numero.toLowerCase();
                 const text = opt.textContent.toLowerCase();
                 opt.style.display = (numero.includes(search) || text.includes(search)) ? '' : 'none';
@@ -9316,8 +9530,30 @@ INSTRUCCIONES:
                             }],
                             generationConfig: {
                                 temperature: 0.7,
-                                maxOutputTokens: 2048
-                            }
+                                maxOutputTokens: 8192,  // Maximum for Gemini 2.5
+                                topP: 0.95,
+                                topK: 40,
+                                candidateCount: 1,
+                                stopSequences: []
+                            },
+                            safetySettings: [
+                                {
+                                    category: "HARM_CATEGORY_HARASSMENT",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_HATE_SPEECH",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                    threshold: "BLOCK_NONE"
+                                },
+                                {
+                                    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                    threshold: "BLOCK_NONE"
+                                }
+                            ]
                         })
                     });
                     
@@ -9445,7 +9681,8 @@ INSTRUCCIONES:
                 'salud': 'Evalúa el estado de salud del hato: vacunaciones al día, tratamientos recientes, animales en retiro. ¿Qué acciones sanitarias se necesitan próximamente?',
                 'potreros': 'Analiza la eficiencia de uso de potreros: ocupación, rotación, días de descanso. ¿Están bien distribuidos los animales? ¿Hay potreros subutilizados?',
                 'proyeccion': 'Genera una proyección a 30, 60 y 90 días: cuántos animales llegarán al peso objetivo, ingreso estimado por ventas, y recomendaciones de timing para maximizar ganancias.',
-                'recomendaciones': 'Basándote en todos los datos, genera las 5 recomendaciones más importantes para mejorar la rentabilidad de la finca en los próximos 3 meses.'
+                'recomendaciones': 'Basándote en todos los datos, genera las 5 recomendaciones más importantes para mejorar la rentabilidad de la finca en los próximos 3 meses.',
+                'peso_rentabilidad': 'ANÁLISIS CRÍTICO: Analiza en detalle qué rangos de peso de compra (ej: 100-150kg, 150-200kg, 200-250kg, etc.) han dado la mejor rentabilidad. Para cada rango calcula: 1) Margen de ganancia promedio (%), 2) ROI promedio, 3) GDP promedio, 4) Días promedio hasta venta, 5) Ganancia total en $ por animal. Identifica el "punto dulce" óptimo de peso de compra y explica por qué. Incluye recomendaciones específicas de qué pesos buscar en futuras compras.'
             };
             
             const prompt = prompts[type];
@@ -9516,17 +9753,169 @@ INSTRUCCIONES:
         }
         
         function formatAIResponse(text) {
+            // Clean up any artifacts
+            text = text.trim();
+            
             let html = text
-                .replace(/^### (.*$)/gim, '<h4 style="color: #9c27b0; margin-top: 1rem;">$1</h4>')
-                .replace(/^## (.*$)/gim, '<h3 style="color: #9c27b0; margin-top: 1.2rem;">$1</h3>')
-                .replace(/^# (.*$)/gim, '<h2 style="color: #9c27b0; margin-top: 1.5rem;">$1</h2>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/^\- (.*$)/gim, '• $1<br>')
-                .replace(/^\* (.*$)/gim, '• $1<br>')
+                // Headers - improved detection
+                .replace(/^###\s+(.*$)/gim, '<h4 style="color: #9c27b0; margin-top: 1rem; margin-bottom: 0.5rem;">$1</h4>')
+                .replace(/^##\s+(.*$)/gim, '<h3 style="color: #9c27b0; margin-top: 1.2rem; margin-bottom: 0.5rem;">$1</h3>')
+                .replace(/^#\s+(.*$)/gim, '<h2 style="color: #9c27b0; margin-top: 1.5rem; margin-bottom: 0.5rem;">$1</h2>')
+                // Bold text
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #2e7d32;">$1</strong>')
+                // Lists - improved with proper line breaks
+                .replace(/^\s*[-*]\s+(.*$)/gim, '<div style="margin-left: 1rem;">• $1</div>')
+                // Numbered lists
+                .replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left: 1rem;">$1. $2</div>')
+                // Preserve paragraph breaks but avoid too many
+                .replace(/\n{3,}/g, '\n\n')
                 .replace(/\n\n/g, '<br><br>')
                 .replace(/\n/g, '<br>');
             
             return html;
+        }
+        
+        // Add function to generate peso rentabilidad report
+        function generatePesoRentabilidadReport() {
+            const reportDiv = document.getElementById('pesoRentabilidadReport');
+            reportDiv.style.display = 'block';
+            reportDiv.innerHTML = '<div style="text-align: center; padding: 2rem;"><div style="font-size: 2rem;">📊</div><div>Generando análisis...</div></div>';
+            
+            // Get all sold animals with purchase and sale data
+            const soldAnimals = data.salidas.filter(s => s.comprador !== 'MUERTE').map(salida => {
+                const entrada = data.entradas.find(e => e.numero === salida.numero);
+                if (!entrada) return null;
+                
+                const costoCompra = entrada.costoTotal || (entrada.peso * entrada.precioKilo);
+                const ingresoVenta = salida.costoVenta || (salida.peso * salida.precioKiloVenta);
+                const ganancia = ingresoVenta - costoCompra;
+                const margen = costoCompra > 0 ? (ganancia / costoCompra) * 100 : 0;
+                const diasEnFinca = Math.floor((new Date(salida.fechaSalida) - new Date(entrada.fechaEntrada)) / (1000*60*60*24));
+                const gananciaKg = salida.peso - entrada.peso;
+                const gdp = diasEnFinca > 0 ? gananciaKg / diasEnFinca : 0;
+                
+                return {
+                    numero: entrada.numero,
+                    pesoCompra: entrada.peso,
+                    pesoVenta: salida.peso,
+                    costoCompra: costoCompra,
+                    ingresoVenta: ingresoVenta,
+                    ganancia: ganancia,
+                    margen: margen,
+                    diasEnFinca: diasEnFinca,
+                    gdp: gdp,
+                    vendedor: entrada.vendedor
+                };
+            }).filter(a => a !== null);
+            
+            if (soldAnimals.length === 0) {
+                reportDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">No hay suficientes datos de ventas para generar el análisis</div>';
+                return;
+            }
+            
+            // Group by weight ranges
+            const ranges = [
+                { min: 0, max: 100, label: '< 100 kg' },
+                { min: 100, max: 150, label: '100-150 kg' },
+                { min: 150, max: 200, label: '150-200 kg' },
+                { min: 200, max: 250, label: '200-250 kg' },
+                { min: 250, max: 300, label: '250-300 kg' },
+                { min: 300, max: 999, label: '> 300 kg' }
+            ];
+            
+            const rangeStats = ranges.map(range => {
+                const animalsInRange = soldAnimals.filter(a => a.pesoCompra >= range.min && a.pesoCompra < range.max);
+                
+                if (animalsInRange.length === 0) {
+                    return { ...range, count: 0 };
+                }
+                
+                const avgMargen = animalsInRange.reduce((sum, a) => sum + a.margen, 0) / animalsInRange.length;
+                const avgGanancia = animalsInRange.reduce((sum, a) => sum + a.ganancia, 0) / animalsInRange.length;
+                const avgGDP = animalsInRange.reduce((sum, a) => sum + a.gdp, 0) / animalsInRange.length;
+                const avgDias = animalsInRange.reduce((sum, a) => sum + a.diasEnFinca, 0) / animalsInRange.length;
+                const totalGanancia = animalsInRange.reduce((sum, a) => sum + a.ganancia, 0);
+                
+                return {
+                    ...range,
+                    count: animalsInRange.length,
+                    avgMargen: avgMargen,
+                    avgGanancia: avgGanancia,
+                    avgGDP: avgGDP,
+                    avgDias: avgDias,
+                    totalGanancia: totalGanancia,
+                    avgROI: avgMargen // Same as margin in this case
+                };
+            }).filter(r => r.count > 0);
+            
+            // Sort by average margin (best first)
+            rangeStats.sort((a, b) => b.avgMargen - a.avgMargen);
+            
+            // Generate visual report
+            let html = '<div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">';
+            html += '<h3 style="margin: 0 0 1rem 0; color: #2e7d32;">🎯 PUNTO ÓPTIMO DE COMPRA</h3>';
+            
+            if (rangeStats.length > 0) {
+                const best = rangeStats[0];
+                html += `<div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">📊 ${best.label}</div>`;
+                html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">`;
+                html += `<div><strong>Margen:</strong> ${best.avgMargen.toFixed(1)}%</div>`;
+                html += `<div><strong>Ganancia:</strong> ${formatCurrency(best.avgGanancia)}</div>`;
+                html += `<div><strong>GDP:</strong> ${best.avgGDP.toFixed(3)} kg/día</div>`;
+                html += `<div><strong>Animales:</strong> ${best.count}</div>`;
+                html += `</div>`;
+            }
+            html += '</div>';
+            
+            // Detailed table
+            html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse;">';
+            html += '<thead><tr style="background: var(--primary); color: white;">';
+            html += '<th style="padding: 0.75rem; text-align: left;">Rango de Peso</th>';
+            html += '<th style="padding: 0.75rem; text-align: center;">Animales</th>';
+            html += '<th style="padding: 0.75rem; text-align: right;">Margen %</th>';
+            html += '<th style="padding: 0.75rem; text-align: right;">Ganancia Promedio</th>';
+            html += '<th style="padding: 0.75rem; text-align: right;">GDP Promedio</th>';
+            html += '<th style="padding: 0.75rem; text-align: right;">Días Promedio</th>';
+            html += '<th style="padding: 0.75rem; text-align: right;">Ganancia Total</th>';
+            html += '</tr></thead><tbody>';
+            
+            rangeStats.forEach((r, i) => {
+                const rowColor = i === 0 ? 'background: #e8f5e9;' : '';
+                html += `<tr style="${rowColor}">`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd;"><strong>${r.label}</strong></td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: center;">${r.count}</td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: right;"><strong style="color: var(--success);">${r.avgMargen.toFixed(1)}%</strong></td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: right;">${formatCurrency(r.avgGanancia)}</td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: right;">${r.avgGDP.toFixed(3)} kg/día</td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: right;">${Math.round(r.avgDias)} días</td>`;
+                html += `<td style="padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: right;"><strong>${formatCurrency(r.totalGanancia)}</strong></td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            
+            // Recommendations
+            html += '<div style="margin-top: 1.5rem; padding: 1.5rem; background: #fff3e0; border-left: 4px solid #ff9800; border-radius: 8px;">';
+            html += '<h4 style="margin: 0 0 1rem 0; color: #e65100;">💡 RECOMENDACIONES</h4>';
+            html += '<ul style="margin: 0; padding-left: 1.5rem;">';
+            
+            if (rangeStats.length > 0) {
+                const best = rangeStats[0];
+                const worst = rangeStats[rangeStats.length - 1];
+                
+                html += `<li><strong>ENFOCARSE EN:</strong> Comprar animales en el rango ${best.label} - han generado ${best.avgMargen.toFixed(1)}% de margen promedio</li>`;
+                html += `<li><strong>EVITAR:</strong> El rango ${worst.label} muestra menor rentabilidad (${worst.avgMargen.toFixed(1)}% margen)</li>`;
+                
+                if (best.avgGDP > 0.4) {
+                    html += `<li><strong>GDP EXCELENTE:</strong> Animales en ${best.label} tienen GDP de ${best.avgGDP.toFixed(3)} kg/día - muy por encima del promedio</li>`;
+                }
+                
+                html += `<li><strong>TIEMPO DE INVERSIÓN:</strong> Animales en rango óptimo toman ${Math.round(best.avgDias)} días promedio hasta venta</li>`;
+            }
+            
+            html += '</ul></div>';
+            
+            reportDiv.innerHTML = html;
         }
         
         function copyAnalysis() {
