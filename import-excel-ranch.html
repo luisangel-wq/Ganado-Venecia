@@ -512,13 +512,23 @@
                         const fechaRaw = getColumnValue(row, ['Fecha Salida', 'Fecha de Salida', 'FechaSalida', 'Fecha', 'fecha', 'FECHA']);
                         const fecha = fechaRaw ? parseExcelDate(fechaRaw) : new Date().toISOString().split('T')[0];
 
+                        const precioKiloVenta = Number(getColumnValue(row, ['Precio/Kilo Venta', 'PrecioKiloVenta', 'Precio Kilo', 'Precio', 'precio', 'PRECIO']) || 0);
+                        const costoVenta = Number(getColumnValue(row, ['Costo de venta', 'CostoVenta', 'Costo_Venta', 'Total', 'total', 'TOTAL']) || 0);
+
+                        // Skip sales with $0 value
+                        const totalValue = costoVenta || (Number(peso) * precioKiloVenta);
+                        if (totalValue === 0) {
+                            log(`⚠️ Fila ${index + 2}: Venta con valor $0 - ignorada (chapeta #${numero})`);
+                            return null;
+                        }
+
                         return {
                             numero: String(numero).trim(),
                             peso: Number(peso) || 0,
                             fechaSalida: fecha,
-                            precioKiloVenta: Number(getColumnValue(row, ['Precio/Kilo Venta', 'PrecioKiloVenta', 'Precio Kilo', 'Precio', 'precio', 'PRECIO']) || 0),
+                            precioKiloVenta: precioKiloVenta,
                             comprador: String(getColumnValue(row, ['Comprador', 'comprador', 'COMPRADOR', 'Tipo', 'tipo']) || ''),
-                            costoVenta: Number(getColumnValue(row, ['Costo de venta', 'CostoVenta', 'Costo_Venta', 'Total', 'total', 'TOTAL']) || 0)
+                            costoVenta: costoVenta
                         };
                     }).filter(s => s !== null && s.numero && s.peso);
 

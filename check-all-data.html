@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Datos Actuales</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .ranch-section {
+            margin-bottom: 30px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .ranch-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ranch-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .ranch-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .ranch-body {
+            padding: 20px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #000;
+        }
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Estado Actual de Todas las Fincas</h1>
+        <p style="color: #6c757d; margin-bottom: 30px;">Esta página muestra todos los datos actuales en tu navegador</p>
+
+        <div id="summary"></div>
+        <div id="ranches"></div>
+        
+        <div style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #dee2e6;">
+            <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                ← Volver a la Aplicación
+            </button>
+            <button class="btn btn-success" onclick="window.location.href='import-catalina.html'">
+                📥 Importar Santa Catalina
+            </button>
+            <button class="btn btn-success" onclick="window.location.href='import-lavega.html'">
+                📥 Importar La Vega
+            </button>
+            <button class="btn btn-warning" onclick="location.reload()">
+                🔄 Actualizar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { 
+                name: 'Santa Catalina', 
+                icon: '🏠', 
+                key: 'ganadoFinca_SantaCatalina',
+                importFile: 'import-catalina.html'
+            },
+            'LaVega': { 
+                name: 'La Vega', 
+                icon: '🌾', 
+                key: 'ganadoFinca_LaVega',
+                importFile: 'import-lavega.html'
+            },
+            'LaCoruna': { 
+                name: 'La Coruña', 
+                icon: '⛰️', 
+                key: 'ganadoFinca_LaCoruna',
+                importFile: null
+            }
+        };
+
+        function loadAllData() {
+            const summary = document.getElementById('summary');
+            const ranchesDiv = document.getElementById('ranches');
+            
+            let totalEntradas = 0;
+            let totalSalidas = 0;
+            let totalActivos = 0;
+            let hasAnyData = false;
+
+            Object.entries(RANCHES).forEach(([id, ranch]) => {
+                const data = loadRanchData(ranch.key);
+                
+                if (data && (data.entradas?.length > 0 || data.salidas?.length > 0)) {
+                    hasAnyData = true;
+                    const entradas = data.entradas || [];
+                    const salidas = data.salidas || [];
+                    const activos = entradas.length - salidas.length;
+                    
+                    totalEntradas += entradas.length;
+                    totalSalidas += salidas.length;
+                    totalActivos += activos;
+                    
+                    ranchesDiv.innerHTML += createRanchSection(ranch, data, entradas, salidas, activos);
+                } else {
+                    ranchesDiv.innerHTML += createEmptyRanchSection(ranch);
+                }
+            });
+
+            if (!hasAnyData) {
+                summary.innerHTML = `
+                    <div class="warning">
+                        <strong>⚠️ No se encontraron datos en ninguna finca</strong><br><br>
+                        Esto puede significar:<br>
+                        • Los datos nunca fueron importados<br>
+                        • Estás usando un navegador diferente<br>
+                        • Los datos fueron eliminados accidentalmente<br>
+                        • Estás en modo incógnito/privado<br><br>
+                        <strong>Solución:</strong> Usa los botones de abajo para importar los datos nuevamente.
+                    </div>
+                `;
+            } else {
+                summary.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Resumen General</strong><br>
+                        📥 Total Entradas: ${totalEntradas}<br>
+                        📤 Total Salidas: ${totalSalidas}<br>
+                        🐄 Total Activos: ${totalActivos}
+                    </div>
+                `;
+            }
+        }
+
+        function loadRanchData(key) {
+            const saved = localStorage.getItem(key);
+            return saved ? JSON.parse(saved) : null;
+        }
+
+        function createRanchSection(ranch, data, entradas, salidas, activos) {
+            return `
+                <div class="ranch-section">
+                    <div class="ranch-header">
+                        <div class="ranch-title">${ranch.icon} ${ranch.name}</div>
+                        <div class="ranch-stats">
+                            <div class="stat">
+                                <div class="stat-value">${entradas.length}</div>
+                                <div class="stat-label">Entradas</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${salidas.length}</div>
+                                <div class="stat-label">Salidas</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${activos}</div>
+                                <div class="stat-label">Activos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ranch-body">
+                        ${createEntradasTable(entradas)}
+                        ${createSalidasTable(salidas)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function createEmptyRanchSection(ranch) {
+            return `
+                <div class="ranch-section">
+                    <div class="ranch-header">
+                        <div class="ranch-title">${ranch.icon} ${ranch.name}</div>
+                        <div class="ranch-stats">
+                            <div class="stat">
+                                <div class="stat-value">0</div>
+                                <div class="stat-label">Sin datos</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ranch-body">
+                        <div class="empty">
+                            <div style="font-size: 3rem;">📭</div>
+                            <div>Esta finca no tiene datos</div>
+                            ${ranch.importFile ? `
+                                <button class="btn btn-success" onclick="window.location.href='${ranch.importFile}'">
+                                    📥 Importar ${ranch.name}
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createEntradasTable(entradas) {
+            if (entradas.length === 0) return '';
+            
+            const recent = entradas.slice(-5).reverse();
+            return `
+                <div class="section-title">📥 Últimas 5 Entradas:</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Chapeta</th>
+                            <th>Lote</th>
+                            <th>Vendedor</th>
+                            <th>Peso</th>
+                            <th>$/Kg</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recent.map(e => `
+                            <tr>
+                                <td><strong>#${e.numero}</strong></td>
+                                <td>${e.lote || '-'}</td>
+                                <td>${e.vendedor || '-'}</td>
+                                <td>${e.peso} kg</td>
+                                <td>${formatCurrency(e.precioKilo || 0)}</td>
+                                <td>${formatDate(e.fechaEntrada)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function createSalidasTable(salidas) {
+            if (salidas.length === 0) return '<div class="info">✅ No hay salidas registradas</div>';
+            
+            const recent = salidas.slice(-5).reverse();
+            return `
+                <div class="section-title">📤 Últimas 5 Salidas:</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Chapeta</th>
+                            <th>Peso</th>
+                            <th>Comprador</th>
+                            <th>Valor</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${recent.map(s => `
+                            <tr>
+                                <td><strong>#${s.numero}</strong></td>
+                                <td>${s.peso} kg</td>
+                                <td>${s.comprador || '-'}</td>
+                                <td>${formatCurrency(s.costoVenta || 0)}</td>
+                                <td>${formatDate(s.fechaSalida)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('es-CO');
+        }
+
+        function formatCurrency(value) {
+            return '$' + Math.round(value).toLocaleString('es-CO');
+        }
+
+        window.addEventListener('DOMContentLoaded', loadAllData);
+    </script>
+</body>
+</html>

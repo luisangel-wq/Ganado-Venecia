@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Salidas con $0</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card.red {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        tr.invalid {
+            background: #f8d7da;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+        .btn-danger:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .preview {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Eliminar Salidas Inválidas ($0)</h1>
+        <p style="color: #6c757d; margin-bottom: 20px;">Limpia las salidas que tienen valor $0 o indefinido</p>
+
+        <div class="warning">
+            <strong>⚠️ Atención:</strong> Esta herramienta eliminará SOLO las salidas con valor $0. Las salidas válidas y todas las entradas permanecerán intactas.
+        </div>
+
+        <div id="status"></div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSalidas">0</div>
+                <div class="stat-label">Total Salidas</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-value" id="invalidSalidas">0</div>
+                <div class="stat-label">Salidas con $0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="validSalidas">0</div>
+                <div class="stat-label">Salidas Válidas</div>
+            </div>
+        </div>
+
+        <div id="preview" class="preview" style="display: none;">
+            <h3 style="padding: 15px; margin: 0; background: #f8d7da; border-bottom: 2px solid #dc3545;">
+                Salidas con $0 que serán eliminadas:
+            </h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Chapeta</th>
+                        <th>Peso</th>
+                        <th>Fecha</th>
+                        <th>Comprador</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody id="invalidTable">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="actions" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #dee2e6; display: none;">
+            <button class="btn btn-danger" onclick="removeInvalidSales()" id="removeBtn">
+                🗑️ Eliminar Salidas con $0
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='check-all-data.html'">
+                📊 Ver Todos los Datos
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                ← Volver a la Aplicación
+            </button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { name: 'Santa Catalina', key: 'ganadoFinca_SantaCatalina' },
+            'LaVega': { name: 'La Vega', key: 'ganadoFinca_LaVega' },
+            'LaCoruna': { name: 'La Coruña', key: 'ganadoFinca_LaCoruna' }
+        };
+
+        let invalidSales = [];
+        let ranchData = {};
+
+        function loadData() {
+            const status = document.getElementById('status');
+            invalidSales = [];
+            
+            // Check all ranches
+            Object.entries(RANCHES).forEach(([id, ranch]) => {
+                const data = loadRanchData(ranch.key);
+                if (data && data.salidas && data.salidas.length > 0) {
+                    const invalid = data.salidas.filter(s => !s.costoVenta || s.costoVenta === 0);
+                    if (invalid.length > 0) {
+                        ranchData[id] = {
+                            ranch: ranch,
+                            data: data,
+                            invalid: invalid,
+                            valid: data.salidas.filter(s => s.costoVenta && s.costoVenta > 0)
+                        };
+                        invalidSales = invalidSales.concat(invalid.map(s => ({...s, ranch: ranch.name})));
+                    }
+                }
+            });
+
+            if (invalidSales.length === 0) {
+                status.innerHTML = `
+                    <div class="success">
+                        <strong>✅ ¡Todo está limpio!</strong><br>
+                        No se encontraron salidas con valor $0 en ninguna finca.
+                    </div>
+                `;
+                return;
+            }
+
+            // Show stats and preview
+            displayStats();
+            displayInvalidSales();
+            
+            status.innerHTML = `
+                <div class="info">
+                    <strong>📋 Análisis completado</strong><br>
+                    Se encontraron ${invalidSales.length} salidas con valor $0 que no deberían estar aquí.
+                </div>
+            `;
+
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('preview').style.display = 'block';
+            document.getElementById('actions').style.display = 'block';
+        }
+
+        function loadRanchData(key) {
+            const saved = localStorage.getItem(key);
+            return saved ? JSON.parse(saved) : null;
+        }
+
+        function displayStats() {
+            let totalSalidas = 0;
+            let invalidCount = 0;
+            
+            Object.values(ranchData).forEach(rd => {
+                totalSalidas += rd.data.salidas.length;
+                invalidCount += rd.invalid.length;
+            });
+
+            document.getElementById('totalSalidas').textContent = totalSalidas;
+            document.getElementById('invalidSalidas').textContent = invalidCount;
+            document.getElementById('validSalidas').textContent = totalSalidas - invalidCount;
+        }
+
+        function displayInvalidSales() {
+            const tbody = document.getElementById('invalidTable');
+            tbody.innerHTML = invalidSales.map(s => `
+                <tr class="invalid">
+                    <td><strong>#${s.numero}</strong> (${s.ranch})</td>
+                    <td>${s.peso || '?'} kg</td>
+                    <td>${formatDate(s.fechaSalida)}</td>
+                    <td>${s.comprador || '-'}</td>
+                    <td style="color: #dc3545; font-weight: bold;">$0</td>
+                </tr>
+            `).join('');
+        }
+
+        function removeInvalidSales() {
+            const count = invalidSales.length;
+            
+            if (!confirm(`¿Está seguro de eliminar ${count} salidas con valor $0?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            let removedCount = 0;
+            let ranches = [];
+
+            // Remove invalid sales from each ranch
+            Object.entries(ranchData).forEach(([id, rd]) => {
+                const before = rd.data.salidas.length;
+                
+                // Keep only valid sales
+                rd.data.salidas = rd.valid;
+                
+                // Save back
+                localStorage.setItem(rd.ranch.key, JSON.stringify(rd.data));
+                
+                const removed = before - rd.data.salidas.length;
+                removedCount += removed;
+                ranches.push(`${rd.ranch.name}: ${removed} eliminadas`);
+            });
+
+            document.getElementById('result').innerHTML = `
+                <div class="success">
+                    <strong>✅ ¡Limpieza completada!</strong><br><br>
+                    Se eliminaron ${removedCount} salidas inválidas:<br>
+                    ${ranches.map(r => `• ${r}`).join('<br>')}<br><br>
+                    <strong>Siguiente paso:</strong> 
+                    <a href="check-all-data.html" style="color: #007bff;">Ver todos los datos</a> 
+                    para confirmar que todo está correcto.
+                </div>
+            `;
+
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('preview').style.display = 'none';
+            document.getElementById('actions').style.display = 'none';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('es-CO');
+        }
+
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

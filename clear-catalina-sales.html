@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar Salidas de Santa Catalina</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .actions {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        #preview {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Limpiar Salidas de Santa Catalina</h1>
+        <p class="subtitle">Herramienta para corregir datos de ventas con fechas incorrectas</p>
+
+        <div class="warning">
+            <strong>⚠️ Advertencia:</strong> Esta herramienta eliminará SOLO las salidas (ventas) de Santa Catalina. Las entradas (compras) NO serán afectadas.
+        </div>
+
+        <div class="stats" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSalidas">-</div>
+                <div class="stat-label">Salidas Actuales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalEntradas">-</div>
+                <div class="stat-label">Entradas (No afectadas)</div>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>📋 Proceso recomendado:</strong>
+            <ol style="margin: 10px 0 0 20px;">
+                <li>Revisa las salidas actuales abajo</li>
+                <li>Haz clic en "Limpiar Salidas" para eliminarlas</li>
+                <li>Ve a la página principal</li>
+                <li>Importa el archivo Excel corregido con las fechas correctas</li>
+            </ol>
+        </div>
+
+        <div id="preview">
+            <h3>Vista Previa de Salidas Actuales:</h3>
+            <table id="salidasTable">
+                <thead>
+                    <tr>
+                        <th>Chapeta</th>
+                        <th>Peso</th>
+                        <th>Fecha Salida</th>
+                        <th>Comprador</th>
+                        <th>Valor</th>
+                    </tr>
+                </thead>
+                <tbody id="salidasBody">
+                    <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-danger" onclick="clearSalidas()" id="clearBtn">
+                🗑️ Limpiar TODAS las Salidas de Santa Catalina
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                ← Volver a la Aplicación
+            </button>
+        </div>
+
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        const RANCH_KEY = 'ganadoFinca_SantaCatalina';
+        let currentData = null;
+
+        function loadData() {
+            const saved = localStorage.getItem(RANCH_KEY);
+            if (saved) {
+                currentData = JSON.parse(saved);
+                if (!currentData.salidas) currentData.salidas = [];
+                if (!currentData.entradas) currentData.entradas = [];
+                
+                updateStats();
+                displaySalidas();
+            } else {
+                document.getElementById('result').innerHTML = `
+                    <div class="warning">
+                        <strong>⚠️ No se encontraron datos de Santa Catalina</strong><br>
+                        Asegúrese de haber importado datos primero.
+                    </div>
+                `;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('totalSalidas').textContent = currentData.salidas.length;
+            document.getElementById('totalEntradas').textContent = currentData.entradas.length;
+        }
+
+        function displaySalidas() {
+            const tbody = document.getElementById('salidasBody');
+            
+            if (currentData.salidas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #28a745;">✅ No hay salidas registradas</td></tr>';
+                document.getElementById('clearBtn').disabled = true;
+                return;
+            }
+
+            // Sort by date descending
+            const sorted = [...currentData.salidas].sort((a, b) => 
+                new Date(b.fechaSalida) - new Date(a.fechaSalida)
+            );
+
+            tbody.innerHTML = sorted.map(s => {
+                const tipo = s.comprador === 'MUERTE' ? '✝️ Muerte' : '💵 Venta';
+                return `
+                    <tr>
+                        <td><strong>#${s.numero}</strong></td>
+                        <td>${s.peso} kg</td>
+                        <td>${formatDate(s.fechaSalida)}</td>
+                        <td>${s.comprador}</td>
+                        <td>${formatCurrency(s.costoVenta || 0)}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function clearSalidas() {
+            if (!currentData || currentData.salidas.length === 0) {
+                alert('No hay salidas para eliminar');
+                return;
+            }
+
+            const count = currentData.salidas.length;
+            
+            if (!confirm(`¿Está seguro de eliminar TODAS las ${count} salidas de Santa Catalina?\n\nEsto NO afectará las entradas (${currentData.entradas.length} animales).`)) {
+                return;
+            }
+
+            if (!confirm(`CONFIRMACIÓN FINAL:\n\n¿Eliminar ${count} registros de salidas?`)) {
+                return;
+            }
+
+            // Clear salidas
+            currentData.salidas = [];
+
+            // Save back to localStorage
+            localStorage.setItem(RANCH_KEY, JSON.stringify(currentData));
+
+            // Update display
+            updateStats();
+            displaySalidas();
+
+            document.getElementById('result').innerHTML = `
+                <div class="success">
+                    <strong>✅ ¡Salidas eliminadas exitosamente!</strong><br><br>
+                    Se eliminaron ${count} registros de salidas.<br>
+                    Se conservaron ${currentData.entradas.length} entradas (animales comprados).<br><br>
+                    <strong>Siguiente paso:</strong> Vuelva a la aplicación principal e importe el archivo Excel con las fechas corregidas.
+                </div>
+            `;
+
+            document.getElementById('clearBtn').disabled = true;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-CO');
+        }
+
+        function formatCurrency(value) {
+            return '$' + Math.round(value).toLocaleString('es-CO');
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

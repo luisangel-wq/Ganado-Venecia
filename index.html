@@ -2327,8 +2327,11 @@
                     <span>📥 Historial de Entradas (Compras + Nacimientos)</span>
                 </div>
                 <div class="card-body">
-                    <div class="filters" style="flex-wrap: wrap;">
-                        <input type="text" class="form-input" id="entradasSearch" placeholder="Buscar..." oninput="filterEntradas()">
+            <div class="filters" style="flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <input type="text" class="form-input" id="entradasSearch" placeholder="🔍 Buscar por chapeta, lote, vendedor, raza..." oninput="filterEntradas()" style="width: 100%;">
+                    <div class="form-hint" style="margin-top: 0.25rem;">💡 Escribe para filtrar automáticamente - sin necesidad de hacer clic</div>
+                </div>
                         <select class="form-select" id="entradasTipoFilter" onchange="filterEntradas()">
                             <option value="">Todos los tipos</option>
                             <option value="compra">Compras</option>
@@ -5242,7 +5245,7 @@
                 const sold = isAnimalSold(entrada.numero);
                 
                 return `
-                    <tr>
+                    <tr class="clickable-row" onclick="showAnimalProfile('${entrada.numero}')" title="Ver perfil del animal" style="cursor: pointer;">
                         <td><strong>${entrada.numero}</strong></td>
                         <td><span class="badge ${tipo === 'compra' ? 'badge-success' : 'badge-info'}">${tipo === 'compra' ? '🛒' : '🐣'}</span></td>
                         <td>${entrada.lote || '-'}</td>
@@ -5281,7 +5284,7 @@
                 const tipo = salida.comprador === 'MUERTE' ? 'muerte' : 'venta';
                 
                 return `
-                    <tr>
+                    <tr class="clickable-row" onclick="showAnimalProfile('${salida.numero}')" title="Ver perfil del animal" style="cursor: pointer;">
                         <td><strong>${salida.numero}</strong></td>
                         <td><span class="badge ${tipo === 'venta' ? 'badge-warning' : 'badge-danger'}">${tipo === 'venta' ? '💵' : '✝️'}</span></td>
                         <td class="text-right">${salida.peso} kg</td>
@@ -5506,6 +5509,32 @@
             filterEntradas();
         }
         
+        function handleSalidasPeriodoChange() {
+            const periodo = document.getElementById('salidasPeriodoFilter').value;
+            const yearSelect = document.getElementById('salidasYearSelect');
+            const dateRange = document.getElementById('salidasDateRange');
+            
+            // Hide all extra controls first
+            yearSelect.style.display = 'none';
+            dateRange.style.display = 'none';
+            
+            // Show appropriate controls based on selection
+            if (periodo === 'ano_especifico') {
+                yearSelect.style.display = 'block';
+                // Populate years if empty
+                if (yearSelect.options.length <= 1) {
+                    const years = [...new Set(data.salidas.map(s => new Date(s.fechaSalida).getFullYear()))].sort((a, b) => b - a);
+                    yearSelect.innerHTML = '<option value="">Seleccionar año</option>' + 
+                        years.map(y => `<option value="${y}">${y}</option>`).join('');
+                }
+            } else if (periodo === 'rango_fechas') {
+                dateRange.style.display = 'flex';
+            }
+            
+            // Apply filter
+            filterSalidas();
+        }
+        
         function filterEntradas() {
             const search = document.getElementById('entradasSearch').value.toLowerCase();
             const tipo = document.getElementById('entradasTipoFilter').value;
@@ -5588,16 +5617,65 @@
         function filterSalidas() {
             const search = document.getElementById('salidasSearch').value.toLowerCase();
             const tipo = document.getElementById('salidasTipoFilter').value;
-            const year = document.getElementById('salidasYearFilter').value;
+            const periodo = document.getElementById('salidasPeriodoFilter').value;
+            const yearSelect = document.getElementById('salidasYearSelect').value;
+            const dateFrom = document.getElementById('salidasDateFrom').value;
+            const dateTo = document.getElementById('salidasDateTo').value;
             
             const rows = document.querySelectorAll('#salidasTable tr');
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            
             rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length === 0) return; // Skip header or empty rows
+                
                 const text = row.textContent.toLowerCase();
                 const matchSearch = !search || text.includes(search);
                 const matchTipo = !tipo || text.includes(tipo);
-                const matchYear = !year || text.includes(year);
                 
-                row.style.display = matchSearch && matchTipo && matchYear ? '' : 'none';
+                // Get the fecha from the row (assuming it's in column 3 - Fecha)
+                const fechaCell = cells[3]?.textContent.trim();
+                let matchPeriodo = true;
+                
+                if (periodo && fechaCell) {
+                    const [day, month, year] = fechaCell.split('/').map(Number);
+                    if (day && month && year) {
+                        // Note: month is 1-12 in display, but Date uses 0-11
+                        const fechaSalida = new Date(year, month - 1, day);
+                        
+                        switch(periodo) {
+                            case 'ano_actual':
+                                matchPeriodo = fechaSalida.getFullYear() === currentYear;
+                                break;
+                            case 'ultimo_mes':
+                                const lastMonth = new Date(today);
+                                lastMonth.setMonth(lastMonth.getMonth() - 1);
+                                matchPeriodo = fechaSalida >= lastMonth;
+                                break;
+                            case 'ano_especifico':
+                                if (yearSelect) {
+                                    matchPeriodo = fechaSalida.getFullYear() === parseInt(yearSelect);
+                                }
+                                break;
+                            case 'rango_fechas':
+                                if (dateFrom && dateTo) {
+                                    const from = new Date(dateFrom);
+                                    const to = new Date(dateTo);
+                                    matchPeriodo = fechaSalida >= from && fechaSalida <= to;
+                                } else if (dateFrom) {
+                                    const from = new Date(dateFrom);
+                                    matchPeriodo = fechaSalida >= from;
+                                } else if (dateTo) {
+                                    const to = new Date(dateTo);
+                                    matchPeriodo = fechaSalida <= to;
+                                }
+                                break;
+                        }
+                    }
+                }
+                
+                row.style.display = matchSearch && matchTipo && matchPeriodo ? '' : 'none';
             });
         }
         
@@ -5636,32 +5714,71 @@
                     let importedCount = 0;
                     let errorCount = 0;
                     const errors = [];
+                    let warnedMissingPrice = false;
+                    
+                    const getFirstValue = (row, keys) => {
+                        for (const key of keys) {
+                            const value = row[key];
+                            if (value !== undefined && value !== null && value !== '') {
+                                return value;
+                            }
+                        }
+                        return undefined;
+                    };
+                    
+                    const parseNumber = (value) => {
+                        if (value === undefined || value === null || value === '') return 0;
+                        if (typeof value === 'number') return value;
+                        const cleaned = String(value).replace(/[^\d,.-]/g, '').trim();
+                        if (!cleaned) return 0;
+                        if (cleaned.includes(',') && cleaned.includes('.')) {
+                            return parseFloat(cleaned.replace(/\./g, '').replace(/,/g, '.')) || 0;
+                        }
+                        if (cleaned.includes(',')) {
+                            return parseFloat(cleaned.replace(/\./g, '').replace(/,/g, '.')) || 0;
+                        }
+                        return parseFloat(cleaned) || 0;
+                    };
                     
                     // Try to find the data sheet
+                    // Detect if this is a sales file based on filename
+                    const fileName = file.name.toLowerCase();
+                    const isSalesFile = fileName.includes('salida') || fileName.includes('venta');
+                    
                     let sheetName = null;
-                    if (workbook.SheetNames.includes('Entradas')) {
+                    let isSalesSheet = false;
+                    
+                    if (workbook.SheetNames.includes('Salidas')) {
+                        sheetName = 'Salidas';
+                        isSalesSheet = true;
+                    } else if (workbook.SheetNames.includes('Entradas')) {
                         sheetName = 'Entradas';
+                        isSalesSheet = false;
                     } else if (workbook.SheetNames.includes('Sheet1')) {
                         sheetName = 'Sheet1';
+                        // If filename suggests sales, treat Sheet1 as sales
+                        isSalesSheet = isSalesFile;
                     } else {
                         sheetName = workbook.SheetNames[0];
+                        isSalesSheet = isSalesFile;
                     }
-                    
+
                     console.log('Usando hoja:', sheetName);
-                    
+                    console.log('Tipo de archivo:', isSalesSheet ? 'SALIDAS (Ventas)' : 'ENTRADAS (Compras)');
+
                     if (sheetName) {
                         const sheet = workbook.Sheets[sheetName];
                         const rows = XLSX.utils.sheet_to_json(sheet);
-                        
+
                         console.log('Total de filas:', rows.length);
                         console.log('Primera fila:', rows[0]);
-                        
+
                         if (rows.length === 0) {
                             throw new Error('El archivo Excel está vacío o no tiene datos válidos');
                         }
-                        
-                        showToast(`📝 Procesando ${rows.length} animales...`, 'info');
-                        
+
+                        showToast(`📝 Procesando ${rows.length} ${isSalesSheet ? 'ventas' : 'compras'}...`, 'info');
+
                         // Process each row
                         rows.forEach((row, index) => {
                             try {
@@ -5672,7 +5789,38 @@
                                     return;
                                 }
                                 
-                                // Check if already exists
+                                // For SALES files: Process as salidas (don't check duplicates)
+                                if (isSalesSheet) {
+                                    // Parse precio using the new parseNumber function
+                                    const precioKiloVenta = parseNumber(row['Precio/Kg'] || row['Precio/kg'] || row['Precio/Kilo Venta'] || row['Precio/Kilo'] || row['Precio/kilo'] || row['PrecioKilo'] || row['Precio Kilo'] || row['$/Kg'] || row['$ / Kg'] || row['Precio x Kg'] || row['Precio por Kilo'] || row['Precio por kilo'] || row['Precio']);
+                                    
+                                    // Calculate cost if not provided
+                                    const peso = parseFloat(row['Peso']) || 0;
+                                    let costoVenta = parseFloat(row['Costo de venta'] || row['Valor'] || row['Total'] || 0);
+                                    if (costoVenta === 0 && peso > 0 && precioKiloVenta > 0) {
+                                        costoVenta = peso * precioKiloVenta;
+                                    }
+
+                                    const salida = {
+                                        numero: numero,
+                                        peso: peso,
+                                        fechaSalida: parseExcelDate(row['Fecha'] || row['Fecha Salida'] || row['Fecha de Salida']),
+                                        precioKiloVenta: precioKiloVenta,
+                                        comprador: row['Comprador'] || row['Tipo'] || 'No especificado',
+                                        costoVenta: costoVenta,
+                                        gananciaDay: parseFloat(row['Ganancia/Día'] || row['GDP'] || row['Ganancia Diaria'] || 0)
+                                    };
+
+                                    data.salidas.push(salida);
+                                    importedCount++;
+                                    
+                                    if (importedCount % 50 === 0) {
+                                        console.log(`✅ Importadas ${importedCount} ventas...`);
+                                    }
+                                    return; // Important: return here to skip purchase logic
+                                }
+
+                                // For PURCHASE files: Check if already exists
                                 const exists = data.entradas.some(e => e.numero == numero && !isAnimalSold(e.numero));
                                 if (exists) {
                                     console.warn(`Fila ${index + 2}: Animal ${numero} ya existe, omitido`);
@@ -5691,20 +5839,74 @@
                                 }
                                 
                                 // Get other fields
-                                const peso = parseFloat(row['Peso Inicial'] || row['Peso inicial'] || row['Peso'] || 0);
+                                const peso = parseNumber(row['Peso Inicial'] || row['Peso inicial'] || row['Peso'] || 0);
+                                
                                 // Try multiple column name variations for price/kg
-                                const precioKilo = parseFloat(
-                                    row['Precio/Kilo'] || 
-                                    row['Precio/kilo'] || 
-                                    row['PrecioKilo'] || 
-                                    row['Precio Kilo'] ||
-                                    row['$/Kg'] ||
-                                    row['$ / Kg'] ||
-                                    row['Precio x Kg'] ||
-                                    row['Precio por Kilo'] ||
-                                    row['Precio por kilo'] ||
-                                    0
-                                );
+                                const rowKeys = Object.keys(row);
+                                let precioKiloRaw = getFirstValue(row, [
+                                    'Precio/Kg',
+                                    'Precio/kg',
+                                    'Precio/Kilo',
+                                    'Precio/kilo',
+                                    'PrecioKilo',
+                                    'Precio Kilo',
+                                    '$/Kg',
+                                    '$ / Kg',
+                                    'Precio x Kg',
+                                    'Precio x kg',
+                                    'Precio por Kilo',
+                                    'Precio por kilo'
+                                ]);
+                                
+                                if (!precioKiloRaw) {
+                                    const precioKgKey = rowKeys.find((key) => {
+                                        const lower = key.toLowerCase();
+                                        return lower.includes('precio') && (lower.includes('kg') || lower.includes('kilo'));
+                                    });
+                                    if (precioKgKey) {
+                                        precioKiloRaw = row[precioKgKey];
+                                    }
+                                }
+                                
+                                // Parse precio handling Spanish number format (8.500 -> 8500)
+                                let precioKilo = parseNumber(precioKiloRaw);
+                                
+                                if (precioKilo <= 0) {
+                                    let totalRaw = getFirstValue(row, [
+                                        'Precio',
+                                        'Precio Total',
+                                        'Precio total',
+                                        'Valor',
+                                        'Valor Total',
+                                        'Valor total',
+                                        'Costo',
+                                        'Costo Total',
+                                        'Costo total',
+                                        'Total'
+                                    ]);
+                                    
+                                    if (!totalRaw) {
+                                        const totalKey = rowKeys.find((key) => {
+                                            const lower = key.toLowerCase();
+                                            const hasPrice = lower.includes('precio') || lower.includes('valor') || lower.includes('costo');
+                                            const isPerKg = lower.includes('kg') || lower.includes('kilo');
+                                            return hasPrice && !isPerKg;
+                                        });
+                                        if (totalKey) {
+                                            totalRaw = row[totalKey];
+                                        }
+                                    }
+                                    
+                                    const totalPrice = parseNumber(totalRaw);
+                                    if (totalPrice > 0 && peso > 0) {
+                                        precioKilo = totalPrice > 20000 ? totalPrice / peso : totalPrice;
+                                    }
+                                }
+                                
+                                if (precioKilo <= 0 && !warnedMissingPrice) {
+                                    console.warn('No se encontro columna de precio/kg o precio total. Revise el nombre de la columna en Excel.');
+                                    warnedMissingPrice = true;
+                                }
                                 
                                 if (peso <= 0 || precioKilo <= 0) {
                                     console.warn(`Fila ${index + 2}: Datos inválidos para #${numero} (peso: ${peso}, precio: ${precioKilo})`);
@@ -5722,7 +5924,10 @@
                                     peso: peso,
                                     precioKilo: Math.round(precioKilo),
                                     fechaEntrada: fechaEntrada,
-                                    numeroVaca: row['Número vaca'] || row['Numero vaca'] || null,
+                                    numeroVaca: (() => {
+                                        const vacaVal = row['Número vaca'] || row['Numero vaca'];
+                                        return (vacaVal && vacaVal !== 'N/A' && vacaVal !== 'NA' && vacaVal !== 'n/a') ? vacaVal : null;
+                                    })(),
                                     costoTotal: Math.round(peso * precioKilo)
                                 };
                                 
@@ -5751,24 +5956,14 @@
                                 const numero = String(row['Número'] || row['Numero'] || '').trim();
                                 if (!numero) return;
                                 
+                                // Parse precio using the new parseNumber function (handles commas/dots)
+                                const precioKiloVenta = parseNumber(row['Precio/Kg'] || row['Precio/kg'] || row['Precio/Kilo Venta'] || row['Precio/Kilo'] || row['Precio/kilo'] || row['PrecioKilo'] || row['Precio Kilo'] || row['$/Kg'] || row['$ / Kg'] || row['Precio x Kg'] || row['Precio por Kilo'] || row['Precio por kilo']);
+                                
                                 const salida = {
                                     numero: numero,
                                     peso: parseFloat(row['Peso']) || 0,
                                     fechaSalida: parseExcelDate(row['Fecha'] || row['Fecha Salida']),
-                                    // Try multiple column name variations for price/kg in sales
-                                    precioKiloVenta: parseFloat(
-                                        row['Precio/Kilo Venta'] || 
-                                        row['Precio/Kilo'] || 
-                                        row['Precio/kilo'] ||
-                                        row['PrecioKilo'] || 
-                                        row['Precio Kilo'] ||
-                                        row['$/Kg'] ||
-                                        row['$ / Kg'] ||
-                                        row['Precio x Kg'] ||
-                                        row['Precio por Kilo'] ||
-                                        row['Precio por kilo'] ||
-                                        0
-                                    ),
+                                    precioKiloVenta: precioKiloVenta,
                                     comprador: row['Comprador'] || '',
                                     costoVenta: parseFloat(row['Costo de venta'] || row['Valor'] || 0),
                                     gananciaDay: parseFloat(row['Ganancia/Día'] || row['GDP'] || 0)

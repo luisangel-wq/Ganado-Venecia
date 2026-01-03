@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar Salidas por Finca</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #0dcaf0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .ranch-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .ranch-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .ranch-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .ranch-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .ranch-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .ranch-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .ranch-stats {
+            font-size: 0.9rem;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+        .btn-danger:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .actions {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        #preview {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Limpiar Salidas por Finca</h1>
+        <p class="subtitle">Herramienta para corregir datos de ventas con fechas incorrectas</p>
+
+        <div class="warning">
+            <strong>⚠️ Importante:</strong> Esta herramienta eliminará SOLO las salidas (ventas/muertes). Las entradas (compras) NO serán afectadas.
+        </div>
+
+        <h3>Seleccione la finca:</h3>
+        <div class="ranch-selector" id="ranchSelector">
+            <!-- Ranch cards will be inserted here -->
+        </div>
+
+        <div id="dataSection" style="display: none;">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSalidas">-</div>
+                    <div class="stat-label">Salidas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalEntradas">-</div>
+                    <div class="stat-label">Entradas (protegidas)</div>
+                </div>
+            </div>
+
+            <div class="info">
+                <strong>📋 Proceso recomendado:</strong>
+                <ol style="margin: 10px 0 0 20px;">
+                    <li>Revisa las salidas actuales en la tabla</li>
+                    <li>Haz clic en "Limpiar Salidas" para eliminarlas</li>
+                    <li>Ve a la página principal (index.html)</li>
+                    <li>Importa el archivo Excel corregido con las fechas correctas</li>
+                </ol>
+            </div>
+
+            <div id="preview">
+                <h3 style="padding: 15px; margin: 0; background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    Vista Previa de Salidas:
+                </h3>
+                <table id="salidasTable">
+                    <thead>
+                        <tr>
+                            <th>Chapeta</th>
+                            <th>Peso</th>
+                            <th>Fecha Salida</th>
+                            <th>Comprador</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salidasBody">
+                        <tr><td colspan="5" style="text-align: center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-danger" onclick="clearSalidas()" id="clearBtn" disabled>
+                    🗑️ Limpiar TODAS las Salidas
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                    ← Volver a la Aplicación
+                </button>
+            </div>
+        </div>
+
+        <div id="result" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        const RANCHES = {
+            'SantaCatalina': { 
+                name: 'Santa Catalina', 
+                icon: '🏠', 
+                key: 'ganadoFinca_SantaCatalina' 
+            },
+            'LaVega': { 
+                name: 'La Vega', 
+                icon: '🌾', 
+                key: 'ganadoFinca_LaVega' 
+            },
+            'LaCoruna': { 
+                name: 'La Coruña', 
+                icon: '⛰️', 
+                key: 'ganadoFinca_LaCoruna' 
+            }
+        };
+
+        let selectedRanch = null;
+        let currentData = null;
+
+        function initRanchSelector() {
+            const selector = document.getElementById('ranchSelector');
+            
+            Object.entries(RANCHES).forEach(([id, ranch]) => {
+                const data = loadRanchData(ranch.key);
+                const salidasCount = data?.salidas?.length || 0;
+                const entradasCount = data?.entradas?.length || 0;
+                
+                const card = document.createElement('div');
+                card.className = 'ranch-card';
+                card.onclick = () => selectRanch(id);
+                card.innerHTML = `
+                    <div class="ranch-icon">${ranch.icon}</div>
+                    <div class="ranch-name">${ranch.name}</div>
+                    <div class="ranch-stats">
+                        📥 ${entradasCount} entradas<br>
+                        📤 ${salidasCount} salidas
+                    </div>
+                `;
+                selector.appendChild(card);
+            });
+        }
+
+        function loadRanchData(key) {
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+            return null;
+        }
+
+        function selectRanch(ranchId) {
+            selectedRanch = ranchId;
+            const ranch = RANCHES[ranchId];
+            
+            // Update UI
+            document.querySelectorAll('.ranch-card').forEach((card, idx) => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            // Load data
+            currentData = loadRanchData(ranch.key);
+            
+            if (!currentData) {
+                document.getElementById('result').innerHTML = `
+                    <div class="error">
+                        <strong>❌ No se encontraron datos de ${ranch.name}</strong><br>
+                        Esta finca no tiene datos importados aún.
+                    </div>
+                `;
+                document.getElementById('dataSection').style.display = 'none';
+                return;
+            }
+            
+            if (!currentData.salidas) currentData.salidas = [];
+            if (!currentData.entradas) currentData.entradas = [];
+            
+            document.getElementById('dataSection').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            updateStats();
+            displaySalidas();
+        }
+
+        function updateStats() {
+            document.getElementById('totalSalidas').textContent = currentData.salidas.length;
+            document.getElementById('totalEntradas').textContent = currentData.entradas.length;
+        }
+
+        function displaySalidas() {
+            const tbody = document.getElementById('salidasBody');
+            const clearBtn = document.getElementById('clearBtn');
+            
+            if (currentData.salidas.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <div style="font-size: 3rem;">✅</div>
+                            <div>No hay salidas registradas</div>
+                        </td>
+                    </tr>
+                `;
+                clearBtn.disabled = true;
+                return;
+            }
+
+            clearBtn.disabled = false;
+
+            // Sort by date descending
+            const sorted = [...currentData.salidas].sort((a, b) => 
+                new Date(b.fechaSalida) - new Date(a.fechaSalida)
+            );
+
+            tbody.innerHTML = sorted.map(s => `
+                <tr>
+                    <td><strong>#${s.numero}</strong></td>
+                    <td>${s.peso} kg</td>
+                    <td>${formatDate(s.fechaSalida)}</td>
+                    <td>${s.comprador || '-'}</td>
+                    <td>${formatCurrency(s.costoVenta || 0)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function clearSalidas() {
+            if (!selectedRanch || !currentData || currentData.salidas.length === 0) {
+                alert('No hay salidas para eliminar');
+                return;
+            }
+
+            const ranch = RANCHES[selectedRanch];
+            const count = currentData.salidas.length;
+            
+            if (!confirm(`¿Está seguro de eliminar TODAS las ${count} salidas de ${ranch.name}?\n\nEsto NO afectará las ${currentData.entradas.length} entradas.`)) {
+                return;
+            }
+
+            if (!confirm(`CONFIRMACIÓN FINAL:\n\n¿Eliminar ${count} registros de salidas de ${ranch.name}?`)) {
+                return;
+            }
+
+            // Clear salidas
+            currentData.salidas = [];
+
+            // Save back to localStorage
+            localStorage.setItem(ranch.key, JSON.stringify(currentData));
+
+            // Update display
+            updateStats();
+            displaySalidas();
+
+            document.getElementById('result').innerHTML = `
+                <div class="success">
+                    <strong>✅ ¡Salidas eliminadas exitosamente!</strong><br><br>
+                    Se eliminaron ${count} registros de salidas de <strong>${ranch.name}</strong>.<br>
+                    Se conservaron ${currentData.entradas.length} entradas (animales comprados).<br><br>
+                    <strong>Siguiente paso:</strong> Vuelva a la aplicación principal e importe el archivo Excel con las fechas corregidas.
+                </div>
+            `;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('es-CO');
+        }
+
+        function formatCurrency(value) {
+            return '$' + Math.round(value).toLocaleString('es-CO');
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initRanchSelector);
+    </script>
+</body>
+</html>
