@@ -1838,115 +1838,37 @@
                             </div>
                         </div>
                         
-                        <h3 style="margin-bottom: 1rem; color: var(--primary);">🐄 Paso 2: Agregar Animales</h3>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">🐄 Paso 2: Agregar Animales (Todos a la vez)</h3>
                         
-                        <form id="compraAnimalForm" onsubmit="addAnimalToLote(event)">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label">Chapeta <span class="required">*</span></label>
-                                    <input type="text" class="form-input" id="compraNumero" required style="font-size: 1.2rem; font-weight: bold;">
-                                    <div class="form-hint" id="compraChapetaHint">Automático</div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Raza <span class="required">*</span></label>
-                                    <select class="form-select" id="compraRaza" required>
-                                        <option value="Cebú">Cebú</option>
-                                        <option value="Razuno">Razuno</option>
-                                        <option value="Brangus">Brangus</option>
-                                        <option value="Cebú/Europeo">Cebú/Europeo</option>
-                                        <option value="Simbra">Simbra</option>
-                                        <option value="Brahman">Brahman</option>
-                                        <option value="Angus">Angus</option>
-                                        <option value="Otra">Otra</option>
-                                    </select>
-                                </div>
-                        <div class="form-group">
-                            <label class="form-label">Peso Visual Estimado (kg)</label>
-                            <input type="number" class="form-input" id="fotoPesoVisual" min="0" step="1" placeholder="ej: 420">
-                            <div class="form-hint">Estimación visual del peso del animal</div>
+                        <div class="form-hint" style="margin-bottom: 0.75rem;">
+                            Llena la tabla completa y luego confirma para guardar todos los animales.
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label">Peso Báscula (kg)</label>
-                            <input type="number" class="form-input" id="fotoPesoBascula" min="0" step="0.1" placeholder="ej: 425.5">
-                            <div class="form-hint">Peso medido en báscula (si disponible)</div>
+                        <div class="table-container" style="max-height: 320px; overflow-y: auto; margin-bottom: 1rem;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Chapeta *</th>
+                                        <th>Raza *</th>
+                                        <th>Sexo *</th>
+                                        <th class="text-right">Peso (kg) *</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compraAnimalesBulkTable">
+                                    <tr><td colspan="5" class="text-center" style="color: var(--gray);">Completa el paso 1 para crear la tabla</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                         
-                        <!-- Body Composition Section -->
-                        <div class="form-group full-width" style="grid-column: 1/-1;">
-                            <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #2196f3;">
-                                <strong>📏 Composición Corporal (Opcional)</strong>
-                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #555;">
-                                    Mediciones corporales para análisis de desarrollo y estimación de peso IA
-                                </p>
-                            </div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-success" onclick="confirmBulkCompraAnimales()" style="flex: 2;">
+                                ✅ Confirmar Animales y Guardar
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetBulkCompraTable()">
+                                🔄 Limpiar Tabla
+                            </button>
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Perímetro Torácico (cm)</label>
-                            <input type="number" class="form-input" id="fotoPerimetroToracico" min="0" step="1" placeholder="ej: 180">
-                            <div class="form-hint">Circunferencia del pecho detrás de las patas delanteras</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Largo Corporal (cm)</label>
-                            <input type="number" class="form-input" id="fotoLargoCorporal" min="0" step="1" placeholder="ej: 150">
-                            <div class="form-hint">Desde la punta del hombro hasta la punta del anca</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Altura a la Cruz (cm)</label>
-                            <input type="number" class="form-input" id="fotoAlturaCruz" min="0" step="1" placeholder="ej: 125">
-                            <div class="form-hint">Altura desde el suelo hasta la cruz (punto más alto del lomo)</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Ancho de Cadera (cm)</label>
-                            <input type="number" class="form-input" id="fotoAnchoCadera" min="0" step="1" placeholder="ej: 50">
-                            <div class="form-hint">Distancia entre los huesos de la cadera</div>
-                        </div>
-                        
-                        <!-- Body Composition Section -->
-                        <div class="form-group full-width" style="grid-column: 1/-1;">
-                            <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; border-left: 4px solid #2196f3;">
-                                <strong>📏 Composición Corporal (Opcional)</strong>
-                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #555;">
-                                    Mediciones corporales para análisis de desarrollo y estimación de peso
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Perímetro Torácico (cm)</label>
-                            <input type="number" class="form-input" id="fotoPerimetroToracico" min="0" step="1" placeholder="ej: 180">
-                            <div class="form-hint">Circunferencia del pecho detrás de las patas delanteras</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Largo Corporal (cm)</label>
-                            <input type="number" class="form-input" id="fotoLargoCorporal" min="0" step="1" placeholder="ej: 150">
-                            <div class="form-hint">Desde la punta del hombro hasta la punta del anca</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Altura a la Cruz (cm)</label>
-                            <input type="number" class="form-input" id="fotoAlturaCruz" min="0" step="1" placeholder="ej: 125">
-                            <div class="form-hint">Altura desde el suelo hasta la cruz (punto más alto del lomo)</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Ancho de Cadera (cm)</label>
-                            <input type="number" class="form-input" id="fotoAnchoCadera" min="0" step="1" placeholder="ej: 50">
-                            <div class="form-hint">Distancia entre los huesos de la cadera</div>
-                        </div>
-                            </div>
-                            
-                            <div id="addAnimalBtnContainer">
-                                <button type="submit" class="btn btn-success" id="btnAddAnimal" style="width: 100%;">
-                                    ➕ Agregar Animal (<span id="animalCountRemaining">0</span> restantes)
-                                </button>
-                            </div>
-                        </form>
                         
                         <!-- Animals in current lote -->
                         <div style="margin-top: 1.5rem;">
@@ -4273,7 +4195,7 @@
         function getNextLoteNumber() {
             // Set minimum lote number based on ranch
             const minLotePorFinca = {
-                'SantaCatalina': 58,
+                'SantaCatalina': 59,
                 'LaCoruna': 173,
                 'LaVega': 241
             };
@@ -4359,17 +4281,106 @@
             // Show animals section
             document.getElementById('compraLoteInfo').style.display = 'none';
             document.getElementById('compraAnimalesSection').style.display = 'block';
-            
-            // Set first chapeta number
-            const nextChapeta = getNextConsecutiveChapeta();
-            document.getElementById('compraNumero').value = nextChapeta;
-            document.getElementById('compraChapetaHint').textContent = `Siguiente: ${nextChapeta}`;
-            
-            // Focus on raza
-            document.getElementById('compraRaza').focus();
-            
+
+            // Build bulk entry table
+            buildBulkCompraTable(cantidadAnimales);
+
             updateLoteTable();
             updateLoteProgress();
+        }
+
+        function buildBulkCompraTable(count) {
+            const tbody = document.getElementById('compraAnimalesBulkTable');
+            if (!tbody) return;
+
+            if (!count || count < 1) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--gray);">Completa el paso 1 para crear la tabla</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = Array.from({ length: count }).map((_, index) => `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td><input type="text" class="form-input" data-field="numero" placeholder="ej: 301"></td>
+                    <td>
+                        <select class="form-select" data-field="raza">
+                            <option value="">Seleccionar</option>
+                            <option value="Cebú">Cebú</option>
+                            <option value="Razuno">Razuno</option>
+                            <option value="Brangus">Brangus</option>
+                            <option value="Cebú/Europeo">Cebú/Europeo</option>
+                            <option value="Simbra">Simbra</option>
+                            <option value="Brahman">Brahman</option>
+                            <option value="Angus">Angus</option>
+                            <option value="Otra">Otra</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select" data-field="sexo">
+                            <option value="">Seleccionar</option>
+                            <option value="MACHO">MACHO</option>
+                            <option value="HEMBRA">HEMBRA</option>
+                        </select>
+                    </td>
+                    <td><input type="number" class="form-input text-right" data-field="peso" min="1" step="0.1" placeholder="ej: 420"></td>
+                </tr>
+            `).join('');
+        }
+
+        function resetBulkCompraTable() {
+            const count = currentLote.cantidadEsperada || parseInt(document.getElementById('compraCantidadAnimales').value) || 0;
+            buildBulkCompraTable(count);
+        }
+
+        function confirmBulkCompraAnimales() {
+            const tbody = document.getElementById('compraAnimalesBulkTable');
+            if (!tbody) return;
+
+            const rows = [...tbody.querySelectorAll('tr')];
+            if (!rows.length) {
+                showToast('Complete el paso 1 para generar la tabla', 'warning');
+                return;
+            }
+
+            const animales = [];
+            const numerosSet = new Set();
+
+            for (const row of rows) {
+                const numero = row.querySelector('[data-field="numero"]')?.value.trim();
+                const raza = row.querySelector('[data-field="raza"]')?.value;
+                const sexo = row.querySelector('[data-field="sexo"]')?.value;
+                const peso = parseFloat(row.querySelector('[data-field="peso"]')?.value);
+
+                if (!numero || !raza || !sexo || !peso || peso <= 0) {
+                    showToast('Complete todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                if (numerosSet.has(numero)) {
+                    showToast(`Chapeta duplicada en la tabla: ${numero}`, 'error');
+                    return;
+                }
+                numerosSet.add(numero);
+
+                if (data.entradas.some(e => e.numero == numero && !isAnimalSold(e.numero))) {
+                    showToast(`La chapeta ${numero} ya existe en inventario`, 'error');
+                    return;
+                }
+
+                animales.push({ numero, raza, sexo, peso });
+            }
+
+            currentLote.animales = animales.map(animal => ({
+                numero: animal.numero,
+                raza: animal.raza,
+                sexo: animal.sexo,
+                peso: animal.peso,
+                costoTotal: animal.peso * currentLote.precioKilo
+            }));
+
+            updateLoteTable();
+            updateLoteProgress();
+            showToast(`✅ ${animales.length} animales agregados al lote`, 'success');
         }
         
         function updateLoteProgress() {
@@ -4381,21 +4392,26 @@
             // Update progress text and bar
             document.getElementById('loteProgressText').textContent = `${current} de ${expected}`;
             document.getElementById('loteProgressBar').style.width = `${Math.min(percentage, 100)}%`;
-            document.getElementById('animalCountRemaining').textContent = remaining;
+            const remainingSpan = document.getElementById('animalCountRemaining');
+            if (remainingSpan) {
+                remainingSpan.textContent = remaining;
+            }
             
             // Update progress status badge
             const statusBadge = document.getElementById('loteProgressStatus');
             const finalizarBtn = document.getElementById('btnFinalizarLote');
-            const addBtn = document.getElementById('btnAddAnimal');
             const warningDiv = document.getElementById('finalizarLoteWarning');
+            const addBtn = document.getElementById('btnAddAnimal');
             
             if (current === expected) {
                 // Exact count reached
                 statusBadge.className = 'badge badge-success';
                 statusBadge.textContent = '✅ Completo';
                 finalizarBtn.disabled = false;
-                addBtn.disabled = true;
-                addBtn.textContent = '✅ Lote completo';
+                if (addBtn) {
+                    addBtn.disabled = true;
+                    addBtn.textContent = '✅ Lote completo';
+                }
                 warningDiv.style.display = 'none';
                 document.getElementById('loteProgressBar').style.background = 'var(--success)';
             } else if (current > expected) {
@@ -4410,8 +4426,13 @@
                 statusBadge.className = 'badge badge-warning';
                 statusBadge.textContent = 'En progreso';
                 finalizarBtn.disabled = true;
-                addBtn.disabled = false;
-                addBtn.innerHTML = `➕ Agregar Animal (<span id="animalCountRemaining">${remaining}</span> restantes)`;
+                if (addBtn) {
+                    addBtn.disabled = false;
+                    addBtn.innerHTML = `➕ Agregar Animal (<span id="animalCountRemaining">${remaining}</span> restantes)`;
+                }
+                if (remainingSpan) {
+                    remainingSpan.textContent = remaining;
+                }
                 warningDiv.style.display = 'block';
                 document.getElementById('finalizarWarningText').textContent = `Faltan ${remaining} animal(es) para completar el lote`;
                 document.getElementById('loteProgressBar').style.background = 'var(--primary)';
