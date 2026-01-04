@@ -3517,7 +3517,7 @@
 
         // App version info (update when publishing)
         const APP_VERSION = '1';
-        const APP_BUILD_DATE = '2025-03-08';
+        const APP_BUILD_DATE = 'auto';
         
         // ==================== DATA STORAGE ====================
         let data = {
@@ -3591,11 +3591,14 @@
             const headerEl = document.getElementById('appVersionHeader');
             const configEl = document.getElementById('appVersionConfig');
             const buildEl = document.getElementById('appBuildDate');
+            const buildDate = APP_BUILD_DATE === 'auto'
+                ? new Date().toISOString().split('T')[0]
+                : APP_BUILD_DATE;
             
-            const dateLabel = APP_BUILD_DATE ? ` · ${APP_BUILD_DATE}` : '';
+            const dateLabel = buildDate ? ` · ${buildDate}` : '';
             if (headerEl) headerEl.textContent = `v${APP_VERSION}${dateLabel}`;
             if (configEl) configEl.textContent = `v${APP_VERSION}`;
-            if (buildEl) buildEl.textContent = APP_BUILD_DATE;
+            if (buildEl) buildEl.textContent = buildDate;
         }
         
         // ==================== RANCH SWITCHING ====================
