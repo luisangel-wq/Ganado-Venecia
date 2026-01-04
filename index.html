@@ -164,6 +164,17 @@
             font-size: 1.25rem;
             font-weight: bold;
         }
+
+        .app-version-badge {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
         
         .container {
             max-width: 1400px;
@@ -1561,6 +1572,7 @@
                     <div>Valor Inventario</div>
                 </div>
             </div>
+            <div class="app-version-badge" id="appVersionHeader">v--</div>
         </div>
     </header>
     
@@ -3138,6 +3150,22 @@
         
         <!-- Tab: Configuración -->
         <div id="tab-config" class="tab-content">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #0f172a, #1e293b);">
+                    <span>🧭 Versión de la App</span>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="font-size: 1.2rem; font-weight: 700;" id="appVersionConfig">v--</div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            Actualizado: <span id="appBuildDate">--</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 0.75rem; color: #6b7280; font-size: 0.85rem;">
+                        Use este número para confirmar que todos los dispositivos tienen la misma versión.
+                    </div>
+                </div>
+            </div>
             <!-- Google Gemini API Key Section -->
             <div class="card">
                 <div class="card-header">
@@ -3486,6 +3514,10 @@
         
         // Current active ranch
         let currentRanch = 'la_coruna'; // Default to La Coruña
+
+        // App version info (update when publishing)
+        const APP_VERSION = '1';
+        const APP_BUILD_DATE = '2025-03-08';
         
         // ==================== DATA STORAGE ====================
         let data = {
@@ -3543,6 +3575,7 @@
             updateAnimalPhotosGrid(); // Update photo grid after loading
             initConfigValues();
             loadApiKeys();
+            updateAppVersionLabels();
             
             document.getElementById('importExcel').addEventListener('change', handleExcelImport);
             
@@ -3553,6 +3586,17 @@
             // Set season based on today's date for foto form
             updateSeasonFromDate();
         });
+
+        function updateAppVersionLabels() {
+            const headerEl = document.getElementById('appVersionHeader');
+            const configEl = document.getElementById('appVersionConfig');
+            const buildEl = document.getElementById('appBuildDate');
+            
+            const dateLabel = APP_BUILD_DATE ? ` · ${APP_BUILD_DATE}` : '';
+            if (headerEl) headerEl.textContent = `v${APP_VERSION}${dateLabel}`;
+            if (configEl) configEl.textContent = `v${APP_VERSION}`;
+            if (buildEl) buildEl.textContent = APP_BUILD_DATE;
+        }
         
         // ==================== RANCH SWITCHING ====================
         function switchRanch(ranchId) {
