@@ -2252,7 +2252,6 @@
                         <strong>📷 Sistema de Fotografía del Ganado</strong>
                         <p style="margin: 0.5rem 0 0 0; color: #666;">
                             Capture fotos de sus animales para seguimiento visual del crecimiento y condición corporal.
-                            El sistema detecta automáticamente la raza usando IA.
                         </p>
                     </div>
                     
@@ -5308,10 +5307,11 @@
                 const pesoEstimado = animal.peso + (diasEnFinca * data.config.gdp);
                 const inRetiro = isAnimalInRetiro(animal.numero);
                 const potrero = data.animalPotreros[animal.numero] ? data.potreros.find(p => p.id === data.animalPotreros[animal.numero]) : null;
+                const hasPhoto = !!animalPhotos[animal.numero]?.photo;
                 
                 return `
                     <tr class="clickable-row" onclick="showAnimalProfile('${animal.numero}')" title="Ver perfil del animal">
-                        <td><strong>${animal.numero}</strong>${inRetiro ? ' 🚫' : ''}</td>
+                        <td><strong>${animal.numero}</strong>${inRetiro ? ' 🚫' : ''}${hasPhoto ? ' 📸' : ''}</td>
                         <td>${animal.lote || '-'}</td>
                         <td>${animal.numeroVaca ? 'Nac. (' + animal.numeroVaca + ')' : animal.vendedor}</td>
                         <td>${animal.raza || '-'}</td>
@@ -7079,6 +7079,17 @@
             };
             return labels[type] || type;
         }
+
+        function getSessionPhotoDataUrl(foto, sesion) {
+            if (foto && foto.dataUrl) return foto.dataUrl;
+            if (foto && foto.fromAnimalPhotos && foto.chapeta) {
+                return animalPhotos[foto.chapeta]?.photo || null;
+            }
+            if (sesion && sesion.photoRef && sesion.photoRef.chapeta) {
+                return animalPhotos[sesion.photoRef.chapeta]?.photo || null;
+            }
+            return null;
+        }
         
         function deleteSessionPhoto(index) {
             currentSessionPhotos.splice(index, 1);
@@ -7181,6 +7192,14 @@
             });
         }
         
+        function getTemporadaFromDateValue(fecha) {
+            const month = new Date(fecha).getMonth() + 1; // 1-12
+            if (month >= 4 && month <= 5) return 'lluvias_fuertes';
+            if (month >= 6 && month <= 8) return 'veranillo';
+            if (month >= 9 && month <= 11) return 'lluvias';
+            return 'seco';
+        }
+        
         function updateSeasonFromDate() {
             const fotoFechaEl = document.getElementById('fotoFecha');
             if (!fotoFechaEl) return; // Element doesn't exist yet
@@ -7188,20 +7207,7 @@
             const fecha = fotoFechaEl.value;
             if (!fecha) return;
             
-            const month = new Date(fecha).getMonth() + 1; // 1-12
-            let temporada;
-            
-            if (month >= 4 && month <= 5) {
-                temporada = 'lluvias_fuertes';
-            } else if (month >= 6 && month <= 8) {
-                temporada = 'veranillo';
-            } else if (month >= 9 && month <= 11) {
-                temporada = 'lluvias';
-            } else {
-                temporada = 'seco';
-            }
-            
-            document.getElementById('fotoTemporada').value = temporada;
+            document.getElementById('fotoTemporada').value = getTemporadaFromDateValue(fecha);
         }
         
         function getUltimaFoto(numero) {
@@ -7343,6 +7349,55 @@
             }
         }
         
+        function addQuickPhotoSession(chapetaNum, timestamp) {
+            const fecha = new Date(timestamp).toISOString().split('T')[0];
+            const temporada = getTemporadaFromDateValue(fecha);
+            const ultimaFoto = getUltimaFoto(chapetaNum);
+            const bcs = ultimaFoto?.bcs || 3;
+            const pasto = ultimaFoto?.pasto || 'bueno';
+            
+            const sesion = {
+                id: Date.now(),
+                numero: chapetaNum,
+                fecha: fecha,
+                temporada: temporada,
+                bcs: bcs,
+                pasto: pasto,
+                pesoVisual: null,
+                pesoBascula: null,
+                numFotos: 1,
+                fotos: [{
+                    type: 'otra',
+                    dataUrl: null,
+                    timestamp: timestamp,
+                    hasReference: false,
+                    fromAnimalPhotos: true,
+                    chapeta: chapetaNum
+                }],
+                photoRef: {
+                    chapeta: chapetaNum
+                },
+                calibracion: {
+                    tipoReferencia: 'ninguna',
+                    distancia: null,
+                    refVisibility: { lateral: false, trasera: false, superior: false },
+                    posicionManga: null,
+                    marcasVisibles: null
+                },
+                salud: 'bueno',
+                observaciones: 'Captura rápida'
+            };
+            
+            if (!data.fotoSesiones) data.fotoSesiones = [];
+            data.fotoSesiones.push(sesion);
+            try {
+                saveData();
+            } catch (error) {
+                data.fotoSesiones.pop();
+                throw error;
+            }
+        }
+        
         function viewPhoto(dataUrl, label) {
             // Clear any existing session navigation
             window.currentViewingSession = null;
@@ -7457,17 +7512,28 @@
                 // Generate photo thumbnails
                 let fotosHtml = '-';
                 if (sesion.fotos && sesion.fotos.length > 0) {
+                    const previewFotos = sesion.fotos
+                        .map(foto => ({
+                            ...foto,
+                            dataUrl: getSessionPhotoDataUrl(foto, sesion)
+                        }))
+                        .filter(foto => foto.dataUrl);
+                    
+                    if (previewFotos.length === 0) {
+                        fotosHtml = `<span class="badge badge-warning">Sin foto</span>`;
+                    } else {
                     fotosHtml = `
                         <div style="display: flex; gap: 4px;">
-                            ${sesion.fotos.slice(0, 3).map(foto => `
-                                <img src="${foto.dataUrl}" 
+                            ${previewFotos.slice(0, 3).map(foto => `
+                                <img src="${foto.dataUrl}"
                                      style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;"
                                      onclick="viewPhoto('${foto.dataUrl}', '${getPhotoTypeLabel(foto.type)} - #${sesion.numero}')"
                                      title="${getPhotoTypeLabel(foto.type)}">
                             `).join('')}
-                            ${sesion.fotos.length > 3 ? `<span style="font-size: 0.8rem; color: var(--gray);">+${sesion.fotos.length - 3}</span>` : ''}
+                            ${previewFotos.length > 3 ? `<span style="font-size: 0.8rem; color: var(--gray);">+${previewFotos.length - 3}</span>` : ''}
                         </div>
                     `;
+                    }
                 } else if (sesion.numFotos) {
                     fotosHtml = `<span class="badge badge-secondary">${sesion.numFotos} fotos</span>`;
                 }
@@ -7499,8 +7565,20 @@
                 return;
             }
             
+            const fotos = sesion.fotos
+                .map(foto => ({
+                    ...foto,
+                    dataUrl: getSessionPhotoDataUrl(foto, sesion)
+                }))
+                .filter(foto => foto.dataUrl);
+            
+            if (fotos.length === 0) {
+                showToast('No hay fotos disponibles para mostrar', 'info');
+                return;
+            }
+            
             // Store session for navigation
-            window.currentViewingSession = sesion;
+            window.currentViewingSession = { ...sesion, fotos };
             window.currentPhotoIndex = 0;
             
             // Show first photo
@@ -7509,7 +7587,7 @@
             
             // Show navigation buttons if multiple photos
             const navButtons = document.getElementById('photoViewerNav');
-            navButtons.style.display = sesion.fotos.length > 1 ? 'flex' : 'none';
+            navButtons.style.display = fotos.length > 1 ? 'flex' : 'none';
             
             // Add keyboard navigation
             document.addEventListener('keydown', handlePhotoNavigation);
@@ -8475,6 +8553,8 @@
             const fotoSesiones = (data.fotoSesiones || [])
                 .filter(f => f.numero === numero)
                 .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            const mainPhoto = animalPhotos[numero]?.photo || null;
+            const mainPhotoDate = animalPhotos[numero]?.dateAdded || null;
             
             // Check retiro status
             const inRetiro = isAnimalInRetiro(numero);
@@ -8611,6 +8691,15 @@
                 <!-- Photo History -->
                 <div class="profile-section">
                     <div class="profile-section-title">📸 Historial Fotográfico</div>
+                    ${mainPhoto ? `
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                            <img src="${mainPhoto}" alt="Foto animal ${numero}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 2px solid #e5e7eb;">
+                            <div style="font-size: 0.9rem; color: #666;">
+                                <div style="font-weight: 700; color: #111;">Foto principal</div>
+                                <div>${mainPhotoDate ? formatDate(mainPhotoDate) : ''}</div>
+                            </div>
+                        </div>
+                    ` : ''}
                     ${fotoSesiones.length > 0 ? `
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem;">
                             ${fotoSesiones.slice(0, 6).map(f => `
@@ -9004,7 +9093,7 @@
             input.accept = 'image/*';
             input.capture = 'environment';
             
-            input.onchange = async function(e) {
+            input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
                 
@@ -9012,31 +9101,18 @@
                 
                 try {
                     // Compress image
-                    compressImage(file, async (compressedDataUrl) => {
+                    compressImage(file, (compressedDataUrl) => {
                         try {
-                            // Detect breed using AI (optional - don't let this fail the save)
-                            let breedData = null;
-                            if (typeof BreedDetection !== 'undefined') {
-                                try {
-                                    showToast('🧬 Detectando raza con IA...', 'info');
-                                    breedData = await BreedDetection.detectBreed({
-                                        lateral: compressedDataUrl
-                                    });
-                                } catch (error) {
-                                    console.error('Breed detection error:', error);
-                                    showToast('⚠️ Detección de raza falló, pero foto se guardará', 'warning');
-                                }
-                            }
+                            const timestamp = new Date().toISOString();
                             
-                            // Store photo with breed data
+                            // Store photo immediately
                             animalPhotos[chapetaNum] = {
                                 photo: compressedDataUrl,
-                                breed: breedData,
-                                dateAdded: new Date().toISOString()
+                                breed: null,
+                                dateAdded: timestamp
                             };
                             
                             console.log(`📸 Photo captured for animal #${chapetaNum}`, {
-                                hasBreed: !!breedData,
                                 photoSize: (compressedDataUrl.length / 1024).toFixed(2) + ' KB',
                                 totalPhotos: Object.keys(animalPhotos).length
                             });
@@ -9052,23 +9128,28 @@
                                 }
                                 
                                 updateAllViews();
-                                
-                                // Show breed confirmation dialog or success message
-                                if (breedData) {
-                                    showBreedConfirmation(chapetaNum, breedData);
-                                } else {
-                                    showToast(`✅ Foto guardada exitosamente para animal #${chapetaNum}`, 'success');
-                                }
+                                showToast(`✅ Foto guardada exitosamente para animal #${chapetaNum}`, 'success');
                             } catch (saveError) {
                                 // Handle storage quota exceeded
                                 if (saveError.name === 'QuotaExceededError') {
                                     delete animalPhotos[chapetaNum]; // Remove failed save
                                     showToast('❌ Almacenamiento lleno. Elimine fotos antiguas o exporte los datos.', 'error');
                                     alert('⚠️ ALMACENAMIENTO LLENO\n\nLas fotos ocupan mucho espacio. Para continuar:\n\n1. Exporte los datos actuales\n2. Elimine fotos de animales ya vendidos\n3. Use la función de respaldo\n4. Considere reducir el número de fotos por animal');
+                                    return;
                                 } else {
                                     throw saveError;
                                 }
                             }
+                            
+                            // Add to photo history (animal profile)
+                            try {
+                                addQuickPhotoSession(chapetaNum, timestamp);
+                            } catch (historyError) {
+                                console.error('Error saving photo session:', historyError);
+                                showToast('⚠️ Foto guardada, pero no se pudo registrar en el historial', 'warning');
+                            }
+                            
+                            // Sin detección de raza para acelerar el proceso
                         } catch (error) {
                             console.error('Error saving photo:', error);
                             showToast('❌ Error al guardar foto: ' + error.message, 'error');
