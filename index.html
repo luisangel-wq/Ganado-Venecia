@@ -8902,7 +8902,79 @@
         }
         
         function saveAnimalPhotos() {
-            localStorage.setItem('animalPhotos_' + currentRanch, JSON.stringify(animalPhotos));
+            try {
+                const photosJson = JSON.stringify(animalPhotos);
+                const sizeKB = (new Blob([photosJson]).size / 1024).toFixed(2);
+                
+                // Check size before saving (warn if > 5MB)
+                if (sizeKB > 5000) {
+                    console.warn(`Photo storage is large: ${sizeKB} KB. Consider cleaning up old photos.`);
+                }
+                
+                localStorage.setItem('animalPhotos_' + currentRanch, photosJson);
+                console.log(`✅ Photos saved successfully (${sizeKB} KB, ${Object.keys(animalPhotos).length} animals)`);
+                
+                // Update the photos grid display
+                updateAnimalPhotosGrid();
+            } catch (error) {
+                console.error('Error saving photos:', error);
+                if (error.name === 'QuotaExceededError') {
+                    throw new Error('Almacenamiento lleno. Elimine fotos antiguas.');
+                }
+                throw error;
+            }
+        }
+        
+        function updateAnimalPhotosGrid() {
+            const grid = document.getElementById('animalPhotosGrid');
+            if (!grid) return;
+            
+            const photoKeys = Object.keys(animalPhotos);
+            
+            if (photoKeys.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--gray); padding: 2rem;">No hay fotos registradas aún</div>';
+                return;
+            }
+            
+            grid.innerHTML = photoKeys.map(chapeta => {
+                const photoData = animalPhotos[chapeta];
+                const animal = data.entradas.find(e => e.numero == chapeta);
+                const breedInfo = photoData.breed ? photoData.breed.breedName || 'Raza detectada' : 'Sin detección de raza';
+                const confidence = photoData.breed?.confidence || 0;
+                
+                return `
+                    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="position: relative; padding-top: 100%; background: #f5f5f5; cursor: pointer;" onclick="viewAnimalPhotoLarge('${chapeta}')">
+                            <img src="${photoData.photo}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Animal ${chapeta}">
+                            ${animal ? '' : '<div style="position: absolute; top: 8px; right: 8px; background: rgba(255,152,0,0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">⚠️ No en inventario</div>'}
+                        </div>
+                        <div style="padding: 1rem;">
+                            <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">
+                                🐂 #${chapeta}
+                            </div>
+                            ${animal ? `
+                                <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">
+                                    ${animal.sexo === 'MACHO' ? '♂️' : '♀️'} ${animal.vendedor || 'Nacimiento'}
+                                </div>
+                            ` : ''}
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">
+                                📅 ${formatDate(photoData.dateAdded)}
+                            </div>
+                            ${photoData.breed ? `
+                                <div style="background: ${confidence >= 80 ? '#e8f5e9' : '#fff3e0'}; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                    <strong>🧬 ${breedInfo}</strong>
+                                    <div style="font-size: 0.75rem; color: #666;">Confianza: ${confidence}%</div>
+                                </div>
+                            ` : ''}
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                                <button class="btn btn-danger" style="flex: 1; padding: 0.4rem; font-size: 0.8rem;" onclick="event.stopPropagation(); deleteAnimalPhoto('${chapeta}')">
+                                    🗑️ Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
         
         // Simple photo capture with AI breed detection
@@ -8919,40 +8991,61 @@
                 
                 showToast('📷 Procesando foto...', 'info');
                 
-                // Compress image
-                compressImage(file, async (compressedDataUrl) => {
-                    // Show loading for breed detection
-                    showToast('🧬 Detectando raza con IA...', 'info');
-                    
-                    // Detect breed using AI
-                    let breedData = null;
-                    if (typeof BreedDetection !== 'undefined') {
+                try {
+                    // Compress image
+                    compressImage(file, async (compressedDataUrl) => {
                         try {
-                            breedData = await BreedDetection.detectBreed({
-                                lateral: compressedDataUrl
-                            });
+                            // Detect breed using AI (optional - don't let this fail the save)
+                            let breedData = null;
+                            if (typeof BreedDetection !== 'undefined') {
+                                try {
+                                    showToast('🧬 Detectando raza con IA...', 'info');
+                                    breedData = await BreedDetection.detectBreed({
+                                        lateral: compressedDataUrl
+                                    });
+                                } catch (error) {
+                                    console.error('Breed detection error:', error);
+                                    showToast('⚠️ Detección de raza falló, pero foto se guardará', 'warning');
+                                }
+                            }
+                            
+                            // Store photo with breed data
+                            animalPhotos[chapetaNum] = {
+                                photo: compressedDataUrl,
+                                breed: breedData,
+                                dateAdded: new Date().toISOString()
+                            };
+                            
+                            // Save to localStorage with error handling
+                            try {
+                                saveAnimalPhotos();
+                                updateAllViews();
+                                
+                                // Show breed confirmation dialog or success message
+                                if (breedData) {
+                                    showBreedConfirmation(chapetaNum, breedData);
+                                } else {
+                                    showToast(`✅ Foto guardada para animal #${chapetaNum}`, 'success');
+                                }
+                            } catch (saveError) {
+                                // Handle storage quota exceeded
+                                if (saveError.name === 'QuotaExceededError') {
+                                    delete animalPhotos[chapetaNum]; // Remove failed save
+                                    showToast('❌ Almacenamiento lleno. Elimine fotos antiguas o exporte los datos.', 'error');
+                                    alert('⚠️ ALMACENAMIENTO LLENO\n\nLas fotos ocupan mucho espacio. Para continuar:\n\n1. Exporte los datos actuales\n2. Elimine fotos de animales ya vendidos\n3. Use la función de respaldo\n4. Considere reducir el número de fotos por animal');
+                                } else {
+                                    throw saveError;
+                                }
+                            }
                         } catch (error) {
-                            console.error('Breed detection error:', error);
+                            console.error('Error saving photo:', error);
+                            showToast('❌ Error al guardar foto: ' + error.message, 'error');
                         }
-                    }
-                    
-                    // Store photo with breed data
-                    animalPhotos[chapetaNum] = {
-                        photo: compressedDataUrl,
-                        breed: breedData,
-                        dateAdded: new Date().toISOString()
-                    };
-                    
-                    saveAnimalPhotos();
-                    updateAllViews();
-                    
-                    // Show breed confirmation dialog
-                    if (breedData) {
-                        showBreedConfirmation(chapetaNum, breedData);
-                    } else {
-                        showToast(`✅ Foto guardada para animal #${chapetaNum}`, 'success');
-                    }
-                });
+                    });
+                } catch (error) {
+                    console.error('Error processing photo:', error);
+                    showToast('❌ Error al procesar foto: ' + error.message, 'error');
+                }
             };
             
             input.click();
