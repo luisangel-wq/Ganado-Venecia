@@ -3536,11 +3536,12 @@
             // Apply ranch theme and load data
             applyRanchTheme();
             loadData();
-            loadAnimalPhotos(); // Load animal photos
+            loadAnimalPhotos(); // Load animal photos FIRST
             initTabs();
             initForms();
             initSortableHeaders();
             updateAllViews();
+            updateAnimalPhotosGrid(); // Update photo grid after loading
             initConfigValues();
             loadApiKeys();
             
@@ -3586,6 +3587,7 @@
                 
                 // Load new ranch data
                 loadData();
+                loadAnimalPhotos(); // Reload photos for new ranch
                 
                 // Update all views
                 updateAllViews();
@@ -5240,6 +5242,7 @@
             updateSaludView();
             updatePotrerosView();
             updateAIStats();
+            updateAnimalPhotosGrid(); // Update animal photos grid
         }
         
         function updateSummary() {
@@ -8897,7 +8900,17 @@
         function loadAnimalPhotos() {
             const saved = localStorage.getItem('animalPhotos_' + currentRanch);
             if (saved) {
-                animalPhotos = JSON.parse(saved);
+                try {
+                    animalPhotos = JSON.parse(saved);
+                    console.log(`📷 Loaded ${Object.keys(animalPhotos).length} animal photos for ${RANCHES[currentRanch].name}`);
+                } catch (error) {
+                    console.error('Error loading animal photos:', error);
+                    animalPhotos = {};
+                    showToast('⚠️ Error cargando fotos guardadas', 'warning');
+                }
+            } else {
+                animalPhotos = {};
+                console.log(`📷 No photos found for ${RANCHES[currentRanch].name}`);
             }
         }
         
@@ -8914,8 +8927,14 @@
                 localStorage.setItem('animalPhotos_' + currentRanch, photosJson);
                 console.log(`✅ Photos saved successfully (${sizeKB} KB, ${Object.keys(animalPhotos).length} animals)`);
                 
+                // Force reload photos from storage to ensure sync
+                loadAnimalPhotos();
+                
                 // Update the photos grid display
                 updateAnimalPhotosGrid();
+                
+                // Also update inventory views in case photos affect animal display
+                updateInventarioTable();
             } catch (error) {
                 console.error('Error saving photos:', error);
                 if (error.name === 'QuotaExceededError') {
@@ -9016,16 +9035,29 @@
                                 dateAdded: new Date().toISOString()
                             };
                             
+                            console.log(`📸 Photo captured for animal #${chapetaNum}`, {
+                                hasBreed: !!breedData,
+                                photoSize: (compressedDataUrl.length / 1024).toFixed(2) + ' KB',
+                                totalPhotos: Object.keys(animalPhotos).length
+                            });
+                            
                             // Save to localStorage with error handling
                             try {
                                 saveAnimalPhotos();
+                                
+                                // Verify the photo was actually saved
+                                const saved = localStorage.getItem('animalPhotos_' + currentRanch);
+                                if (!saved || !JSON.parse(saved)[chapetaNum]) {
+                                    throw new Error('La foto no se guardó correctamente en el almacenamiento');
+                                }
+                                
                                 updateAllViews();
                                 
                                 // Show breed confirmation dialog or success message
                                 if (breedData) {
                                     showBreedConfirmation(chapetaNum, breedData);
                                 } else {
-                                    showToast(`✅ Foto guardada para animal #${chapetaNum}`, 'success');
+                                    showToast(`✅ Foto guardada exitosamente para animal #${chapetaNum}`, 'success');
                                 }
                             } catch (saveError) {
                                 // Handle storage quota exceeded
@@ -9198,16 +9230,23 @@
         // Legacy function for compatibility
         function showAddAnimalPhoto() {
             const chapeta = prompt('🐂 Ingrese el número de chapeta del animal:');
-            if (!chapeta || !chapeta.trim()) return;
+            if (!chapeta || !chapeta.trim()) {
+                showToast('❌ Debe ingresar un número de chapeta', 'error');
+                return;
+            }
             
             const chapetaNum = chapeta.trim();
             
             // Check if animal exists
             const animal = data.entradas.find(e => e.numero == chapetaNum);
             if (!animal) {
-                if (!confirm(`El animal #${chapetaNum} no existe en el sistema. ¿Agregar foto de todas formas?`)) {
+                const msg = `⚠️ El animal #${chapetaNum} no existe en el inventario actual.\n\n¿Desea agregar la foto de todas formas?\n(Útil si el animal fue comprado recientemente)`;
+                if (!confirm(msg)) {
                     return;
                 }
+                showToast(`📸 Preparando cámara para animal #${chapetaNum}...`, 'info');
+            } else {
+                showToast(`📸 Preparando cámara para ${animal.sexo === 'MACHO' ? 'macho' : 'hembra'} #${chapetaNum} (${animal.raza || 'Cebú'})`, 'info');
             }
             
             captureAnimalPhoto(chapetaNum);
