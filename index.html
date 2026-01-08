@@ -3369,7 +3369,43 @@
                             📜 Ver Historial
                         </button>
                     </div>
-                    
+
+                    <!-- User ID Management Section -->
+                    <div style="margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; border: 2px solid #f59e0b;">
+                        <h4 style="margin: 0 0 1rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.3rem;">👥</span> Compartir con Familia
+                        </h4>
+                        <p style="margin: 0 0 1rem 0; color: #78350f; font-size: 0.9rem;">
+                            Para sincronizar entre dispositivos de la familia, todos deben usar el <strong>mismo ID de Usuario</strong>.
+                        </p>
+
+                        <!-- Current User ID Display -->
+                        <div style="background: white; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">Tu ID de Usuario:</div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <code id="currentUserIdDisplay" style="flex: 1; min-width: 200px; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; font-size: 0.85rem; word-break: break-all; border: 1px solid #e5e7eb;">Cargando...</code>
+                                <button class="btn btn-secondary" onclick="copyUserId()" style="white-space: nowrap;">
+                                    📋 Copiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Change User ID -->
+                        <div style="background: white; border-radius: 8px; padding: 1rem;">
+                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">Usar ID de otro familiar:</div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                <input type="text" id="newUserIdInput" placeholder="Pegar ID del familiar aquí"
+                                       style="flex: 1; min-width: 200px; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.9rem;">
+                                <button class="btn btn-warning" onclick="changeUserId()" style="white-space: nowrap; background: #f59e0b; border-color: #f59e0b;">
+                                    🔄 Cambiar ID
+                                </button>
+                            </div>
+                            <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fef2f2; border-radius: 6px; border-left: 3px solid #ef4444; font-size: 0.8rem; color: #991b1b;">
+                                <strong>⚠️ Importante:</strong> Al cambiar el ID, tus datos locales se reemplazarán con los datos de la nube del nuevo ID.
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Sync Info -->
                     <div style="margin-top: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 8px; font-size: 0.9rem;">
                         <strong>ℹ️ Información de Sincronización:</strong>
@@ -6793,7 +6829,141 @@
                 }
             }
         }
-        
+
+        // ==================== USER ID MANAGEMENT FUNCTIONS ====================
+
+        function displayCurrentUserId() {
+            const userIdDisplay = document.getElementById('currentUserIdDisplay');
+            if (userIdDisplay) {
+                const userId = localStorage.getItem('cloudSync_userId') || 'No configurado';
+                userIdDisplay.textContent = userId;
+            }
+        }
+
+        function copyUserId() {
+            const userId = localStorage.getItem('cloudSync_userId');
+            if (!userId) {
+                showToast('⚠️ No hay ID de usuario configurado', 'warning');
+                return;
+            }
+
+            // Try to use the Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(userId)
+                    .then(() => {
+                        showToast('✅ ID copiado al portapapeles', 'success');
+                    })
+                    .catch(err => {
+                        // Fallback for older browsers
+                        fallbackCopyUserId(userId);
+                    });
+            } else {
+                // Fallback for older browsers
+                fallbackCopyUserId(userId);
+            }
+        }
+
+        function fallbackCopyUserId(userId) {
+            const textArea = document.createElement('textarea');
+            textArea.value = userId;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                showToast('✅ ID copiado al portapapeles', 'success');
+            } catch (err) {
+                showToast('❌ No se pudo copiar. ID: ' + userId, 'error');
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        async function changeUserId() {
+            const newUserIdInput = document.getElementById('newUserIdInput');
+            const newUserId = newUserIdInput.value.trim();
+
+            if (!newUserId) {
+                showToast('⚠️ Por favor ingrese un ID de usuario', 'warning');
+                return;
+            }
+
+            // Validate format (should start with user_)
+            if (!newUserId.startsWith('user_')) {
+                showToast('⚠️ ID inválido. Debe empezar con "user_"', 'error');
+                return;
+            }
+
+            const currentUserId = localStorage.getItem('cloudSync_userId');
+            if (newUserId === currentUserId) {
+                showToast('ℹ️ Ya estás usando ese ID', 'info');
+                return;
+            }
+
+            // Confirm the change
+            const confirmed = confirm(
+                '⚠️ ADVERTENCIA\n\n' +
+                'Al cambiar el ID de usuario:\n\n' +
+                '1. Tus datos locales se sincronizarán con la nube del nuevo ID\n' +
+                '2. Si el nuevo ID tiene datos, reemplazarán los tuyos locales\n\n' +
+                '¿Desea continuar?'
+            );
+
+            if (!confirmed) return;
+
+            try {
+                // Stop current sync if running
+                if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                    cloudSync.disable();
+                }
+
+                // Update the user ID
+                localStorage.setItem('cloudSync_userId', newUserId);
+
+                // Reinitialize cloud sync with new user ID
+                if (typeof cloudSync !== 'undefined' && typeof firebaseConfig !== 'undefined') {
+                    cloudSync.userId = newUserId;
+                    cloudSync.enabled = false;
+
+                    showToast('🔄 Conectando con nuevo ID...', 'info');
+
+                    const initialized = await cloudSync.initialize(firebaseConfig);
+
+                    if (initialized) {
+                        showToast('✅ Conectado con nuevo ID. Sincronizando...', 'success');
+                        await cloudSync.syncFromCloud();
+
+                        // Offer to reload page
+                        setTimeout(() => {
+                            if (confirm('¿Recargar la página para ver los datos sincronizados?')) {
+                                window.location.reload();
+                            }
+                        }, 1000);
+                    } else {
+                        showToast('⚠️ ID cambiado pero error al conectar. Recargue la página.', 'warning');
+                    }
+                } else {
+                    showToast('✅ ID cambiado. Recargue la página para sincronizar.', 'success');
+                }
+
+                // Update display
+                displayCurrentUserId();
+                newUserIdInput.value = '';
+
+            } catch (error) {
+                console.error('Error changing user ID:', error);
+                showToast('❌ Error al cambiar ID: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize User ID display when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(displayCurrentUserId, 500);
+        });
+
         // ==================== PHOTO SESSION FUNCTIONS ====================
         
         // Current session photos (temporary storage before save)
