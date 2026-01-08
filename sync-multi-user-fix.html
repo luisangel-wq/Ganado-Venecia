@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔄 Sincronización Multi-Usuario - Diagnóstico y Solución</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .section h2 {
+            color: #444;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-box label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        
+        .info-box .value {
+            font-family: 'Courier New', monospace;
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .btn.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            margin-top: 10px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .alert.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+        
+        .alert.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        
+        .animal-count {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Sincronización Multi-Usuario</h1>
+        <p class="subtitle">Diagnóstico y Solución para Compartir Datos entre Hermanos</p>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando información...</p>
+        </div>
+        
+        <div id="content" style="display: none;">
+            <!-- Current Status -->
+            <div class="section">
+                <h2>📊 Tu Configuración Actual</h2>
+                <div class="info-box">
+                    <label>Tu User ID</label>
+                    <div class="value" id="currentUserId">-</div>
+                </div>
+                <div class="info-box">
+                    <label>Animales en tu dispositivo</label>
+                    <div class="animal-count" id="localAnimalCount">0</div>
+                </div>
+                <div class="info-box">
+                    <label>Estado de Sincronización</label>
+                    <div id="syncStatus">-</div>
+                </div>
+            </div>
+            
+            <!-- Problem Explanation -->
+            <div id="problemSection" class="section" style="display: none;">
+                <h2>⚠️ Problema Detectado</h2>
+                <div class="alert warning">
+                    <strong>🔍 Problema:</strong> Tú y tu hermano tienen User IDs diferentes.<br><br>
+                    <strong>¿Qué significa?</strong> Cada uno está guardando datos en lugares separados en Firebase. 
+                    Por eso no puedes ver los animales que él agregó.<br><br>
+                    <strong>✅ Solución:</strong> Ambos deben usar el mismo User ID para compartir datos.
+                </div>
+            </div>
+            
+            <!-- Solution Options -->
+            <div class="section">
+                <h2>🔧 Solución: Compartir User ID</h2>
+                
+                <div class="alert warning">
+                    <strong>IMPORTANTE:</strong> Para que tú y tu hermano vean los mismos datos, 
+                    deben acordar un User ID compartido y ambos configurarlo.
+                </div>
+                
+                <div class="info-box">
+                    <label>Opción 1: Usar TU User ID (Recomendado si ya tienes datos)</label>
+                    <div class="value" id="yourUserIdCopy">-</div>
+                    <button class="btn" onclick="copyYourUserId()">📋 Copiar mi User ID para Enviar</button>
+                    <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                        Copia este ID y envíaselo a tu hermano por WhatsApp. Él debe pegarlo en "Opción 2" abajo.
+                    </p>
+                </div>
+                
+                <div class="info-box" style="margin-top: 20px;">
+                    <label>Opción 2: Usar el User ID de tu Hermano</label>
+                    <input type="text" id="brotherUserId" placeholder="Pega aquí el User ID que te envió tu hermano">
+                    <button class="btn secondary" onclick="useBrotherUserId()">🔄 Cambiar a este User ID</button>
+                    <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                        ⚠️ Esto reemplazará tu User ID actual. Asegúrate de haber sincronizado tus datos primero.
+                    </p>
+                </div>
+                
+                <div class="info-box" style="margin-top: 20px;">
+                    <label>Opción 3: Crear User ID Compartido Nuevo</label>
+                    <button class="btn success" onclick="createSharedUserId()">✨ Crear User ID Compartido</button>
+                    <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                        Crea un nuevo User ID y compártelo con tu hermano. Ideal si ambos tienen datos importantes.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Instructions -->
+            <div class="section">
+                <h2>📱 Instrucciones Completas</h2>
+                <div class="alert success">
+                    <strong>Paso a Paso:</strong><br><br>
+                    <strong>1️⃣ Decide quién tiene los datos más completos</strong><br>
+                    - Si TÚ tienes más datos → Usa Opción 1 (compartir tu User ID)<br>
+                    - Si tu HERMANO tiene más datos → Usa Opción 2 (usar su User ID)<br>
+                    - Si ambos tienen datos importantes → Usa Opción 3 (crear uno nuevo)<br><br>
+                    
+                    <strong>2️⃣ El que tenga MÁS datos debe:</strong><br>
+                    - Ir a Config → Cloud Sync<br>
+                    - Click en "Sincronizar Ahora"<br>
+                    - Seleccionar "Subir a la nube"<br>
+                    - Esperar confirmación<br><br>
+                    
+                    <strong>3️⃣ El otro debe:</strong><br>
+                    - Cambiar su User ID (usando esta página)<br>
+                    - Ir a Config → Cloud Sync<br>
+                    - Click en "Sincronizar Ahora"<br>
+                    - Seleccionar "Descargar desde la nube"<br>
+                    - ¡Listo! Verá todos los datos<br><br>
+                    
+                    <strong>4️⃣ De ahora en adelante:</strong><br>
+                    - Ambos verán los mismos datos<br>
+                    - Los cambios se sincronizan automáticamente<br>
+                    - ¡Trabajan juntos en tiempo real! 🎉
+                </div>
+            </div>
+            
+            <!-- Manual Sync -->
+            <div class="section">
+                <h2>🔄 Sincronización Manual</h2>
+                <button class="btn" onclick="forceUpload()">⬆️ Subir MIS datos a la nube</button>
+                <button class="btn secondary" onclick="forceDownload()">⬇️ Descargar datos de la nube</button>
+                <p style="margin-top: 10px; font-size: 13px; color: #666; text-align: center;">
+                    Usa estos botones después de cambiar el User ID
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="firebase-config.js"></script>
+    <script src="cloud-sync.js"></script>
+    <script>
+        let currentUserId = null;
+        
+        // Load Firebase
+        async function initializePage() {
+            try {
+                // Get current user ID
+                currentUserId = localStorage.getItem('cloudSync_userId');
+                
+                if (currentUserId) {
+                    document.getElementById('currentUserId').textContent = currentUserId;
+                    document.getElementById('yourUserIdCopy').textContent = currentUserId;
+                } else {
+                    document.getElementById('currentUserId').textContent = '❌ No configurado';
+                }
+                
+                // Count local animals
+                const animalCount = countLocalAnimals();
+                document.getElementById('localAnimalCount').textContent = animalCount;
+                
+                // Check sync status
+                if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                    document.getElementById('syncStatus').innerHTML = '<span class="status success">● Sincronización activa</span>';
+                } else {
+                    document.getElementById('syncStatus').innerHTML = '<span class="status error">⚫ Sincronización desactivada</span>';
+                }
+                
+                // Show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error initializing:', error);
+                document.getElementById('loading').innerHTML = '<div class="alert error">Error al cargar: ' + error.message + '</div>';
+            }
+        }
+        
+        function countLocalAnimals() {
+            const ranches = {
+                la_coruna: 'ganadoFinca_LaCoruna',
+                santa_catalina: 'ganadoFinca_SantaCatalina',
+                la_vega: 'ganadoFinca_LaVega'
+            };
+            
+            let total = 0;
+            Object.values(ranches).forEach(key => {
+                try {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        if (parsed.cattle && Array.isArray(parsed.cattle)) {
+                            total += parsed.cattle.length;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error counting animals:', e);
+                }
+            });
+            
+            return total;
+        }
+        
+        function copyYourUserId() {
+            const userId = document.getElementById('currentUserId').textContent;
+            
+            // Create message for WhatsApp
+            const message = `🐄 Ganado Venecia - User ID Compartido\n\n` +
+                `Para que veas los mismos datos que yo:\n\n` +
+                `1. Abre este link en tu teléfono:\n` +
+                `https://luisangel-wq.github.io/Ganado-Venecia/sync-multi-user-fix.html\n\n` +
+                `2. En "Opción 2", pega este User ID:\n` +
+                `${userId}\n\n` +
+                `3. Click en "Cambiar a este User ID"\n\n` +
+                `4. Ve a Config → Cloud Sync → Sincronizar Ahora\n\n` +
+                `5. Selecciona "Descargar desde la nube"\n\n` +
+                `¡Listo! Verás todos los animales 🎉`;
+            
+            // Copy to clipboard
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(message).then(() => {
+                    alert('✅ Mensaje copiado!\n\nAhora pégalo en WhatsApp y envíaselo a tu hermano.');
+                }).catch(() => {
+                    // Fallback
+                    prompt('Copia este mensaje y envíaselo por WhatsApp:', message);
+                });
+            } else {
+                prompt('Copia este mensaje y envíaselo por WhatsApp:', message);
+            }
+        }
+        
+        function useBrotherUserId() {
+            const brotherUserId = document.getElementById('brotherUserId').value.trim();
+            
+            if (!brotherUserId) {
+                alert('❌ Por favor pega el User ID de tu hermano');
+                return;
+            }
+            
+            if (!brotherUserId.startsWith('user_')) {
+                alert('❌ El User ID no parece válido. Debe empezar con "user_"');
+                return;
+            }
+            
+            if (!confirm(
+                '⚠️ ADVERTENCIA\n\n' +
+                'Esto cambiará tu User ID a:\n' +
+                brotherUserId + '\n\n' +
+                '¿Estás seguro?\n\n' +
+                'Después de cambiar, haz click en "Descargar datos de la nube" abajo.'
+            )) {
+                return;
+            }
+            
+            // Save old user ID for backup
+            const oldUserId = currentUserId;
+            localStorage.setItem('cloudSync_userId_backup', oldUserId);
+            
+            // Set new user ID
+            localStorage.setItem('cloudSync_userId', brotherUserId);
+            currentUserId = brotherUserId;
+            
+            alert('✅ User ID cambiado exitosamente!\n\n' +
+                'Ahora haz click en "Descargar datos de la nube" abajo para obtener los datos de tu hermano.');
+            
+            // Reload page to show new ID
+            window.location.reload();
+        }
+        
+        function createSharedUserId() {
+            const newUserId = 'user_shared_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            const message = `🐄 User ID Compartido Creado\n\n` +
+                `${newUserId}\n\n` +
+                `Envía este User ID a tu hermano y ambos úsenlo.\n\n` +
+                `Instrucciones:\n` +
+                `1. El que tenga MÁS datos: primero SUBE a la nube\n` +
+                `2. Luego ambos cambian al nuevo User ID\n` +
+                `3. El que tenía menos datos: DESCARGA desde la nube\n` +
+                `4. ¡Listo! Ambos sincronizados 🎉`;
+            
+            if (confirm('Se creará un nuevo User ID compartido.\n\n¿Continuar?')) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(message).then(() => {
+                        alert('✅ User ID compartido creado y copiado!\n\nPégalo en WhatsApp y envíaselo a tu hermano.');
+                        // Set as current
+                        localStorage.setItem('cloudSync_userId_backup', currentUserId);
+                        localStorage.setItem('cloudSync_userId', newUserId);
+                        window.location.reload();
+                    });
+                } else {
+                    prompt('Copia este User ID y compártelo:', message);
+                }
+            }
+        }
+        
+        async function forceUpload() {
+            if (!confirm('¿Subir TUS datos actuales a la nube?\n\n⚠️ Esto sobrescribirá lo que esté en la nube para este User ID.')) {
+                return;
+            }
+            
+            try {
+                // Initialize cloud sync if not already
+                if (!cloudSync.enabled) {
+                    await cloudSync.initialize(getFirebaseConfig());
+                }
+                
+                await cloudSync.syncToCloud();
+                alert('✅ Datos subidos exitosamente a la nube!\n\nAhora tu hermano puede descargarlos.');
+            } catch (error) {
+                alert('❌ Error al subir datos:\n' + error.message);
+            }
+        }
+        
+        async function forceDownload() {
+            if (!confirm('¿Descargar datos de la nube?\n\n⚠️ Esto reemplazará tus datos locales con los datos de la nube.')) {
+                return;
+            }
+            
+            try {
+                // Initialize cloud sync if not already
+                if (!cloudSync.enabled) {
+                    await cloudSync.initialize(getFirebaseConfig());
+                }
+                
+                await cloudSync.syncFromCloud();
+                alert('✅ Datos descargados exitosamente!\n\nRecarga la página para ver los cambios.');
+                setTimeout(() => window.location.reload(), 1500);
+            } catch (error) {
+                alert('❌ Error al descargar datos:\n' + error.message);
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>
