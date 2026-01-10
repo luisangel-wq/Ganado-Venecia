@@ -1,0 +1,132 @@
+📋 CAMBIAR USER ID - MÉTODO CONSOLA DEL NAVEGADOR
+
+=========================================
+Para: Hermanos/Socios
+=========================================
+
+🎯 OBJETIVO:
+Configurar el User ID correcto para sincronización
+
+⏱️ TIEMPO:
+2 minutos
+
+📱 FUNCIONA EN:
+Chrome, Safari, Firefox, Edge (Computadora y Móvil)
+
+=========================================
+PASOS:
+=========================================
+
+1️⃣ ABRIR LA APP
+   - Abre la app en tu navegador
+   - Puede ser index.html o la URL que te compartieron
+
+2️⃣ ABRIR CONSOLA DEL NAVEGADOR
+
+   🖥️ EN COMPUTADORA:
+   - Windows/Linux: Presiona F12
+   - Mac: Presiona Cmd + Option + J
+   - O: Clic derecho en la página → "Inspeccionar" → Pestaña "Console"
+
+   📱 EN MÓVIL (más difícil, mejor usa computadora):
+   - Safari (iPhone): Settings → Safari → Advanced → Web Inspector
+   - Chrome (Android): No disponible, usa computadora
+
+3️⃣ VERIFICAR USER ID ACTUAL (Opcional)
+
+   Copia y pega en la consola:
+
+   console.log('Tu User ID actual:', localStorage.getItem('cloudSync_userId'))
+
+   Presiona Enter
+   Te mostrará tu User ID actual
+
+4️⃣ CAMBIAR AL USER ID CORRECTO
+
+   Copia y pega este comando en la consola:
+
+   localStorage.setItem('cloudSync_userId', 'user_1767286295709_gwj75h9dp')
+
+   Presiona Enter
+
+5️⃣ VERIFICAR QUE SE CAMBIÓ (Opcional)
+
+   Copia y pega:
+
+   console.log('Nuevo User ID:', localStorage.getItem('cloudSync_userId'))
+
+   Debe mostrar: user_1767286295709_gwj75h9dp
+
+6️⃣ RECARGAR LA PÁGINA
+
+   - Presiona F5 (o Cmd+R en Mac)
+   - O cierra y vuelve a abrir la app
+
+7️⃣ VERIFICAR SINCRONIZACIÓN
+
+   - Ve a Config → Cloud Sync
+   - Click "Sincronizar Ahora"
+   - Deberías ver los datos de los demás
+
+=========================================
+COMANDO COMPLETO (COPIA TODO):
+=========================================
+
+localStorage.setItem('cloudSync_userId', 'user_1767286295709_gwj75h9dp'); alert('✅ User ID cambiado correctamente!\n\nNuevo ID: user_1767286295709_gwj75h9dp\n\nAhora recarga la página (F5)');
+
+=========================================
+¿QUÉ HACE ESTE COMANDO?
+=========================================
+
+- Guarda el User ID correcto en tu navegador
+- NO borra tus datos existentes
+- Es seguro, solo cambia el ID de sincronización
+- Muestra un mensaje de confirmación
+
+=========================================
+SOLUCIÓN DE PROBLEMAS:
+=========================================
+
+❌ "No encuentro la consola"
+   → F12 en computadora
+   → Busca "Console" en las pestañas de arriba
+
+❌ "Me da error al pegar"
+   → Escribe el comando manualmente
+   → Asegúrate de copiar todo correctamente
+
+❌ "No veo los datos de los demás"
+   → Ve a Config → Cloud Sync → "Sincronizar Ahora"
+   → Espera 10 segundos
+   → Recarga la página (F5)
+
+❌ "Tengo miedo de romper algo"
+   → Este comando es 100% seguro
+   → Solo cambia el User ID
+   → Tus datos locales NO se borran
+   → Puedes deshacer: usa el mismo comando con tu User ID anterior
+
+=========================================
+DESHACER (SI ALGO SALE MAL):
+=========================================
+
+Si necesitas volver a tu User ID anterior:
+
+localStorage.setItem('cloudSync_userId', 'TU_USER_ID_ANTERIOR')
+
+(Reemplaza TU_USER_ID_ANTERIOR con tu ID original)
+
+=========================================
+CONTACTO:
+=========================================
+
+Si no te funciona, contacta a Beatriz.
+
+=========================================
+
+User ID Correcto para Todos:
+user_1767286295709_gwj75h9dp
+
+¡Asegúrate que TODOS usemos el mismo!
+
+=========================================

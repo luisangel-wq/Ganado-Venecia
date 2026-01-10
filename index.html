@@ -2271,6 +2271,9 @@
                         <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1.1rem; padding: 1rem 2rem;">
                             📸 Agregar Foto de Animal
                         </button>
+                        <div style="margin-top: 0.75rem; color: #666; font-size: 0.9rem;">
+                            Puede tomar foto con la cámara o seleccionar desde galería/computadora
+                        </div>
                     </div>
                     
                     <div style="margin-top: 2rem;">
@@ -9303,49 +9306,72 @@
         }
         
         // Simple photo capture with AI breed detection
-        function captureAnimalPhoto(chapetaNum) {
+        function captureAnimalPhoto(chapetaNum, useCamera = true) {
             // Create file input
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.capture = 'environment';
-            
+
+            // Only use camera capture on mobile devices if useCamera is true
+            if (useCamera && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                input.capture = 'environment';
+            }
+            // Otherwise, it will open file picker (gallery on mobile, file browser on desktop)
+
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    showToast('❌ El archivo seleccionado no es una imagen válida', 'error');
+                    return;
+                }
+
+                // Validate file size (max 10MB before compression)
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                if (file.size > maxSize) {
+                    showToast('⚠️ La imagen es muy grande (máx 10MB). Se intentará comprimir...', 'warning');
+                }
+
                 showToast('📷 Procesando foto...', 'info');
-                
+
                 try {
                     // Compress image
                     compressImage(file, (compressedDataUrl) => {
                         try {
                             const timestamp = new Date().toISOString();
-                            
+
                             // Store photo immediately
                             animalPhotos[chapetaNum] = {
                                 photo: compressedDataUrl,
                                 breed: null,
                                 dateAdded: timestamp
                             };
-                            
-                            console.log(`📸 Photo captured for animal #${chapetaNum}`, {
+
+                            console.log(`📸 Photo ${useCamera ? 'captured' : 'uploaded'} for animal #${chapetaNum}`, {
                                 photoSize: (compressedDataUrl.length / 1024).toFixed(2) + ' KB',
-                                totalPhotos: Object.keys(animalPhotos).length
+                                totalPhotos: Object.keys(animalPhotos).length,
+                                source: useCamera ? 'camera' : 'file'
                             });
-                            
+
                             // Save to localStorage with error handling
                             try {
                                 saveAnimalPhotos();
-                                
+
                                 // Verify the photo was actually saved
                                 const saved = localStorage.getItem('animalPhotos_' + currentRanch);
                                 if (!saved || !JSON.parse(saved)[chapetaNum]) {
                                     throw new Error('La foto no se guardó correctamente en el almacenamiento');
                                 }
-                                
+
                                 updateAllViews();
                                 showToast(`✅ Foto guardada exitosamente para animal #${chapetaNum}`, 'success');
+
+                                // Trigger automatic sync if enabled
+                                if (window.cloudSync && window.cloudSync.enabled) {
+                                    cloudSync.triggerAutoSync();
+                                }
                             } catch (saveError) {
                                 // Handle storage quota exceeded
                                 if (saveError.name === 'QuotaExceededError') {
@@ -9357,7 +9383,7 @@
                                     throw saveError;
                                 }
                             }
-                            
+
                             // Add to photo history (animal profile)
                             try {
                                 addQuickPhotoSession(chapetaNum, timestamp);
@@ -9365,7 +9391,7 @@
                                 console.error('Error saving photo session:', historyError);
                                 showToast('⚠️ Foto guardada, pero no se pudo registrar en el historial', 'warning');
                             }
-                            
+
                             // Sin detección de raza para acelerar el proceso
                         } catch (error) {
                             console.error('Error saving photo:', error);
@@ -9377,7 +9403,7 @@
                     showToast('❌ Error al procesar foto: ' + error.message, 'error');
                 }
             };
-            
+
             input.click();
         }
         
@@ -9532,9 +9558,9 @@
                 showToast('❌ Debe ingresar un número de chapeta', 'error');
                 return;
             }
-            
+
             const chapetaNum = chapeta.trim();
-            
+
             // Check if animal exists
             const animal = data.entradas.find(e => e.numero == chapetaNum);
             if (!animal) {
@@ -9542,12 +9568,33 @@
                 if (!confirm(msg)) {
                     return;
                 }
-                showToast(`📸 Preparando cámara para animal #${chapetaNum}...`, 'info');
-            } else {
-                showToast(`📸 Preparando cámara para ${animal.sexo === 'MACHO' ? 'macho' : 'hembra'} #${chapetaNum} (${animal.raza || 'Cebú'})`, 'info');
             }
-            
-            captureAnimalPhoto(chapetaNum);
+
+            // Show photo source selection
+            showPhotoSourceSelection(chapetaNum, animal);
+        }
+
+        function showPhotoSourceSelection(chapetaNum, animal) {
+            const animalInfo = animal ?
+                `${animal.sexo === 'MACHO' ? 'macho' : 'hembra'} #${chapetaNum} (${animal.raza || 'Cebú'})` :
+                `animal #${chapetaNum}`;
+
+            const message = `📸 Seleccione el origen de la foto para ${animalInfo}:\n\n` +
+                `1 - Tomar foto con la cámara\n` +
+                `2 - Seleccionar archivo de galería/computadora\n\n` +
+                `Ingrese 1 o 2:`;
+
+            const choice = prompt(message);
+
+            if (choice === '1') {
+                showToast(`📸 Preparando cámara para ${animalInfo}...`, 'info');
+                captureAnimalPhoto(chapetaNum, true);
+            } else if (choice === '2') {
+                showToast(`📁 Seleccione una foto de su dispositivo para ${animalInfo}...`, 'info');
+                captureAnimalPhoto(chapetaNum, false);
+            } else if (choice !== null) {
+                showToast('❌ Opción inválida. Use 1 o 2', 'error');
+            }
         }
         
         function getAnimalPhoto(chapeta) {

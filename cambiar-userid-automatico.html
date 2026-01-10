@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cambiar User ID - Automático</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .emoji {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .current-id {
+            font-family: monospace;
+            font-size: 14px;
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            margin: 15px 0;
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .new-id {
+            font-family: monospace;
+            font-size: 14px;
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            margin: 15px 0;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            padding: 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+            font-size: 20px;
+        }
+
+        .btn-primary:active {
+            background: #218838;
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:active {
+            background: #5a6268;
+            transform: scale(0.98);
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #155724;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🐄</div>
+        <h1>Configuración Rápida</h1>
+        <h2 style="color: #6c757d; margin-bottom: 30px;">App Ganado Finca</h2>
+
+        <div class="info-box">
+            <p style="margin-bottom: 10px;"><strong>Tu User ID actual:</strong></p>
+            <div class="current-id" id="currentUserId">Cargando...</div>
+
+            <p style="margin: 20px 0 10px 0;"><strong>User ID que necesitas:</strong></p>
+            <div class="new-id">user_1767286295709_gwj75h9dp</div>
+        </div>
+
+        <div class="instructions">
+            <strong>📌 ¿Por qué cambiar?</strong>
+            <p style="margin-top: 10px;">
+                Para que todos veamos los mismos animales, TODOS debemos usar el mismo User ID.
+            </p>
+        </div>
+
+        <div id="changeSection">
+            <button class="btn-primary" onclick="changeUserIdAutomatic()">
+                ✅ CAMBIAR AL USER ID CORRECTO
+            </button>
+
+            <p style="margin: 15px 0; color: #6c757d; font-size: 14px;">
+                (La página se recargará automáticamente)
+            </p>
+        </div>
+
+        <div id="successSection" class="success-box">
+            <div class="emoji" style="font-size: 48px; margin-bottom: 15px;">🎉</div>
+            <h3 style="margin-bottom: 10px;">¡User ID Actualizado!</h3>
+            <p>Ahora puedes abrir la app principal y sincronizar.</p>
+        </div>
+
+        <div id="alreadyCorrect" class="success-box">
+            <div class="emoji" style="font-size: 48px; margin-bottom: 15px;">✅</div>
+            <h3 style="margin-bottom: 10px;">¡Ya tienes el User ID correcto!</h3>
+            <p>No necesitas hacer nada. Abre la app principal.</p>
+        </div>
+
+        <button class="btn-secondary" onclick="openMainApp()" style="margin-top: 20px;">
+            📱 Abrir App Principal
+        </button>
+    </div>
+
+    <script>
+        const CORRECT_USER_ID = 'user_1767286295709_gwj75h9dp';
+
+        // Display current User ID
+        function displayUserId() {
+            const userId = localStorage.getItem('cloudSync_userId');
+            const display = document.getElementById('currentUserId');
+
+            if (userId) {
+                display.textContent = userId;
+
+                // Check if it's already correct
+                if (userId === CORRECT_USER_ID) {
+                    document.getElementById('changeSection').classList.add('hidden');
+                    document.getElementById('alreadyCorrect').style.display = 'block';
+                    display.style.color = '#155724';
+                    display.style.background = '#d4edda';
+                }
+            } else {
+                display.textContent = 'No hay User ID configurado';
+            }
+        }
+
+        // Change User ID automatically
+        function changeUserIdAutomatic() {
+            const currentUserId = localStorage.getItem('cloudSync_userId');
+
+            const confirmed = confirm(
+                '🔄 ¿Cambiar User ID?\n\n' +
+                'Actual: ' + (currentUserId || 'Ninguno') + '\n\n' +
+                'Nuevo: ' + CORRECT_USER_ID + '\n\n' +
+                'La página se recargará automáticamente.'
+            );
+
+            if (confirmed) {
+                // Change the User ID
+                localStorage.setItem('cloudSync_userId', CORRECT_USER_ID);
+
+                // Show success message
+                document.getElementById('changeSection').classList.add('hidden');
+                document.getElementById('successSection').style.display = 'block';
+
+                // Reload after 2 seconds
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            }
+        }
+
+        // Open main app
+        function openMainApp() {
+            // Try to open the main app
+            const mainAppUrl = 'index.html';
+            window.location.href = mainAppUrl;
+        }
+
+        // Initialize on page load
+        displayUserId();
+    </script>
+</body>
+</html>

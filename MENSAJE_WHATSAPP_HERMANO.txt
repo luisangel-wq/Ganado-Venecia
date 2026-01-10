@@ -1,0 +1,34 @@
+🐄 Configurar App Ganado - Rápido y Fácil
+
+Hola! Para sincronizar la app, sigue estos pasos:
+
+1️⃣ Abre la app en tu navegador
+
+2️⃣ Presiona F12 (abre herramientas del navegador)
+   💻 Windows: F12
+   🍎 Mac: Cmd + Option + J
+
+3️⃣ Busca la pestaña "Console" arriba
+
+4️⃣ Copia y pega este comando completo:
+
+localStorage.setItem('cloudSync_userId', 'user_1767286295709_gwj75h9dp'); alert('✅ Listo! Ahora recarga');
+
+5️⃣ Presiona Enter
+
+6️⃣ Recarga la página:
+   💻 Windows: F5 o Ctrl+R
+   🍎 Mac: Cmd+R
+   📱 Móvil: Desliza hacia abajo desde arriba
+
+✅ ¡Listo! Ahora compartimos los mismos datos.
+
+---
+
+⚠️ IMPORTANTE:
+- Este comando es seguro
+- NO borra tus datos
+- Solo sincroniza con mi User ID
+- Al recargar NO pierdes información
+
+📞 Si tienes problemas, llámame.

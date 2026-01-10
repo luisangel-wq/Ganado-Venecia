@@ -221,16 +221,16 @@ class CloudSync {
         // DATA VALIDATION: Check if cloud data is suspicious (empty or too small)
         const cloudAnimalCount = this.countAnimalsInData(cloudData);
         const localAnimalCount = this.countLocalAnimals();
-        
+
         // Prevent overwriting good data with empty/minimal data
         if (localAnimalCount > 10 && cloudAnimalCount < localAnimalCount * 0.5) {
             console.warn('⚠️ SYNC BLOCKED: Cloud data appears incomplete');
             console.warn(`Local has ${localAnimalCount} animals, cloud has ${cloudAnimalCount}`);
-            
+
             if (showNotification && typeof showToast === 'function') {
                 showToast('⚠️ Sincronización bloqueada: Los datos en la nube parecen incompletos. Use Backup/Restore manual.', 'warning');
             }
-            
+
             // Optionally ask user what to do
             if (showNotification && confirm(
                 `ADVERTENCIA: Sincronización bloqueada\n\n` +
@@ -243,7 +243,7 @@ class CloudSync {
                 // Upload local data to cloud instead
                 this.syncToCloud();
             }
-            
+
             return; // Don't apply cloud data
         }
 
@@ -255,7 +255,7 @@ class CloudSync {
                     try {
                         const newData = JSON.stringify(cloudData.ranches[ranchId]);
                         const oldData = localStorage.getItem(ranch.storageKey);
-                        
+
                         if (newData !== oldData) {
                             localStorage.setItem(ranch.storageKey, newData);
                             changesCount++;
@@ -275,7 +275,7 @@ class CloudSync {
                 try {
                     const newPhotos = JSON.stringify(cloudData.photos[ranchId]);
                     const oldPhotos = localStorage.getItem(photosKey);
-                    
+
                     if (newPhotos !== oldPhotos) {
                         localStorage.setItem(photosKey, newPhotos);
                         changesCount++;
@@ -291,24 +291,17 @@ class CloudSync {
         localStorage.setItem('cloudSync_lastSync', this.lastSync);
 
         if (changesCount > 0) {
-            console.log(`Synced ${changesCount} changes from cloud`);
-            
+            console.log(`✅ Synced ${changesCount} changes from cloud - UI will update automatically`);
+
+            // AUTOMATIC UI REFRESH - No user confirmation needed
+            if (typeof updateAllViews === 'function') {
+                console.log('🔄 Updating UI with new data...');
+                updateAllViews();
+            }
+
+            // Show subtle notification (only if not silent sync)
             if (showNotification && typeof showToast === 'function') {
-                showToast(`☁️ Sincronizado desde la nube (${changesCount} cambios)`, 'success');
-                
-                // Reload data in current view if updateAllViews exists
-                if (typeof updateAllViews === 'function') {
-                    updateAllViews();
-                }
-                
-                // On mobile, suggest page reload for full UI refresh
-                if (showNotification && changesCount > 0) {
-                    setTimeout(() => {
-                        if (confirm('¿Recargar la página para ver todos los cambios sincronizados?')) {
-                            window.location.reload();
-                        }
-                    }, 1500);
-                }
+                showToast(`☁️ ${changesCount} cambio(s) sincronizado(s) automáticamente`, 'success');
             }
         }
     }
@@ -406,6 +399,17 @@ class CloudSync {
         await this.syncToCloud();
         await this.syncFromCloud();
         return true;
+    }
+
+    /**
+     * Trigger automatic sync after data changes
+     * Call this whenever local data is modified
+     */
+    async triggerAutoSync() {
+        if (!this.enabled) return;
+
+        console.log('📤 Data changed - syncing to cloud...');
+        await this.syncToCloud();
     }
 }
 

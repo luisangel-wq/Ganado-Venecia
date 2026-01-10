@@ -1,0 +1,112 @@
+# 🔄 Cómo Actualizar/Recargar la App
+
+## 📌 REGLA SIMPLE:
+Cuando te diga "Recarga la página", usa uno de estos métodos:
+
+---
+
+## 🖥️ WINDOWS (PC)
+
+### Método Rápido:
+- Presiona **F5**
+- O **Ctrl + R**
+
+### Método Completo (si el rápido no funciona):
+- Presiona **Ctrl + Shift + R**
+- O **Ctrl + F5**
+
+### Con el Mouse:
+- Click en el botón de refrescar (↻) en la barra de direcciones
+
+---
+
+## 🍎 MAC
+
+### Método Rápido:
+- Presiona **Cmd + R** (⌘ + R)
+
+### Método Completo (si el rápido no funciona):
+- Presiona **Cmd + Shift + R** (⌘ + Shift + R)
+
+### Con el Mouse:
+- Click en el botón de refrescar (↻) en la barra de direcciones
+
+---
+
+## 📱 TELÉFONO/TABLET
+
+### iPhone (Safari/Chrome):
+- **Desliza hacia abajo** desde arriba de la página
+- O toca el botón de refrescar (↻)
+
+### Android (Chrome):
+- **Desliza hacia abajo** desde arriba de la página
+- O toca los tres puntos (⋮) → "Recargar"
+
+---
+
+## 🤔 ¿CUÁL USAR?
+
+### Usa el Método Rápido (F5 o Cmd+R) cuando:
+- Te pidan recargar la página
+- Actualizaste el User ID
+- Hiciste cambios en Config
+- Quieres ver datos nuevos
+
+### Usa el Método Completo (Ctrl+Shift+R) cuando:
+- El método rápido no funcionó
+- La app se ve "vieja" o rara
+- Hay un error que no desaparece
+- Te lo indiquen específicamente
+
+---
+
+## ⚡ ATAJOS DE TECLADO RESUMIDOS
+
+| Acción | Windows | Mac |
+|--------|---------|-----|
+| Recargar | F5 | Cmd + R |
+| Recargar | Ctrl + R | Cmd + R |
+| Forzar recarga | Ctrl + Shift + R | Cmd + Shift + R |
+| Forzar recarga | Ctrl + F5 | Shift + Click ↻ |
+
+---
+
+## ✅ CÓMO SABER SI FUNCIONÓ
+
+Después de recargar:
+- ✅ La página debe parpadear/recargarse
+- ✅ Vuelves al inicio de la página
+- ✅ Los cambios deben aparecer
+- ✅ El número de versión puede cambiar (si lo hay)
+
+---
+
+## 🚨 SI NO FUNCIONA
+
+1. Cierra completamente el navegador
+2. Vuelve a abrirlo
+3. Abre la app de nuevo
+4. Debería funcionar
+
+Si aún no funciona:
+- Reinicia tu computadora/teléfono
+- O contacta a quien te compartió la app
+
+---
+
+## 💡 DATO ÚTIL
+
+**No pierdes datos al recargar:**
+- Tus datos están guardados
+- Recargar solo actualiza el código
+- Es 100% seguro
+
+---
+
+**RECORDAR:**
+- Windows: F5
+- Mac: Cmd + R
+- Móvil: Desliza hacia abajo
+
+¡Así de simple! 🎉
