@@ -2939,16 +2939,55 @@
                     <span>📈 Seguimiento de Peso y Progreso</span>
                 </div>
                 <div class="card-body">
-                    <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #10b981;">
-                        <strong>📊 Control de Peso Individual</strong>
-                        <p style="margin: 0.5rem 0 0 0; color: #555;">
-                            Registra actualizaciones de peso de tus animales para calcular el GDP real y monitorear el crecimiento.
-                        </p>
+                    <!-- AI Dictation for Weight Updates -->
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 12px; padding: 1.25rem; border: 2px solid #8b5cf6;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">🎤</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #6d28d9;">AI Dictation</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #7c3aed;">Dicte chapeta, peso y condición</p>
+                                </div>
+                            </div>
+                            <button onclick="startProgressoDictation()" class="btn-voice" style="width: 100%;">
+                                🎤 Dictar Peso
+                            </button>
+                            <div id="progresoVoiceStatus" style="display: none; margin-top: 0.5rem;">
+                                <div style="background: white; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.85rem;">
+                                    <div id="progresoVoiceTranscript" style="color: #333; min-height: 24px;">Escuchando...</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-radius: 12px; padding: 1.25rem; border: 2px solid #10b981;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">⚖️</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #065f46;">Registro Manual</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #047857;">Formulario tradicional</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="showRegistrarPesoForm()" style="width: 100%; background: #10b981;">
+                                ➕ Registrar Peso
+                            </button>
+                        </div>
                     </div>
-                    
-                    <button class="btn btn-primary" onclick="showRegistrarPesoForm()" style="margin-bottom: 1.5rem;">
-                        ➕ Registrar Actualización de Peso
-                    </button>
+
+                    <!-- Pending Progreso Dictations -->
+                    <div id="pendingProgresoDictations" style="display: none; margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0;">📝 Dictaciones de Peso Pendientes</h3>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="clearProgresoDictations()" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                    🗑️ Limpiar
+                                </button>
+                                <button id="saveProgresoDictationsBtn" onclick="saveAllProgresoDictations()" class="btn btn-success" style="font-size: 0.9rem; padding: 0.5rem 1rem; background: #10b981;">
+                                    💾 Guardar Todo
+                                </button>
+                            </div>
+                        </div>
+                        <div id="progresoDictationsContainer" style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                        </div>
+                    </div>
                     
                     <!-- Peso Registration Form (hidden by default) -->
                     <div id="pesoFormContainer" style="display: none;">
@@ -12663,6 +12702,263 @@ document.addEventListener('DOMContentLoaded', async function() {
                 cloudSync.triggerAutoSync();
             }
         }
+
+        // ==================== PROGRESO SECTION DICTATION ====================
+        let pendingProgresoDictations = [];
+
+        function startProgressoDictation() {
+            if (!SpeechRecognition) {
+                showToast('⚠️ Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.', 'error');
+                return;
+            }
+
+            if (!recognition) {
+                initSpeechRecognition();
+            }
+
+            currentDictationContext = 'progreso';
+
+            // Show status
+            const statusEl = document.getElementById('progresoVoiceStatus');
+            const transcriptEl = document.getElementById('progresoVoiceTranscript');
+            if (statusEl) statusEl.style.display = 'block';
+            if (transcriptEl) transcriptEl.textContent = 'Escuchando...';
+
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                if (transcriptEl) {
+                    transcriptEl.textContent = finalTranscript || interimTranscript || 'Escuchando...';
+                }
+
+                if (finalTranscript) {
+                    processProgressoDictation(finalTranscript);
+                }
+            };
+
+            recognition.onend = function() {
+                if (statusEl) statusEl.style.display = 'none';
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                if (statusEl) statusEl.style.display = 'none';
+                if (event.error === 'not-allowed') {
+                    showToast('⚠️ Permiso de micrófono denegado', 'error');
+                }
+            };
+
+            try {
+                recognition.start();
+                showToast('🎤 Escuchando... Diga: "Animal [número], peso [kilos], [condición]"', 'info');
+            } catch (e) {
+                console.error('Error starting recognition:', e);
+            }
+        }
+
+        function processProgressoDictation(transcript) {
+            console.log('📝 Processing progreso dictation:', transcript);
+
+            const parsed = parseVoiceDictation(transcript);
+            console.log('📋 Parsed result:', parsed);
+
+            // Add to pending progreso dictations
+            const dictation = {
+                id: Date.now(),
+                chapeta: parsed.chapeta || '',
+                peso: parsed.peso || '',
+                condicion: parsed.condicion || '',
+                observaciones: transcript,
+                timestamp: new Date().toISOString()
+            };
+
+            pendingProgresoDictations.push(dictation);
+            updateProgresoDictationsUI();
+
+            showToast('✅ Dictación agregada. Puede continuar dictando o guardar.', 'success');
+        }
+
+        function updateProgresoDictationsUI() {
+            const container = document.getElementById('progresoDictationsContainer');
+            const section = document.getElementById('pendingProgresoDictations');
+
+            if (!container || !section) return;
+
+            if (pendingProgresoDictations.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+
+            container.innerHTML = pendingProgresoDictations.map((d, index) => {
+                // Find animal to show current info
+                const animal = d.chapeta ? data.entradas.find(e => String(e.numero) === String(d.chapeta)) : null;
+                const animalInfo = animal ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">Peso actual: ${animal.peso}kg | Raza: ${animal.raza || 'N/A'}</div>` : '';
+
+                return `
+                <div style="background: white; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${d.chapeta && d.peso ? '#10b981' : '#f59e0b'};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                        <div style="font-weight: bold; font-size: 1.2rem;">
+                            ${d.chapeta && d.peso ? '✅' : '📝'} Animal:
+                            <input type="text" value="${d.chapeta}" onchange="updateProgresoDictation(${d.id}, 'chapeta', this.value)"
+                                   style="width: 80px; font-size: 1.1rem; font-weight: bold; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;">
+                        </div>
+                        <button onclick="removeProgresoDictation(${d.id})" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;">✕</button>
+                    </div>
+
+                    ${animalInfo}
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <label style="font-size: 0.8rem; color: #666;">Nuevo Peso (kg):</label>
+                            <input type="number" value="${d.peso}" onchange="updateProgresoDictation(${d.id}, 'peso', this.value)"
+                                   style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #666;">Condición General:</label>
+                            <select onchange="updateProgresoDictation(${d.id}, 'condicion', this.value)"
+                                    style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
+                                <option value="" ${!d.condicion ? 'selected' : ''}>Seleccionar...</option>
+                                <option value="Excelente" ${d.condicion === 'Excelente' ? 'selected' : ''}>Excelente</option>
+                                <option value="Muy bien" ${d.condicion === 'Muy bien' ? 'selected' : ''}>Muy bien</option>
+                                <option value="Buenas condiciones" ${d.condicion === 'Buenas condiciones' ? 'selected' : ''}>Buenas condiciones</option>
+                                <option value="Regular" ${d.condicion === 'Regular' ? 'selected' : ''}>Regular</option>
+                                <option value="Flaco" ${d.condicion === 'Flaco' ? 'selected' : ''}>Flaco</option>
+                                <option value="Enfermo" ${d.condicion === 'Enfermo' ? 'selected' : ''}>Enfermo</option>
+                                <option value="Recuperándose" ${d.condicion === 'Recuperándose' ? 'selected' : ''}>Recuperándose</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.8rem; color: #666;">Observaciones:</label>
+                        <textarea onchange="updateProgresoDictation(${d.id}, 'observaciones', this.value)"
+                                  style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px; min-height: 50px; resize: vertical;">${d.observaciones}</textarea>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function updateProgresoDictation(id, field, value) {
+            const dictation = pendingProgresoDictations.find(d => d.id === id);
+            if (dictation) {
+                dictation[field] = value;
+                updateProgresoDictationsUI();
+            }
+        }
+
+        function removeProgresoDictation(id) {
+            pendingProgresoDictations = pendingProgresoDictations.filter(d => d.id !== id);
+            updateProgresoDictationsUI();
+        }
+
+        function clearProgresoDictations() {
+            if (pendingProgresoDictations.length === 0) return;
+            if (confirm('¿Está seguro de borrar todas las dictaciones pendientes?')) {
+                pendingProgresoDictations = [];
+                updateProgresoDictationsUI();
+                showToast('🗑️ Dictaciones borradas', 'info');
+            }
+        }
+
+        function saveAllProgresoDictations() {
+            const validDictations = pendingProgresoDictations.filter(d => d.chapeta && d.peso);
+
+            if (validDictations.length === 0) {
+                showToast('⚠️ No hay dictaciones completas para guardar (necesita chapeta y peso)', 'warning');
+                return;
+            }
+
+            let savedCount = 0;
+            let errorCount = 0;
+
+            validDictations.forEach(d => {
+                try {
+                    const animal = data.entradas.find(e => String(e.numero) === String(d.chapeta));
+
+                    if (!animal) {
+                        console.warn(`Animal ${d.chapeta} not found`);
+                        errorCount++;
+                        return;
+                    }
+
+                    // Get previous weight
+                    const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(d.chapeta)).sort((a, b) => {
+                        const dateCompare = new Date(b.fecha) - new Date(a.fecha);
+                        if (dateCompare !== 0) return dateCompare;
+                        return (b.id || 0) - (a.id || 0);
+                    }) : [];
+                    const lastUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
+                    const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
+
+                    const pesoNuevo = parseFloat(d.peso);
+                    const ganancia = pesoNuevo - pesoAnterior;
+
+                    // Calculate days
+                    const diasDesdeUltimo = lastUpdate
+                        ? Math.max(1, Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24)))
+                        : getDiasEnFinca(animal.fechaEntrada);
+
+                    const gdpReal = diasDesdeUltimo > 0 ? (ganancia / diasDesdeUltimo).toFixed(2) : 0;
+
+                    // Add weight update
+                    data.pesoUpdates.push({
+                        id: Date.now() + Math.random(),
+                        numero: d.chapeta,
+                        fecha: new Date().toISOString().split('T')[0],
+                        pesoAnterior: pesoAnterior,
+                        pesoNuevo: pesoNuevo,
+                        ganancia: ganancia,
+                        dias: diasDesdeUltimo,
+                        gdpReal: parseFloat(gdpReal),
+                        observaciones: d.observaciones || 'Actualizado por dictado de voz'
+                    });
+
+                    // Update animal condition if provided
+                    if (d.condicion) {
+                        animal.condicionGeneral = d.condicion;
+                    }
+
+                    savedCount++;
+                } catch (error) {
+                    console.error('Error saving dictation for', d.chapeta, error);
+                    errorCount++;
+                }
+            });
+
+            // Save data
+            saveData();
+
+            // Remove saved dictations
+            const savedIds = validDictations.map(d => d.id);
+            pendingProgresoDictations = pendingProgresoDictations.filter(d => !savedIds.includes(d.id));
+            updateProgresoDictationsUI();
+
+            // Update views
+            updateAllViews();
+
+            if (errorCount > 0) {
+                showToast(`✅ ${savedCount} guardados, ⚠️ ${errorCount} errores (animales no encontrados)`, 'warning');
+            } else {
+                showToast(`✅ ${savedCount} actualización(es) de peso guardadas`, 'success');
+            }
+
+            // Trigger cloud sync
+            if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                cloudSync.triggerAutoSync();
+            }
+        }
+        // ==================== END PROGRESO DICTATION ====================
 
         // Fill weight update modal from voice
         function fillWeightUpdateFromVoice(parsed) {
