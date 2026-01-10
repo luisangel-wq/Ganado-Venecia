@@ -1630,7 +1630,7 @@
                     <div>Valor Inventario</div>
                 </div>
             </div>
-            <div class="app-version-badge" id="appVersionHeader">v--</div>
+            <div class="app-version-badge" id="appVersionHeader">v2 · 2026-01-10</div>
         </div>
     </header>
     
@@ -1673,13 +1673,9 @@
                 <span class="nav-tab-icon">📤</span>
                 <span>Salidas</span>
             </button>
-            <button class="nav-tab" data-tab="reportes">
-                <span class="nav-tab-icon">📈</span>
-                <span>Reportes</span>
-            </button>
             <button class="nav-tab" data-tab="analytics">
                 <span class="nav-tab-icon">🤖</span>
-                <span>IA</span>
+                <span>Reportes & IA</span>
             </button>
             <button class="nav-tab" data-tab="config">
                 <span class="nav-tab-icon">⚙️</span>
@@ -3355,109 +3351,7 @@
             </div>
         </div>
         
-        <!-- Tab: Reportes -->
-        <div id="tab-reportes" class="tab-content">
-            <div class="summary-grid">
-                <div class="summary-box">
-                    <div class="summary-box-icon">📥</div>
-                    <div class="summary-box-value" id="reportTotalCompras">0</div>
-                    <div class="summary-box-label">Total Compras</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-box-icon">🐣</div>
-                    <div class="summary-box-value" id="reportTotalNacimientos">0</div>
-                    <div class="summary-box-label">Total Nacimientos</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-box-icon">💵</div>
-                    <div class="summary-box-value" id="reportTotalVentas">0</div>
-                    <div class="summary-box-label">Total Ventas</div>
-                </div>
-                <div class="summary-box">
-                    <div class="summary-box-icon">✝️</div>
-                    <div class="summary-box-value" id="reportTotalMuertes">0</div>
-                    <div class="summary-box-label">Total Muertes</div>
-                </div>
-            </div>
-
-            <div class="filters" style="flex-wrap: wrap; margin-bottom: 1.5rem;">
-                <input type="text" class="form-input" id="reportesSearch" placeholder="Buscar por vendedor o comprador..." oninput="filterReportes()" style="flex: 1; min-width: 240px;">
-                <select class="form-select" id="reportesTipoFilter" onchange="filterReportes()">
-                    <option value="">Todos los tipos</option>
-                    <option value="compra">Compras</option>
-                    <option value="nacimiento">Nacimientos</option>
-                    <option value="venta">Ventas</option>
-                    <option value="muerte">Muertes</option>
-                </select>
-                <select class="form-select" id="reportesPeriodoFilter" onchange="handleReportesPeriodoChange()" style="min-width: 150px;">
-                    <option value="">Todos los registros</option>
-                    <option value="ano_actual">📅 Año en curso</option>
-                    <option value="ultimo_mes">📆 Último mes</option>
-                    <option value="ano_especifico">🗓️ Año específico</option>
-                    <option value="rango_fechas">📊 Rango de fechas</option>
-                </select>
-                <select class="form-select" id="reportesYearSelect" style="display:none; min-width: 100px;" onchange="filterReportes()">
-                    <option value="">Seleccionar año</option>
-                </select>
-                <div id="reportesDateRange" style="display:none; display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="date" class="form-input" id="reportesDateFrom" onchange="filterReportes()" style="width: auto;">
-                    <span>a</span>
-                    <input type="date" class="form-input" id="reportesDateTo" onchange="filterReportes()" style="width: auto;">
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <span>📊 Resumen por Vendedor</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-container">
-                        <table id="vendedoresTableContainer">
-                            <thead>
-                                <tr>
-                                    <th class="sortable" data-sort="vendedor" data-type="text">Vendedor</th>
-                                    <th class="sortable text-right" data-sort="count" data-type="number">Animales</th>
-                                    <th class="sortable text-right" data-sort="kg" data-type="number">Kg Totales</th>
-                                    <th class="sortable text-right" data-sort="inversion" data-type="number">Inversión</th>
-                                    <th class="sortable text-right" data-sort="precioKg" data-type="number">$/Kg Promedio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="vendedoresReport">
-                                <tr><td colspan="5" class="text-center">No hay datos</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <span>🤝 Resumen por Comprador</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-container">
-                        <table id="compradoresTableContainer">
-                            <thead>
-                                <tr>
-                                    <th class="sortable" data-sort="comprador" data-type="text">Comprador</th>
-                                    <th class="sortable text-right" data-sort="count" data-type="number">Animales</th>
-                                    <th class="sortable text-right" data-sort="kg" data-type="number">Kg Totales</th>
-                                    <th class="sortable text-right" data-sort="ingresos" data-type="number">Ingresos</th>
-                                    <th class="sortable text-right" data-sort="gdp" data-type="number">GDP Promedio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="compradoresReport">
-                                <tr><td colspan="5" class="text-center">No hay datos</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        </div>
-        
-        
-        <!-- Tab: Analytics IA -->
+        <!-- Tab: Reportes & IA -->
         <div id="tab-analytics" class="tab-content">
             <!-- Custom Question Chatbox -->
             <div class="card" style="margin-bottom: 1.5rem;">
@@ -3573,9 +3467,9 @@
                 </div>
                 <div class="card-body">
                     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                        <div style="font-size: 1.2rem; font-weight: 700;" id="appVersionConfig">v--</div>
+                        <div style="font-size: 1.2rem; font-weight: 700;" id="appVersionConfig">v2</div>
                         <div style="color: #666; font-size: 0.9rem;">
-                            Actualizado: <span id="appBuildDate">--</span>
+                            Actualizado: <span id="appBuildDate">2026-01-10</span>
                         </div>
                     </div>
                     <div style="margin-top: 0.75rem; color: #6b7280; font-size: 0.85rem;">
@@ -3691,52 +3585,51 @@
                         </div>
                     </div>
                     
-                    <!-- Sync Controls -->
-                    <div class="form-group">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 1rem; background: white; border: 2px solid #e5e7eb; border-radius: 8px;">
-                            <input type="checkbox" id="autoSyncEnabled" checked onchange="toggleAutoSync()" style="width: 20px; height: 20px;">
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; margin-bottom: 0.25rem;">Sincronización Automática</div>
-                                <div style="font-size: 0.85rem; color: #666;">Los cambios se guardan automáticamente en la nube</div>
-                            </div>
-                        </label>
-                    </div>
-                    
-                    <!-- Manual Sync Buttons -->
-                    <div class="btn-group" style="margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <button class="btn btn-primary" onclick="manualSync()" id="manualSyncBtn">
-                            ☁️ Sincronizar Ahora
-                        </button>
-                        <button class="btn btn-success" onclick="forceUploadToCloud()" id="forceUploadBtn" style="background: #059669;">
-                            📤 Subir a la Nube
-                        </button>
-                        <button class="btn btn-warning" onclick="forceDownloadFromCloud()" id="forceDownloadBtn" style="background: #d97706;">
-                            📥 Descargar de la Nube
-                        </button>
-                    </div>
-
-                    <!-- Sync Status Display -->
-                    <div id="syncStatusPanel" style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd; font-size: 0.85rem;">
-                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: #0369a1;">Estado de Sincronización:</div>
-                        <div id="syncStatusText" style="color: #0c4a6e;">Verificando...</div>
-                    </div>
-
-                    <!-- Backup to Cloud Section -->
-                    <div style="margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; border: 2px solid #3b82f6;">
-                        <h4 style="margin: 0 0 1rem 0; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="font-size: 1.3rem;">📁</span> Backup y Restauración
+                    <!-- ========== CLOUD BACKUP ========== -->
+                    <div style="padding: 1.25rem; background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-radius: 12px; border: 2px solid #22c55e; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #166534; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.3rem;">☁️</span> Backup en la Nube (Firebase)
                         </h4>
-                        <p style="margin: 0 0 1rem 0; color: #1e3a8a; font-size: 0.9rem;">
-                            Suba su archivo de backup JSON para restaurar los datos y sincronizarlos automáticamente con todos los dispositivos.
+                        <p style="margin: 0 0 1rem 0; color: #166534; font-size: 0.85rem;">
+                            Sincroniza automáticamente entre todos los dispositivos de la familia.
+                        </p>
+
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem; background: white; border-radius: 8px; margin-bottom: 1rem;">
+                            <input type="checkbox" id="autoSyncEnabled" checked onchange="toggleAutoSync()" style="width: 18px; height: 18px;">
+                            <span style="font-size: 0.9rem;">Sincronización Automática</span>
+                        </label>
+
+                        <div class="btn-group" style="flex-wrap: wrap; gap: 0.5rem;">
+                            <button class="btn" onclick="forceUploadToCloud()" id="forceUploadBtn" style="background: #16a34a; color: white;">
+                                📤 Subir a Nube
+                            </button>
+                            <button class="btn" onclick="forceDownloadFromCloud()" id="forceDownloadBtn" style="background: #0891b2; color: white;">
+                                📥 Descargar de Nube
+                            </button>
+                        </div>
+
+                        <div id="syncStatusPanel" style="margin-top: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.7); border-radius: 8px; font-size: 0.8rem;">
+                            <div id="syncStatusText" style="color: #166534;">Verificando...</div>
+                        </div>
+                    </div>
+
+                    <!-- ========== LOCAL BACKUP ========== -->
+                    <div style="padding: 1.25rem; background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.3rem;">💾</span> Backup Local (Archivo)
+                        </h4>
+                        <p style="margin: 0 0 1rem 0; color: #1e3a8a; font-size: 0.85rem;">
+                            Guarde una copia en su computadora o restaure desde un archivo.
                         </p>
 
                         <div class="btn-group" style="flex-wrap: wrap; gap: 0.5rem;">
-                            <button class="btn btn-primary" onclick="uploadBackupToCloud()" style="background: #2563eb;">
-                                📤 Subir Backup a la Nube
+                            <button class="btn" onclick="downloadBackupFromApp()" style="background: #2563eb; color: white;">
+                                📥 Descargar a Computadora
                             </button>
-                            <button class="btn btn-success" onclick="downloadBackupFromApp()" style="background: #059669;">
-                                💾 Descargar Backup
+                            <button class="btn" onclick="document.getElementById('restoreFileInput').click()" style="background: #7c3aed; color: white;">
+                                📤 Restaurar desde Archivo
                             </button>
+                            <input type="file" id="restoreFileInput" accept=".json" style="display: none;" onchange="restoreFromLocalFile(this)">
                         </div>
 
                         <div id="backupUploadStatus" style="margin-top: 1rem; display: none;"></div>
@@ -3816,6 +3709,21 @@
                         </div>
                         <div style="font-size: 0.8rem; color: #0369a1; margin-top: 0.5rem;">
                             Este GDP se usa para estimar el peso actual del inventario
+                        </div>
+                    </div>
+
+                    <!-- Data Management -->
+                    <div style="background: #fef2f2; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; border: 2px solid #fca5a5;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="margin: 0; color: #991b1b;">🗑️ Limpiar Datos de Peso</h4>
+                                <div style="font-size: 0.8rem; color: #991b1b; margin-top: 0.25rem;">
+                                    Elimina todas las actualizaciones de peso del Progreso (usa con cuidado)
+                                </div>
+                            </div>
+                            <button onclick="clearAllPesoUpdates()" class="btn" style="background: #dc2626; color: white; font-size: 0.85rem; padding: 0.5rem 1rem;">
+                                Limpiar Todo
+                            </button>
                         </div>
                     </div>
 
@@ -3945,8 +3853,8 @@
         }
 
         // App version info (update when publishing)
-        const APP_VERSION = '2.1';
-        const APP_BUILD_DATE = '2025-01-09';
+        const APP_VERSION = '2';
+        const APP_BUILD_DATE = '2026-01-10';
         
         // ==================== DATA STORAGE ====================
         let data = {
@@ -4137,11 +4045,13 @@
                 updateWeatherVisuals();
             }
             
-            // Show last weather change info if available
+            // Show last weather change info if available (only if weather UI exists)
             if (data.weatherHistory && data.weatherHistory.length > 0) {
                 const lastChange = data.weatherHistory[data.weatherHistory.length - 1];
-                document.getElementById('weatherChangeInfo').style.display = 'block';
-                document.getElementById('lastWeatherChange').textContent = `${getTemporadaDisplay(lastChange.to)} - ${formatDate(lastChange.fecha)}`;
+                const weatherInfoEl = document.getElementById('weatherChangeInfo');
+                const lastWeatherEl = document.getElementById('lastWeatherChange');
+                if (weatherInfoEl) weatherInfoEl.style.display = 'block';
+                if (lastWeatherEl) lastWeatherEl.textContent = `${getTemporadaDisplay(lastChange.to)} - ${formatDate(lastChange.fecha)}`;
             }
         }
         
@@ -4165,9 +4075,11 @@
                     gdp: data.config.gdp
                 });
                 
-                // Show last change info
-                document.getElementById('weatherChangeInfo').style.display = 'block';
-                document.getElementById('lastWeatherChange').textContent = `${getTemporadaDisplay(selectedWeather)} - ${formatDate(new Date().toISOString().split('T')[0])}`;
+                // Show last change info (only if weather UI exists)
+                const weatherInfoEl = document.getElementById('weatherChangeInfo');
+                const lastWeatherEl = document.getElementById('lastWeatherChange');
+                if (weatherInfoEl) weatherInfoEl.style.display = 'block';
+                if (lastWeatherEl) lastWeatherEl.textContent = `${getTemporadaDisplay(selectedWeather)} - ${formatDate(new Date().toISOString().split('T')[0])}`;
             }
             
             // Update GDP field
@@ -5915,8 +5827,8 @@
                 // Only show estimated/actual weight for MACHOS - females are not raised for weight gain
                 if (animal.sexo === 'HEMBRA') {
                     pesoDisplay = `<span style="color: #9ca3af; font-style: italic;">Hembra</span>`;
-                } else if (lastManualUpdate) {
-                    // Has manual weight update - compare to default estimate
+                } else if (lastManualUpdate && !lastManualUpdate.isDemo) {
+                    // Has REAL manual weight update (not demo data) - compare to default estimate
                     const pesoReal = lastManualUpdate.pesoNuevo;
                     if (pesoReal > pesoEstimadoDefault) {
                         // Above estimate - green and bold
@@ -5930,7 +5842,7 @@
                     }
                     pesoDisplay = `<span style="${pesoStyle}">${pesoReal.toFixed(0)} kg</span>`;
                 } else {
-                    // No manual update - default black (not bold, just regular)
+                    // No manual update OR only demo data - default black (not bold, just regular)
                     pesoDisplay = `<span>${pesoEstimadoDefault.toFixed(0)} kg</span>`;
                 }
 
@@ -6052,12 +5964,15 @@
         }
         
         function updateReports() {
+            // Reportes tab was removed - skip if elements don't exist
+            if (!document.getElementById('reportTotalCompras')) return;
+
             const { entradasFiltered, salidasFiltered } = getReportesFilteredData();
             const compras = entradasFiltered.filter(e => !e.numeroVaca).length;
             const nacimientos = entradasFiltered.filter(e => e.numeroVaca).length;
             const ventas = salidasFiltered.filter(s => s.comprador !== 'MUERTE').length;
             const muertes = salidasFiltered.filter(s => s.comprador === 'MUERTE').length;
-            
+
             document.getElementById('reportTotalCompras').textContent = compras;
             document.getElementById('reportTotalNacimientos').textContent = nacimientos;
             document.getElementById('reportTotalVentas').textContent = ventas;
@@ -7402,6 +7317,127 @@
             a.click();
             URL.revokeObjectURL(url);
             showToast('💾 Backup descargado', 'success');
+        }
+
+        // Restore from local file
+        async function restoreFromLocalFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusDiv = document.getElementById('backupUploadStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="padding: 1rem; background: #fef3c7; border-radius: 8px; color: #92400e;">📖 Leyendo archivo...</div>';
+
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                try {
+                    const backup = JSON.parse(event.target.result);
+
+                    // Validate backup structure
+                    if (!backup.version || !backup.ranches) {
+                        throw new Error('Archivo de backup inválido - debe tener version y ranches');
+                    }
+
+                    // Count animals and photos in backup
+                    let totalAnimals = 0;
+                    let totalPhotos = 0;
+                    let ranchNames = [];
+
+                    const backupKeyMapping = {
+                        'la_coruna': 'la_coruna', 'LaCoruna': 'la_coruna', 'La Coruña': 'la_coruna',
+                        'La_Coruna': 'la_coruna', 'laCoruna': 'la_coruna', 'coruna': 'la_coruna',
+                        'catalina': 'santa_catalina', 'santa_catalina': 'santa_catalina',
+                        'Catalina': 'santa_catalina', 'SantaCatalina': 'santa_catalina',
+                        'Santa_Catalina': 'santa_catalina', 'santaCatalina': 'santa_catalina',
+                        'la_vega': 'la_vega', 'LaVega': 'la_vega', 'La Vega': 'la_vega',
+                        'La_Vega': 'la_vega', 'laVega': 'la_vega', 'vega': 'la_vega'
+                    };
+
+                    Object.entries(backup.ranches).forEach(([key, ranchData]) => {
+                        const normalizedKey = backupKeyMapping[key] || key;
+                        if (RANCHES[normalizedKey]) {
+                            const animals = ranchData.data?.entradas?.length || 0;
+                            const photos = ranchData.animalPhotos ? Object.keys(ranchData.animalPhotos).filter(k => ranchData.animalPhotos[k]?.photo).length : 0;
+                            totalAnimals += animals;
+                            totalPhotos += photos;
+                            ranchNames.push(`${RANCHES[normalizedKey].name}: ${animals} animales, ${photos} fotos`);
+                        }
+                    });
+
+                    // Confirm restore
+                    const confirmMsg = `📂 RESTAURAR DESDE ARCHIVO\n\n` +
+                        `Archivo: ${file.name}\n` +
+                        `Fecha: ${backup.backupDate ? new Date(backup.backupDate).toLocaleString() : 'Desconocida'}\n\n` +
+                        `Contenido:\n${ranchNames.join('\n')}\n\n` +
+                        `Total: ${totalAnimals} animales, ${totalPhotos} fotos\n\n` +
+                        `⚠️ Esto REEMPLAZARÁ todos los datos locales actuales.\n¿Continuar?`;
+
+                    if (!confirm(confirmMsg)) {
+                        statusDiv.innerHTML = '<div style="padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">❌ Restauración cancelada</div>';
+                        input.value = '';
+                        return;
+                    }
+
+                    statusDiv.innerHTML = '<div style="padding: 1rem; background: #dbeafe; border-radius: 8px; color: #1e40af;">🔄 Restaurando datos...</div>';
+
+                    // Restore each ranch
+                    Object.entries(backup.ranches).forEach(([key, ranchData]) => {
+                        const normalizedKey = backupKeyMapping[key] || key;
+                        if (RANCHES[normalizedKey]) {
+                            const ranch = RANCHES[normalizedKey];
+
+                            // Restore ranch data
+                            if (ranchData.data) {
+                                localStorage.setItem(ranch.storageKey, JSON.stringify(ranchData.data));
+                            }
+
+                            // Restore photos
+                            if (ranchData.animalPhotos && Object.keys(ranchData.animalPhotos).length > 0) {
+                                localStorage.setItem('animalPhotos_' + normalizedKey, JSON.stringify(ranchData.animalPhotos));
+                            }
+                        }
+                    });
+
+                    // Restore last ranch selection
+                    if (backup.lastRanch) {
+                        localStorage.setItem('ganadoFinca_lastRanch', backup.lastRanch);
+                    }
+
+                    statusDiv.innerHTML = `<div style="padding: 1rem; background: #dcfce7; border-radius: 8px; color: #166534;">
+                        ✅ Restauración completada<br>
+                        <strong>${totalAnimals} animales</strong> y <strong>${totalPhotos} fotos</strong> restaurados<br>
+                        <small>Recargando página...</small>
+                    </div>`;
+
+                    // Sync to cloud after restore
+                    if (typeof cloudSync !== 'undefined' && cloudSync.isInitialized) {
+                        try {
+                            await cloudSync.syncToCloud();
+                            console.log('✅ Restored data synced to cloud');
+                        } catch (e) {
+                            console.error('Error syncing restored data:', e);
+                        }
+                    }
+
+                    // Reload page after 1.5 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+
+                } catch (error) {
+                    console.error('Error restoring backup:', error);
+                    statusDiv.innerHTML = `<div style="padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">
+                        ❌ Error: ${error.message}
+                    </div>`;
+                }
+            };
+
+            reader.onerror = function() {
+                statusDiv.innerHTML = '<div style="padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">❌ Error leyendo archivo</div>';
+            };
+
+            reader.readAsText(file);
+            input.value = ''; // Reset input
         }
 
         // Force upload ALL local data to cloud (overwrites cloud)
@@ -9669,6 +9705,119 @@
         }
         
         // ==================== ANIMAL PROFILE MODULE ====================
+
+        // Generate weight history table for animal profile
+        function generateWeightHistoryTable(animal, weightUpdates, gdp) {
+            // Sort updates by date ascending (oldest first) for chronological display
+            const sortedUpdates = [...weightUpdates].sort((a, b) => {
+                const dateCompare = new Date(a.fecha) - new Date(b.fecha);
+                if (dateCompare !== 0) return dateCompare;
+                return (a.id || 0) - (b.id || 0);
+            });
+
+            if (sortedUpdates.length === 0) {
+                return `<div style="margin-top: 1rem; padding: 0.75rem; background: #f9fafb; border-radius: 8px; text-align: center; color: #6b7280; font-size: 0.85rem;">
+                    📊 Sin historial de pesajes registrados
+                </div>`;
+            }
+
+            // Build table with entry weight + all updates
+            let tableHtml = `
+                <div style="margin-top: 1rem; overflow-x: auto;">
+                    <div style="font-size: 0.8rem; color: #374151; margin-bottom: 0.5rem; font-weight: 600;">📊 Historial de Pesajes</div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 0.5rem; text-align: left; border-bottom: 2px solid #e5e7eb;">Fecha</th>
+                                <th style="padding: 0.5rem; text-align: right; border-bottom: 2px solid #e5e7eb;">Peso</th>
+                                <th style="padding: 0.5rem; text-align: right; border-bottom: 2px solid #e5e7eb;">GDP Período</th>
+                                <th style="padding: 0.5rem; text-align: right; border-bottom: 2px solid #e5e7eb;">GDP Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            // Entry row
+            const entryDate = new Date(animal.fechaEntrada);
+            tableHtml += `
+                <tr style="background: #f0fdf4;">
+                    <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e7eb;">
+                        <strong>Entrada</strong><br>
+                        <span style="font-size: 0.7rem; color: #6b7280;">${entryDate.toLocaleDateString('es-CO')}</span>
+                    </td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: bold;">
+                        ${animal.peso} kg
+                    </td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                        -
+                    </td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+                        -
+                    </td>
+                </tr>`;
+
+            // Weight update rows
+            let previousWeight = animal.peso;
+            let previousDate = entryDate;
+
+            sortedUpdates.forEach((update, index) => {
+                const updateDate = new Date(update.fecha);
+                const daysSincePrevious = Math.max(1, Math.floor((updateDate - previousDate) / (1000 * 60 * 60 * 24)));
+                const daysSinceEntry = Math.max(1, Math.floor((updateDate - entryDate) / (1000 * 60 * 60 * 24)));
+
+                const periodGain = update.pesoNuevo - previousWeight;
+                const totalGain = update.pesoNuevo - animal.peso;
+
+                const periodGDP = periodGain / daysSincePrevious;
+                const totalGDP = totalGain / daysSinceEntry;
+
+                // Calculate expected weight at this date
+                const expectedWeight = animal.peso + (daysSinceEntry * gdp);
+
+                // Color based on comparison to expected
+                let weightColor = '';
+                if (update.pesoNuevo > expectedWeight) {
+                    weightColor = 'color: #16a34a; font-weight: bold;'; // Green - above estimate
+                } else if (update.pesoNuevo < expectedWeight) {
+                    weightColor = 'color: #dc2626; font-weight: bold;'; // Red - below estimate
+                }
+
+                // GDP color based on comparison to expected GDP
+                let periodGDPColor = periodGDP >= gdp ? 'color: #16a34a;' : 'color: #dc2626;';
+                let totalGDPColor = totalGDP >= gdp ? 'color: #16a34a;' : 'color: #dc2626;';
+
+                tableHtml += `
+                    <tr>
+                        <td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e7eb;">
+                            ${updateDate.toLocaleDateString('es-CO')}<br>
+                            <span style="font-size: 0.7rem; color: #6b7280;">${daysSincePrevious}d desde anterior</span>
+                        </td>
+                        <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; ${weightColor}">
+                            ${update.pesoNuevo} kg
+                            <span style="font-size: 0.7rem; display: block; ${periodGain >= 0 ? 'color: #16a34a;' : 'color: #dc2626;'}">${periodGain >= 0 ? '+' : ''}${periodGain.toFixed(0)} kg</span>
+                        </td>
+                        <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; ${periodGDPColor}">
+                            ${periodGDP.toFixed(2)}
+                        </td>
+                        <td style="padding: 0.4rem 0.5rem; text-align: right; border-bottom: 1px solid #e5e7eb; ${totalGDPColor}">
+                            ${totalGDP.toFixed(2)}
+                        </td>
+                    </tr>`;
+
+                previousWeight = update.pesoNuevo;
+                previousDate = updateDate;
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                    <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.5rem; text-align: right;">
+                        GDP esperado: ${gdp.toFixed(2)} kg/día | <span style="color: #16a34a;">Verde = sobre estimado</span> | <span style="color: #dc2626;">Rojo = bajo estimado</span>
+                    </div>
+                </div>`;
+
+            return tableHtml;
+        }
+
         function showAnimalProfile(numero) {
             const animal = getInventario().find(a => a.numero === numero);
             if (!animal) {
@@ -9813,8 +9962,11 @@
                             <span class="profile-item-value">${calculatedGDP.toFixed(2)} kg/día</span>
                         </div>
                     </div>
+
+                    <!-- Weight History Table -->
+                    ${generateWeightHistoryTable(animal, animalUpdates, gdp)}
                 </div>
-                
+
                 <!-- Financial Section -->
                 <div class="profile-section" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
                     <div class="profile-section-title">💰 Información Financiera</div>
@@ -13899,6 +14051,27 @@ document.addEventListener('DOMContentLoaded', async function() {
             saveData();
             refreshPerformanceAnalytics();
             showToast('Datos demo eliminados', 'info');
+        }
+
+        // Clear ALL peso updates (use with caution)
+        function clearAllPesoUpdates() {
+            const count = data.pesoUpdates ? data.pesoUpdates.length : 0;
+            if (count === 0) {
+                showToast('No hay actualizaciones de peso para eliminar', 'info');
+                return;
+            }
+
+            if (!confirm(`⚠️ ¿Eliminar TODAS las ${count} actualizaciones de peso?\n\nEsto no se puede deshacer.`)) return;
+
+            data.pesoUpdates = [];
+            saveData();
+
+            // Refresh views
+            if (typeof updateInventarioTable === 'function') updateInventarioTable();
+            if (typeof updateProgresoView === 'function') updateProgresoView();
+            if (typeof refreshPerformanceAnalytics === 'function') refreshPerformanceAnalytics();
+
+            showToast(`🗑️ ${count} actualizaciones de peso eliminadas`, 'warning');
         }
         // ==================== END DEMO DATA SIMULATION ====================
 
