@@ -3374,9 +3374,15 @@
                     </div>
                     
                     <!-- Manual Sync Button -->
-                    <div class="btn-group" style="margin-top: 1rem;">
+                    <div class="btn-group" style="margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                         <button class="btn btn-primary" onclick="manualSync()" id="manualSyncBtn">
                             ☁️ Sincronizar Ahora
+                        </button>
+                        <button class="btn btn-success" onclick="forceUploadToCloud()" id="forceUploadBtn" style="background: #059669;">
+                            📤 Subir TODO a la Nube
+                        </button>
+                        <button class="btn btn-warning" onclick="forceDownloadFromCloud()" id="forceDownloadBtn" style="background: #d97706;">
+                            📥 Descargar de la Nube
                         </button>
                         <button class="btn btn-secondary" onclick="viewSyncHistory()">
                             📜 Ver Historial
@@ -6830,13 +6836,118 @@
                 btn.innerHTML = originalText;
             }
         }
-        
+
+        // Force upload ALL local data to cloud (overwrites cloud)
+        async function forceUploadToCloud() {
+            if (typeof cloudSync === 'undefined') {
+                showToast('⚠️ Cloud sync no disponible', 'error');
+                return;
+            }
+
+            const localCount = cloudSync.countLocalAnimals();
+            if (localCount === 0) {
+                showToast('⚠️ No hay datos locales para subir', 'warning');
+                return;
+            }
+
+            if (!confirm(`📤 SUBIR DATOS A LA NUBE\n\nEsto subirá ${localCount} animales a Firebase.\nLos datos en la nube serán reemplazados.\n\n¿Continuar?`)) {
+                return;
+            }
+
+            const btn = document.getElementById('forceUploadBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '📤 Subiendo...';
+
+            try {
+                // Initialize if needed
+                if (!cloudSync.enabled && typeof firebaseConfig !== 'undefined') {
+                    await cloudSync.initialize(firebaseConfig);
+                }
+
+                if (!cloudSync.enabled) {
+                    throw new Error('No se pudo inicializar Firebase');
+                }
+
+                await cloudSync.syncToCloud();
+                showToast(`✅ ${localCount} animales subidos a la nube exitosamente`, 'success');
+                updateSyncStatus();
+            } catch (error) {
+                console.error('Force upload error:', error);
+                showToast('❌ Error al subir: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Force download ALL data from cloud (overwrites local)
+        async function forceDownloadFromCloud() {
+            if (typeof cloudSync === 'undefined') {
+                showToast('⚠️ Cloud sync no disponible', 'error');
+                return;
+            }
+
+            if (!confirm('📥 DESCARGAR DATOS DE LA NUBE\n\nEsto descargará los datos de Firebase y reemplazará los datos locales.\n\n¿Continuar?')) {
+                return;
+            }
+
+            const btn = document.getElementById('forceDownloadBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '📥 Descargando...';
+
+            try {
+                // Initialize if needed
+                if (!cloudSync.enabled && typeof firebaseConfig !== 'undefined') {
+                    await cloudSync.initialize(firebaseConfig);
+                }
+
+                if (!cloudSync.enabled) {
+                    throw new Error('No se pudo inicializar Firebase');
+                }
+
+                // Force download
+                const snapshot = await cloudSync.db.ref(`users/${cloudSync.userId}`).once('value');
+                const cloudData = snapshot.val();
+
+                if (!cloudData || !cloudData.ranches) {
+                    showToast('⚠️ No hay datos en la nube', 'warning');
+                    return;
+                }
+
+                const cloudCount = cloudSync.countAnimalsInData(cloudData);
+
+                // Apply data
+                Object.keys(cloudData.ranches).forEach(ranchId => {
+                    const ranch = RANCHES[ranchId];
+                    if (ranch) {
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
+                    }
+                });
+
+                if (cloudData.photos) {
+                    Object.keys(cloudData.photos).forEach(ranchId => {
+                        localStorage.setItem('animalPhotos_' + ranchId, JSON.stringify(cloudData.photos[ranchId]));
+                    });
+                }
+
+                showToast(`✅ ${cloudCount} animales descargados. Recargando...`, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } catch (error) {
+                console.error('Force download error:', error);
+                showToast('❌ Error al descargar: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
         function viewSyncHistory() {
             if (typeof cloudSync === 'undefined' || !cloudSync.isInitialized) {
                 showToast('⚠️ Cloud sync no está inicializado', 'error');
                 return;
             }
-            
+
             const history = cloudSync.getSyncHistory ? cloudSync.getSyncHistory() : [];
             
             if (history.length === 0) {
@@ -11656,13 +11767,23 @@ document.addEventListener('DOMContentLoaded', async function() {
                         }
                         
                         showToast('✅ Respaldo restaurado exitosamente', 'success');
-                        
-                        // Reload page to apply changes
-                        setTimeout(() => {
-                            if (confirm('La página se recargará para aplicar los cambios. ¿Continuar?')) {
+
+                        // FORCE SYNC TO CLOUD after restore
+                        if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                            showToast('☁️ Subiendo datos a la nube...', 'info');
+                            cloudSync.syncToCloud().then(() => {
+                                showToast('✅ Datos sincronizados con la nube', 'success');
+                                setTimeout(() => location.reload(), 1500);
+                            }).catch(err => {
+                                console.error('Sync error:', err);
+                                setTimeout(() => location.reload(), 1500);
+                            });
+                        } else {
+                            // Reload page to apply changes
+                            setTimeout(() => {
                                 location.reload();
-                            }
-                        }, 1000);
+                            }, 1500);
+                        }
                         
                     } catch (error) {
                         console.error('Error restoring backup:', error);
