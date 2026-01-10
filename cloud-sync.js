@@ -75,7 +75,12 @@ class CloudSync {
 
             this.enabled = true;
             this.isInitialized = true;
+
+            // CRITICAL: Load lastSync from localStorage before any comparisons
+            this.lastSync = localStorage.getItem('cloudSync_lastSync') || null;
+
             console.log('Cloud sync initialized with user ID:', this.userId);
+            console.log('Last sync time from storage:', this.lastSync);
 
             // Check if this is a new device (no local data)
             const localAnimalCount = this.countLocalAnimals();
@@ -86,47 +91,19 @@ class CloudSync {
                 // Force download from cloud for new devices
                 await this.forceDownloadFromCloud();
             } else {
-                // Always check if cloud has newer data (by timestamp, not just count)
-                const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
-                const cloudData = snapshot.val();
-                const cloudAnimalCount = this.countAnimalsInData(cloudData);
-
-                console.log(`📊 Local: ${localAnimalCount} animals, Cloud: ${cloudAnimalCount} animals`);
-
-                if (cloudData && cloudData.lastModified) {
-                    const cloudTime = new Date(cloudData.lastModified).getTime();
-                    const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
-
-                    console.log(`📅 Cloud time: ${cloudData.lastModified}, Local sync: ${this.lastSync || 'never'}`);
-
-                    if (cloudTime > localTime) {
-                        // Cloud has newer data - download it
-                        console.log('☁️ Cloud has newer data - downloading...');
-                        this.applySyncData(cloudData, false);
-
-                        // Reload page to show updated data
-                        if (typeof showToast === 'function') {
-                            showToast('☁️ Datos actualizados desde la nube', 'success');
-                        }
-                        setTimeout(() => window.location.reload(), 1000);
-                        return true;
-                    } else {
-                        console.log('✅ Local data is up to date');
-                    }
-                }
-
-                // Upload local data if we have it
-                if (localAnimalCount > 0) {
-                    console.log('📤 Syncing local data to cloud...');
-                    await this.syncToCloud();
-                }
+                // Device has local data - just upload to cloud on init
+                // Don't download on init to avoid loops - user can manually download if needed
+                console.log(`📊 Local: ${localAnimalCount} animals`);
+                console.log('📤 Syncing local data to cloud...');
+                await this.syncToCloud();
+                console.log('✅ Local data synced to cloud');
             }
 
-            // Setup real-time listeners
-            this.setupListeners();
+            // DISABLED: Real-time listeners were causing infinite loops
+            // this.setupListeners();
 
-            // Auto-sync every 30 seconds
-            this.syncInterval = setInterval(() => this.syncToCloud(), 30000);
+            // Auto-sync every 60 seconds (upload only)
+            this.syncInterval = setInterval(() => this.syncToCloud(), 60000);
 
             return true;
         } catch (error) {
@@ -207,14 +184,26 @@ class CloudSync {
 
         const userRef = this.db.ref(`users/${this.userId}`);
         let lastProcessedTime = 0; // Debounce to prevent rapid re-syncs
+        let isFirstLoad = true; // Skip the first trigger which is the initial load
 
         userRef.on('value', (snapshot) => {
+            // Skip the first load - we handle that in initialize()
+            if (isFirstLoad) {
+                isFirstLoad = false;
+                const cloudData = snapshot.val();
+                if (cloudData && cloudData.lastModified) {
+                    // Just update our lastSync to current cloud time
+                    this.lastSync = cloudData.lastModified;
+                    localStorage.setItem('cloudSync_lastSync', this.lastSync);
+                }
+                return;
+            }
+
             if (this.syncInProgress) return; // Avoid infinite loops
 
             const cloudData = snapshot.val();
             if (cloudData && cloudData.lastModified) {
                 const cloudTime = new Date(cloudData.lastModified).getTime();
-                const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
 
                 // Debounce: don't process same timestamp twice
                 if (cloudTime === lastProcessedTime) {
@@ -226,15 +215,13 @@ class CloudSync {
                 const myDeviceId = this.getDeviceId();
                 const isFromOtherDevice = cloudDeviceId && cloudDeviceId !== myDeviceId;
 
-                console.log(`📡 Cloud update: time=${cloudTime}, local=${localTime}, device=${cloudDeviceId}, myDevice=${myDeviceId}`);
-
-                // If cloud data is newer AND from another device, sync from cloud
-                if (cloudTime > localTime && isFromOtherDevice) {
-                    lastProcessedTime = cloudTime; // Mark as processed
-                    console.log(`☁️ Syncing changes from device ${cloudDeviceId}...`);
+                // Only sync if it's from another device
+                if (isFromOtherDevice) {
+                    lastProcessedTime = cloudTime;
+                    console.log(`☁️ Change from device ${cloudDeviceId} - syncing...`);
                     this.syncFromCloudSilent(cloudData);
-                } else if (cloudTime > localTime && !isFromOtherDevice) {
-                    // Update our lastSync to match cloud time to prevent re-triggering
+                } else {
+                    // It's our own change - just update lastSync
                     this.lastSync = cloudData.lastModified;
                     localStorage.setItem('cloudSync_lastSync', this.lastSync);
                 }
@@ -331,20 +318,23 @@ class CloudSync {
      * Silent sync from cloud (triggered by listeners)
      */
     syncFromCloudSilent(cloudData) {
-        // Show a brief notification that sync is happening from another device
-        if (typeof showToast === 'function') {
-            showToast('☁️ Recibiendo cambios de otro dispositivo...', 'info');
-        }
-
         // Apply data to localStorage first
         this.applySyncData(cloudData, false);
 
-        // Force page reload to ensure UI is updated with new data
-        // This is the most reliable way to ensure all views are refreshed
-        console.log('🔄 Reloading page to show changes from other device...');
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+        // Show notification
+        if (typeof showToast === 'function') {
+            showToast('☁️ Datos sincronizados desde otro dispositivo', 'success');
+        }
+
+        // Update UI without page reload to avoid loops
+        if (typeof loadData === 'function') {
+            loadData();
+        }
+        if (typeof updateAllViews === 'function') {
+            updateAllViews();
+        }
+
+        console.log('✅ Sync from other device complete - UI updated');
     }
 
     /**
