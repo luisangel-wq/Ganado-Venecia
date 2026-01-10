@@ -300,27 +300,92 @@ class CloudSync {
     }
 
     /**
-     * Sync data from cloud to local
+     * Sync data from cloud to local (FORCE download - user clicked button)
      */
     async syncFromCloud() {
         if (!this.enabled) return;
 
         try {
+            console.log('⬇️ USER REQUESTED: Downloading data from cloud...');
             const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
             const cloudData = snapshot.val();
-            
+
             if (!cloudData) {
                 console.log('No cloud data found, will upload local data');
                 await this.syncToCloud();
                 return;
             }
 
-            this.applySyncData(cloudData, true);
+            // Log what we're getting
+            const cloudCount = this.countAnimalsInData(cloudData);
+            const localCount = this.countLocalAnimals();
+            console.log(`📊 Cloud has ${cloudCount} animals, Local has ${localCount} animals`);
+
+            // FORCE apply - user explicitly requested download
+            await this.forceApplyCloudData(cloudData);
             return true;
         } catch (error) {
             console.error('Error syncing from cloud:', error);
             return false;
         }
+    }
+
+    /**
+     * Force apply cloud data (user explicitly requested)
+     */
+    async forceApplyCloudData(cloudData) {
+        if (!cloudData || !cloudData.ranches) {
+            console.log('No ranch data in cloud');
+            return;
+        }
+
+        const RANCHES = this.getRanches();
+        let changesCount = 0;
+
+        // Apply ALL ranch data from cloud
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            if (ranch) {
+                try {
+                    const cloudRanchData = cloudData.ranches[ranchId];
+                    const cloudCount = cloudRanchData?.entradas?.length || 0;
+
+                    localStorage.setItem(ranch.storageKey, JSON.stringify(cloudRanchData));
+                    console.log(`✅ Downloaded ${ranch.name}: ${cloudCount} animals`);
+                    changesCount++;
+                } catch (e) {
+                    console.error(`Error saving ${ranchId}:`, e);
+                }
+            }
+        });
+
+        // Apply ALL photos from cloud
+        if (cloudData.photos) {
+            Object.keys(cloudData.photos).forEach(ranchId => {
+                const photosKey = 'animalPhotos_' + ranchId;
+                try {
+                    const photoCount = Object.keys(cloudData.photos[ranchId] || {}).length;
+                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
+                    console.log(`✅ Downloaded photos for ${ranchId}: ${photoCount} photos`);
+                } catch (e) {
+                    console.error(`Error saving photos for ${ranchId}:`, e);
+                }
+            });
+        }
+
+        // Update lastSync
+        this.lastSync = cloudData.lastModified;
+        localStorage.setItem('cloudSync_lastSync', this.lastSync);
+
+        // Show success and RELOAD page to show new data
+        if (typeof showToast === 'function') {
+            showToast(`☁️ Descargado: ${changesCount} fincas actualizadas. Recargando...`, 'success');
+        }
+
+        console.log('🔄 Reloading page to show downloaded data...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     }
 
     /**
