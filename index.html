@@ -6880,14 +6880,20 @@
                         let totalAnimals = 0;
                         let ranchNames = [];
                         const backupKeyMapping = {
-                            'la_coruna': 'la_coruna', 'LaCoruna': 'la_coruna',
+                            'la_coruna': 'la_coruna', 'LaCoruna': 'la_coruna', 'La Coruña': 'la_coruna',
+                            'La_Coruna': 'la_coruna', 'laCoruna': 'la_coruna', 'coruna': 'la_coruna',
                             'catalina': 'santa_catalina', 'santa_catalina': 'santa_catalina',
                             'Catalina': 'santa_catalina', 'SantaCatalina': 'santa_catalina',
-                            'la_vega': 'la_vega', 'LaVega': 'la_vega'
+                            'Santa Catalina': 'santa_catalina', 'Santa_Catalina': 'santa_catalina',
+                            'la_vega': 'la_vega', 'LaVega': 'la_vega', 'La Vega': 'la_vega', 'La_Vega': 'la_vega'
                         };
 
+                        console.log('📋 Backup ranch keys found:', Object.keys(backup.ranches));
                         Object.keys(backup.ranches).forEach(key => {
                             const ranchData = backup.ranches[key];
+                            const mappedKey = backupKeyMapping[key] || key;
+                            const animalCount = ranchData.data?.entradas?.length || 0;
+                            console.log(`  - "${key}" → "${mappedKey}": ${animalCount} animals`);
                             if (ranchData.data && ranchData.data.entradas) {
                                 totalAnimals += ranchData.data.entradas.length;
                             }
