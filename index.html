@@ -3378,15 +3378,30 @@
                         <button class="btn btn-primary" onclick="manualSync()" id="manualSyncBtn">
                             ☁️ Sincronizar Ahora
                         </button>
-                        <button class="btn btn-success" onclick="forceUploadToCloud()" id="forceUploadBtn" style="background: #059669;">
-                            📤 Subir TODO a la Nube
-                        </button>
                         <button class="btn btn-warning" onclick="forceDownloadFromCloud()" id="forceDownloadBtn" style="background: #d97706;">
                             📥 Descargar de la Nube
                         </button>
-                        <button class="btn btn-secondary" onclick="viewSyncHistory()">
-                            📜 Ver Historial
-                        </button>
+                    </div>
+
+                    <!-- Backup to Cloud Section -->
+                    <div style="margin-top: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; border: 2px solid #3b82f6;">
+                        <h4 style="margin: 0 0 1rem 0; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.3rem;">📁</span> Backup y Restauración
+                        </h4>
+                        <p style="margin: 0 0 1rem 0; color: #1e3a8a; font-size: 0.9rem;">
+                            Suba su archivo de backup JSON para restaurar los datos y sincronizarlos automáticamente con todos los dispositivos.
+                        </p>
+
+                        <div class="btn-group" style="flex-wrap: wrap; gap: 0.5rem;">
+                            <button class="btn btn-primary" onclick="uploadBackupToCloud()" style="background: #2563eb;">
+                                📤 Subir Backup a la Nube
+                            </button>
+                            <button class="btn btn-success" onclick="downloadBackupFromApp()" style="background: #059669;">
+                                💾 Descargar Backup
+                            </button>
+                        </div>
+
+                        <div id="backupUploadStatus" style="margin-top: 1rem; display: none;"></div>
                     </div>
 
                     <!-- User ID Management Section -->
@@ -6835,6 +6850,142 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
+        }
+
+        // Upload backup file directly to cloud
+        async function uploadBackupToCloud() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const statusDiv = document.getElementById('backupUploadStatus');
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<div style="padding: 1rem; background: #fef3c7; border-radius: 8px; color: #92400e;">📖 Leyendo archivo...</div>';
+
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    try {
+                        const backup = JSON.parse(event.target.result);
+
+                        // Validate backup structure
+                        if (!backup.version || !backup.ranches) {
+                            throw new Error('Archivo de backup inválido - debe tener version y ranches');
+                        }
+
+                        // Count animals in backup
+                        let totalAnimals = 0;
+                        let ranchNames = [];
+                        const backupKeyMapping = {
+                            'la_coruna': 'la_coruna', 'LaCoruna': 'la_coruna',
+                            'catalina': 'santa_catalina', 'santa_catalina': 'santa_catalina',
+                            'Catalina': 'santa_catalina', 'SantaCatalina': 'santa_catalina',
+                            'la_vega': 'la_vega', 'LaVega': 'la_vega'
+                        };
+
+                        Object.keys(backup.ranches).forEach(key => {
+                            const ranchData = backup.ranches[key];
+                            if (ranchData.data && ranchData.data.entradas) {
+                                totalAnimals += ranchData.data.entradas.length;
+                            }
+                            ranchNames.push(ranchData.name || key);
+                        });
+
+                        statusDiv.innerHTML = `<div style="padding: 1rem; background: #dbeafe; border-radius: 8px; color: #1e40af;">
+                            📊 Backup encontrado:<br>
+                            <strong>${totalAnimals} animales</strong> en ${ranchNames.length} finca(s): ${ranchNames.join(', ')}
+                        </div>`;
+
+                        if (!confirm(`📤 SUBIR BACKUP A LA NUBE\n\nEste backup contiene:\n- ${totalAnimals} animales\n- Fincas: ${ranchNames.join(', ')}\n\nEsto REEMPLAZARÁ todos los datos en la nube y en este dispositivo.\n\n¿Continuar?`)) {
+                            statusDiv.innerHTML = '<div style="padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">❌ Operación cancelada</div>';
+                            return;
+                        }
+
+                        statusDiv.innerHTML = '<div style="padding: 1rem; background: #fef3c7; border-radius: 8px; color: #92400e;">💾 Guardando datos localmente...</div>';
+
+                        // First restore to localStorage
+                        Object.keys(backup.ranches).forEach(backupRanchId => {
+                            const appRanchId = backupKeyMapping[backupRanchId] || backupRanchId;
+                            const ranch = RANCHES[appRanchId];
+                            if (ranch) {
+                                const ranchBackup = backup.ranches[backupRanchId];
+                                localStorage.setItem(ranch.storageKey, JSON.stringify(ranchBackup.data));
+                                console.log(`✅ Restored ${backupRanchId} -> ${ranch.storageKey}`);
+
+                                if (ranchBackup.animalPhotos) {
+                                    localStorage.setItem('animalPhotos_' + appRanchId, JSON.stringify(ranchBackup.animalPhotos));
+                                }
+                            }
+                        });
+
+                        statusDiv.innerHTML = '<div style="padding: 1rem; background: #dbeafe; border-radius: 8px; color: #1e40af;">☁️ Subiendo a Firebase...</div>';
+
+                        // Initialize cloud sync if needed
+                        if (typeof cloudSync !== 'undefined') {
+                            if (!cloudSync.enabled && typeof firebaseConfig !== 'undefined') {
+                                await cloudSync.initialize(firebaseConfig);
+                            }
+
+                            if (cloudSync.enabled) {
+                                await cloudSync.syncToCloud();
+                                statusDiv.innerHTML = `<div style="padding: 1rem; background: #d1fae5; border-radius: 8px; color: #065f46;">
+                                    ✅ ¡Éxito! ${totalAnimals} animales subidos a la nube.<br>
+                                    <small>La página se recargará en 3 segundos...</small>
+                                </div>`;
+                                showToast(`✅ ${totalAnimals} animales subidos a la nube`, 'success');
+                                setTimeout(() => location.reload(), 3000);
+                            } else {
+                                throw new Error('No se pudo conectar a Firebase');
+                            }
+                        } else {
+                            throw new Error('Cloud sync no disponible');
+                        }
+
+                    } catch (error) {
+                        console.error('Error uploading backup:', error);
+                        statusDiv.innerHTML = `<div style="padding: 1rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">❌ Error: ${error.message}</div>`;
+                        showToast('❌ Error: ' + error.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Download backup from current app data
+        function downloadBackupFromApp() {
+            const backup = {
+                version: '3.0',
+                backupDate: new Date().toISOString(),
+                ranches: {},
+                lastRanch: localStorage.getItem('ganadoFinca_lastRanch')
+            };
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const ranchData = localStorage.getItem(ranch.storageKey);
+                const photosData = localStorage.getItem('animalPhotos_' + ranchId);
+
+                if (ranchData) {
+                    backup.ranches[ranchId] = {
+                        name: ranch.name,
+                        data: JSON.parse(ranchData),
+                        animalPhotos: photosData ? JSON.parse(photosData) : {}
+                    };
+                }
+            });
+
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_ganado_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('💾 Backup descargado', 'success');
         }
 
         // Force upload ALL local data to cloud (overwrites cloud)
