@@ -9722,11 +9722,17 @@
             const today = new Date();
 
             html += potreros.map(p => {
-                // Count animals in this potrero (supports both old and new ID formats)
-                const animalesCount = Object.entries(data.animalPotreros).filter(([num, pId]) =>
-                    potreroIdMatches(pId, p)
-                ).length;
-                
+                // Count ALL animals in this potrero from ALL shared ranches
+                const animalesInfo = countAnimalesInPotreroAllRanches(p);
+                const animalesCount = animalesInfo.total;
+
+                // Build breakdown text for tooltip/display
+                let breakdownText = '';
+                Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
+                    if (breakdownText) breakdownText += ' + ';
+                    breakdownText += `${info.count} ${info.ranchName}`;
+                });
+
                 // Calculate days resting or occupied
                 let diasEstado = null;
                 if (p.estado === 'descanso' && p.ultimaSalida) {
@@ -9734,14 +9740,14 @@
                 } else if (p.estado === 'ocupado' && p.ultimaEntrada) {
                     diasEstado = Math.floor((today - new Date(p.ultimaEntrada)) / (1000 * 60 * 60 * 24));
                 }
-                
+
                 const statusLabels = {
                     'disponible': '🌱 Disponible',
                     'ocupado': '🐄 Ocupado',
                     'descanso': '💤 Descanso',
                     'mantenimiento': '🔧 Mantenimiento'
                 };
-                
+
                 const waterLabels = {
                     'quebrada': '🌊 Quebrada',
                     'bebedero': '🚰 Bebedero',
@@ -9749,12 +9755,13 @@
                     'pozo': '🕳️ Pozo',
                     'ninguna': '❌ Sin agua'
                 };
-                
+
                 // Show which ranch this potrero belongs to (for shared potreros)
                 const ranchLabel = p.sourceRanch ? RANCHES[p.sourceRanch]?.name : null;
+                const potreroKey = `${p.sourceRanch}_${p.id}`;
 
                 return `
-                    <div class="potrero-card ${p.estado}">
+                    <div class="potrero-card ${p.estado}" onclick="showPotreroAnimales('${potreroKey}')" style="cursor: pointer;">
                         <div class="potrero-card-header">
                             <div class="potrero-card-title">🌿 ${p.nombre}</div>
                             <span class="potrero-card-status ${p.estado}">${statusLabels[p.estado]}</span>
@@ -9763,12 +9770,15 @@
                         <div class="potrero-card-stats">
                             <div class="potrero-stat">📏 ${p.area ? p.area + ' ha' : 'Sin área'}</div>
                             <div class="potrero-stat">🌾 ${p.tipoPasto}</div>
-                            <div class="potrero-stat">🐄 ${animalesCount}${p.capacidad ? '/' + p.capacidad : ''} cabezas</div>
+                            <div class="potrero-stat" style="cursor: pointer;" title="${breakdownText || 'Sin animales'}">
+                                🐄 <strong>${animalesCount}</strong>${p.capacidad ? '/' + p.capacidad : ''} cabezas
+                                ${breakdownText ? `<br><small style="color: #6b7280; font-size: 0.7rem;">${breakdownText}</small>` : ''}
+                            </div>
                             <div class="potrero-stat">${waterLabels[p.agua] || '❓'}</div>
                             ${diasEstado !== null ? `<div class="potrero-stat" style="grid-column: 1/-1;">⏱️ ${diasEstado} días ${p.estado === 'descanso' ? 'descansando' : 'ocupado'}</div>` : ''}
                         </div>
                         ${p.notas ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">📝 ${p.notas}</div>` : ''}
-                        <div class="potrero-card-footer">
+                        <div class="potrero-card-footer" onclick="event.stopPropagation();">
                             <button class="btn btn-secondary" onclick="showPotreroForm(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">✏️ Editar</button>
                             <button class="btn btn-danger" onclick="deletePotrero(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">🗑️</button>
                         </div>
@@ -9778,7 +9788,89 @@
 
             container.innerHTML = html;
         }
-        
+
+        // Show modal with animals in potrero, grouped by ranch
+        function showPotreroAnimales(potreroKey) {
+            // Parse potrero key (format: "ranchId_potreroId")
+            const parts = potreroKey.split('_');
+            const sourceRanch = parts[0];
+            const potreroId = parseInt(parts.slice(1).join('_'));
+
+            // Find potrero info
+            const allPotreros = getAllSharedPotreros();
+            const potrero = allPotreros.find(p => p.sourceRanch === sourceRanch && p.id === potreroId);
+
+            if (!potrero) {
+                showToast('Potrero no encontrado', 'error');
+                return;
+            }
+
+            // Get animal counts from all ranches
+            const animalesInfo = countAnimalesInPotreroAllRanches(potrero);
+
+            // Build modal content
+            let animalesHtml = '';
+
+            if (animalesInfo.total === 0) {
+                animalesHtml = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No hay animales en este potrero</div>';
+            } else {
+                // Group by ranch
+                Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
+                    const ranch = RANCHES[ranchId];
+                    const ranchColor = ranchId === 'la_coruna' ? '#ea580c' : '#2563eb'; // Orange for Coruña, Blue for Catalina
+
+                    animalesHtml += `
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${ranchColor}15; border-left: 4px solid ${ranchColor}; border-radius: 0 8px 8px 0; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.2rem;">${ranch.icon}</span>
+                                <span style="font-weight: 600; color: ${ranchColor};">${info.ranchName}</span>
+                                <span style="background: ${ranchColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; margin-left: auto;">
+                                    ${info.count} animal${info.count > 1 ? 'es' : ''}
+                                </span>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; padding-left: 1rem;">
+                                ${info.animales.map(a => `
+                                    <div style="background: white; border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+                                        <strong>#${a.numero}</strong>
+                                        <span style="color: #6b7280; font-size: 0.8rem;">${a.peso || '?'}kg</span>
+                                        <span style="font-size: 0.8rem;">${a.sexo === 'macho' ? '♂️' : '♀️'}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Create and show modal
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'potreroAnimalesModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #059669, #10b981);">
+                        <span>🌿 ${potrero.nombre} - Animales</span>
+                        <button class="modal-close" onclick="document.getElementById('potreroAnimalesModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1.5rem;">
+                            <div>
+                                <div style="font-size: 0.85rem; color: #6b7280;">Total de animales</div>
+                                <div style="font-size: 2rem; font-weight: 700; color: #059669;">${animalesInfo.total}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.85rem; color: #6b7280;">Capacidad</div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #6b7280;">${potrero.capacidad || '∞'}</div>
+                            </div>
+                        </div>
+
+                        ${animalesHtml}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
         function updateRotacionHistorial() {
             const tbody = document.getElementById('rotacionHistorialBody');
 
@@ -9872,6 +9964,56 @@
             // Old format: just numeric ID
             const numericId = typeof assignedId === 'number' ? assignedId : parseInt(assignedId);
             return !isNaN(numericId) && numericId === potrero.id;
+        }
+
+        // Count ALL animals in a potrero from ALL shared ranches
+        function countAnimalesInPotreroAllRanches(potrero) {
+            const result = {
+                total: 0,
+                byRanch: {}  // { ranchId: { count: X, animales: [...] } }
+            };
+
+            // Get all shared ranches
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const ranchDataStr = localStorage.getItem(ranch.storageKey);
+                if (!ranchDataStr) return;
+
+                try {
+                    const ranchData = JSON.parse(ranchDataStr);
+                    const animalPotreros = ranchData.animalPotreros || {};
+                    const entradas = ranchData.entradas || [];
+
+                    // Find animals from this ranch in this potrero
+                    const animalesEnPotrero = [];
+                    Object.entries(animalPotreros).forEach(([numero, assignedId]) => {
+                        if (potreroIdMatches(assignedId, potrero)) {
+                            // Find animal info
+                            const animal = entradas.find(a => a.numero === numero);
+                            if (animal) {
+                                animalesEnPotrero.push({
+                                    numero: animal.numero,
+                                    peso: animal.pesoActual || animal.peso,
+                                    sexo: animal.sexo
+                                });
+                            }
+                        }
+                    });
+
+                    if (animalesEnPotrero.length > 0) {
+                        result.byRanch[ranchId] = {
+                            count: animalesEnPotrero.length,
+                            animales: animalesEnPotrero,
+                            ranchName: ranch.name
+                        };
+                        result.total += animalesEnPotrero.length;
+                    }
+                } catch (e) {
+                    console.error(`Error counting animals for ${ranchId}:`, e);
+                }
+            });
+
+            return result;
         }
         
         // ==================== ANIMAL PROFILE MODULE ====================
