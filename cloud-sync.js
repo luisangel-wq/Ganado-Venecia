@@ -102,16 +102,11 @@ class CloudSync {
             // DISABLED: Real-time listeners were causing infinite loops
             // this.setupListeners();
 
-            // Auto-sync every 60 seconds (upload only)
-            console.log('⏰ Starting auto-sync interval (every 60 seconds)');
+            // TWO-WAY Auto-sync every 30 seconds (both upload AND download)
+            console.log('⏰ Starting TWO-WAY auto-sync interval (every 30 seconds)');
             this.syncInterval = setInterval(() => {
-                console.log('⏰ Auto-sync timer triggered - uploading to cloud...');
-                this.syncToCloud().then(() => {
-                    console.log('⏰ Auto-sync upload complete');
-                }).catch(err => {
-                    console.error('⏰ Auto-sync error:', err);
-                });
-            }, 60000);
+                this.twoWaySync();
+            }, 30000);
 
             return true;
         } catch (error) {
@@ -581,6 +576,139 @@ class CloudSync {
 
         console.log('📤 Data changed - syncing to cloud...');
         await this.syncToCloud();
+    }
+
+    /**
+     * TWO-WAY SYNC: Check cloud for changes AND upload local changes
+     * This enables real-time collaboration between family members
+     */
+    async twoWaySync() {
+        if (!this.enabled || this.syncInProgress) {
+            console.log('⏰ Two-way sync skipped (disabled or in progress)');
+            return;
+        }
+
+        try {
+            this.syncInProgress = true;
+            console.log('🔄 Two-way sync starting...');
+
+            // Step 1: Get cloud data
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            const cloudData = snapshot.val();
+
+            if (!cloudData) {
+                // No cloud data - just upload local
+                console.log('📤 No cloud data - uploading local data...');
+                this.syncInProgress = false;
+                await this.syncToCloud();
+                return;
+            }
+
+            // Step 2: Compare timestamps
+            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
+            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
+            const cloudDeviceId = cloudData.deviceId;
+            const myDeviceId = this.getDeviceId();
+
+            // Step 3: Decide what to do
+            if (cloudDeviceId !== myDeviceId && cloudTime > localTime) {
+                // Cloud has newer data from ANOTHER device - download it!
+                console.log('⬇️ Cloud has newer data from another device - downloading...');
+                console.log(`   Cloud time: ${cloudData.lastModified}`);
+                console.log(`   Local time: ${this.lastSync}`);
+                console.log(`   Cloud device: ${cloudDeviceId}`);
+                console.log(`   My device: ${myDeviceId}`);
+
+                // Apply the cloud data
+                await this.applyCloudDataSmart(cloudData);
+
+                // Show notification
+                if (typeof showToast === 'function') {
+                    showToast('☁️ Nuevos datos sincronizados de otro dispositivo', 'success');
+                }
+            } else {
+                // Local is newer or same - upload to cloud
+                console.log('📤 Uploading local data to cloud...');
+                this.syncInProgress = false;
+                await this.syncToCloud();
+                return;
+            }
+
+            console.log('✅ Two-way sync complete');
+        } catch (error) {
+            console.error('❌ Two-way sync error:', error);
+        } finally {
+            this.syncInProgress = false;
+        }
+    }
+
+    /**
+     * Smart apply of cloud data - merges instead of replacing when possible
+     */
+    async applyCloudDataSmart(cloudData) {
+        if (!cloudData || !cloudData.ranches) return;
+
+        const RANCHES = this.getRanches();
+        let changesApplied = false;
+
+        // Apply ranch data
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            if (ranch) {
+                try {
+                    const cloudRanchData = cloudData.ranches[ranchId];
+                    const localRanchDataStr = localStorage.getItem(ranch.storageKey);
+                    const localRanchData = localRanchDataStr ? JSON.parse(localRanchDataStr) : null;
+
+                    // Count animals in each
+                    const cloudCount = cloudRanchData?.entradas?.length || 0;
+                    const localCount = localRanchData?.entradas?.length || 0;
+
+                    console.log(`   ${ranch.name}: Cloud=${cloudCount}, Local=${localCount}`);
+
+                    // Smart merge: if cloud has more animals, use cloud data
+                    // This handles the case where another device added animals
+                    if (cloudCount > localCount || cloudCount >= localCount) {
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(cloudRanchData));
+                        console.log(`   ✅ Updated ${ranch.name} from cloud`);
+                        changesApplied = true;
+                    }
+                } catch (e) {
+                    console.error(`Error applying smart sync for ${ranchId}:`, e);
+                }
+            }
+        });
+
+        // Apply photos
+        if (cloudData.photos) {
+            Object.keys(cloudData.photos).forEach(ranchId => {
+                const photosKey = 'animalPhotos_' + ranchId;
+                try {
+                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
+                } catch (e) {
+                    console.error(`Error applying photos for ${ranchId}:`, e);
+                }
+            });
+        }
+
+        // Update lastSync
+        this.lastSync = cloudData.lastModified;
+        localStorage.setItem('cloudSync_lastSync', this.lastSync);
+
+        // Reload UI if changes were applied
+        if (changesApplied) {
+            console.log('🔄 Reloading data and updating UI...');
+
+            // Reload data from localStorage
+            if (typeof loadData === 'function') {
+                loadData();
+            }
+
+            // Update UI
+            if (typeof updateAllViews === 'function') {
+                updateAllViews();
+            }
+        }
     }
 }
 
