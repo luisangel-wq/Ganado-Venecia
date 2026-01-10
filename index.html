@@ -1029,6 +1029,58 @@
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.7; }
         }
+
+        /* Voice Dictation Styles */
+        @keyframes pulseMic {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .pulse-mic {
+            display: inline-block;
+            animation: pulseMic 0.8s ease-in-out infinite;
+        }
+
+        .btn-voice {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-voice:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-voice.recording {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            animation: pulseMic 1s ease-in-out infinite;
+        }
+
+        .voice-status-panel {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .pending-dictation-card {
+            transition: all 0.3s ease;
+        }
+
+        .pending-dictation-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
         
         #aiResponseContent {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2215,20 +2267,79 @@
                         </p>
                     </div>
                     
-                    <div style="text-align: center; padding: 2rem;">
+                    <!-- Voice Dictation Section for Field Work -->
+                    <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #8b5cf6;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <span style="font-size: 2rem;">🎤</span>
+                            <div>
+                                <h4 style="margin: 0; color: #6d28d9;">Modo Dictado por Voz</h4>
+                                <p style="margin: 0.25rem 0 0 0; color: #7c3aed; font-size: 0.9rem;">
+                                    Ideal para trabajar en el potrero - dicte la información y tome fotos
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <button id="voiceDictationBtn" class="btn-voice" onclick="startVoiceDictation('photos')">
+                                🎤 Dictar Animal
+                            </button>
+                        </div>
+
+                        <div id="voiceStatus" style="display: none; text-align: center; margin-bottom: 1rem;">
+                            <div style="background: white; border-radius: 8px; padding: 1rem; border: 2px solid #f59e0b;">
+                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Transcripción:</div>
+                                <div id="voiceTranscriptPreview" style="font-size: 1.1rem; color: #333; min-height: 40px;">
+                                    Escuchando...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255,255,255,0.7); border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: #5b21b6;">
+                            <strong>Ejemplo de dictado:</strong><br>
+                            "Este es el animal 1207, tiene un peso aproximado de 300 kilos, se ve en buenas condiciones y ha tenido buen progreso"
+                        </div>
+                    </div>
+
+                    <!-- Pending Dictations Panel -->
+                    <div id="pendingDictationsSection" style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="margin: 0;">📝 Dictaciones Pendientes</h3>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button onclick="clearAllPendingDictations()" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                    🗑️ Limpiar
+                                </button>
+                                <button id="saveAllDictationsBtn" onclick="saveAllPendingDictations()" class="btn btn-success" style="display: none; font-size: 0.9rem; padding: 0.5rem 1rem; background: #10b981;">
+                                    💾 Guardar Todo
+                                </button>
+                            </div>
+                        </div>
+                        <div id="pendingDictationsContainer" style="background: #f9fafb; border-radius: 12px; padding: 1rem; min-height: 150px;">
+                            <div style="text-align: center; color: #666; padding: 2rem;">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">🎤</div>
+                                <p>Presione el botón de micrófono y dicte la información del animal.</p>
+                                <p style="font-size: 0.85rem; color: #999;">Ejemplo: "Animal 1207, peso aproximado 300 kilos, se ve en buenas condiciones"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr style="border: none; border-top: 2px dashed #e5e7eb; margin: 2rem 0;">
+
+                    <!-- Original Photo Buttons -->
+                    <div style="text-align: center; padding: 1rem;">
+                        <h3 style="margin-bottom: 1rem; color: #666;">O agregue fotos manualmente:</h3>
                         <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                            <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
                                 📸 Agregar Foto de Animal
                             </button>
-                            <button class="btn" onclick="openMultiplePhotosPicker()" style="font-size: 1.1rem; padding: 1rem 2rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                            <button class="btn" onclick="openMultiplePhotosPicker()" style="font-size: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
                                 🖼️ Subir Múltiples Fotos
                             </button>
                         </div>
-                        <div style="margin-top: 0.75rem; color: #666; font-size: 0.9rem;">
-                            Seleccione una o varias fotos de su computadora (Descargas, etc.) y asígnelas a los animales
+                        <div style="margin-top: 0.5rem; color: #999; font-size: 0.85rem;">
+                            Seleccione fotos de su computadora y asígnelas a los animales
                         </div>
                     </div>
-                    
+
                     <div style="margin-top: 2rem;">
                         <h3 style="margin-bottom: 1rem;">Animales con Fotos</h3>
                         <div id="animalPhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
@@ -9324,7 +9435,35 @@
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Condicion General Section -->
+                <div class="profile-section" style="background: linear-gradient(135deg, #ede9fe, #ddd6fe);">
+                    <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📊 Condición General</span>
+                        <button onclick="startVoiceDictationForAnimal('${numero}')" style="background: #7c3aed; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                            🎤 Dictar Observación
+                        </button>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-item" style="grid-column: 1/-1;">
+                            <span class="profile-item-label">Estado/Condición</span>
+                            <span class="profile-item-value" id="animalCondicion_${numero}">${animal.condicionGeneral || 'Sin observaciones'}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <select id="condicionSelect_${numero}" onchange="updateAnimalCondicion('${numero}', this.value)" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="">Seleccionar condición...</option>
+                            <option value="Excelente" ${animal.condicionGeneral === 'Excelente' ? 'selected' : ''}>Excelente</option>
+                            <option value="Muy bien" ${animal.condicionGeneral === 'Muy bien' ? 'selected' : ''}>Muy bien</option>
+                            <option value="Buenas condiciones" ${animal.condicionGeneral === 'Buenas condiciones' ? 'selected' : ''}>Buenas condiciones</option>
+                            <option value="Regular" ${animal.condicionGeneral === 'Regular' ? 'selected' : ''}>Regular</option>
+                            <option value="Flaco" ${animal.condicionGeneral === 'Flaco' ? 'selected' : ''}>Flaco</option>
+                            <option value="Enfermo" ${animal.condicionGeneral === 'Enfermo' ? 'selected' : ''}>Enfermo</option>
+                            <option value="Recuperándose" ${animal.condicionGeneral === 'Recuperándose' ? 'selected' : ''}>Recuperándose</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Health Status -->
                 <div class="profile-section" style="background: ${inRetiro ? 'linear-gradient(135deg, #ffebee, #ffcdd2)' : 'linear-gradient(135deg, #e3f2fd, #bbdefb)'};">
                     <div class="profile-section-title">💉 Estado de Salud</div>
@@ -9439,6 +9578,13 @@
                             </div>
                         </div>
 
+                        <!-- Voice Input Button -->
+                        <div style="text-align: center; margin-bottom: 1rem;">
+                            <button onclick="startVoiceForWeightUpdate('${numero}')" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; cursor: pointer;">
+                                🎤 Dictar Peso y Observaciones
+                            </button>
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label">Nuevo Peso (kg)</label>
                             <input type="number" class="form-input" id="quickPesoNuevo" value="${Math.round(pesoEstimado)}" min="1" step="1" style="font-size: 1.2rem; text-align: center;">
@@ -9451,7 +9597,7 @@
 
                         <div class="form-group">
                             <label class="form-label">Observaciones (opcional)</label>
-                            <input type="text" class="form-input" id="quickPesoObs" placeholder="Notas...">
+                            <textarea class="form-input" id="quickPesoObs" placeholder="Notas sobre el animal..." rows="2" style="resize: vertical;"></textarea>
                         </div>
 
                         <button onclick="saveQuickWeightUpdate('${numero}')" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
@@ -12009,13 +12155,666 @@ document.addEventListener('DOMContentLoaded', async function() {
             return date.toLocaleDateString('es-CO');
         }
         
+        // ==================== VOICE DICTATION MODULE ====================
+
+        // Speech Recognition setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+        let pendingDictations = []; // Array of dictated animals pending photo/save
+        let currentDictationContext = null; // 'photos', 'profile', 'weight'
+
+        function initSpeechRecognition() {
+            if (!SpeechRecognition) {
+                console.warn('Speech Recognition not supported in this browser');
+                return false;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-CO'; // Colombian Spanish
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                isListening = true;
+                updateVoiceUI(true);
+                console.log('🎤 Voice recognition started');
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                updateVoiceUI(false);
+                console.log('🎤 Voice recognition ended');
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                updateVoiceUI(false);
+
+                if (event.error === 'not-allowed') {
+                    showToast('⚠️ Permiso de micrófono denegado. Habilítelo en configuración del navegador.', 'error');
+                } else if (event.error === 'no-speech') {
+                    showToast('🎤 No se detectó voz. Intente de nuevo.', 'warning');
+                } else {
+                    showToast('⚠️ Error de reconocimiento de voz: ' + event.error, 'error');
+                }
+            };
+
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                // Update live preview
+                const previewEl = document.getElementById('voiceTranscriptPreview');
+                if (previewEl) {
+                    previewEl.textContent = finalTranscript || interimTranscript || 'Escuchando...';
+                }
+
+                // Process final transcript
+                if (finalTranscript) {
+                    processVoiceDictation(finalTranscript);
+                }
+            };
+
+            return true;
+        }
+
+        function updateVoiceUI(listening) {
+            const voiceBtn = document.getElementById('voiceDictationBtn');
+            const statusEl = document.getElementById('voiceStatus');
+
+            if (voiceBtn) {
+                if (listening) {
+                    voiceBtn.innerHTML = '<span class="pulse-mic">🎤</span> Escuchando...';
+                    voiceBtn.style.background = '#ef4444';
+                    voiceBtn.classList.add('recording');
+                } else {
+                    voiceBtn.innerHTML = '🎤 Dictar Animal';
+                    voiceBtn.style.background = '';
+                    voiceBtn.classList.remove('recording');
+                }
+            }
+
+            if (statusEl) {
+                statusEl.style.display = listening ? 'block' : 'none';
+            }
+        }
+
+        function startVoiceDictation(context = 'photos') {
+            if (!SpeechRecognition) {
+                showToast('⚠️ Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.', 'error');
+                return;
+            }
+
+            if (!recognition) {
+                initSpeechRecognition();
+            }
+
+            currentDictationContext = context;
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                try {
+                    recognition.start();
+                    showToast('🎤 Hable ahora: "Animal 1207, peso 300 kilos, buenas condiciones..."', 'info');
+                } catch (error) {
+                    console.error('Error starting recognition:', error);
+                    showToast('⚠️ Error al iniciar micrófono', 'error');
+                }
+            }
+        }
+
+        function stopVoiceDictation() {
+            if (recognition && isListening) {
+                recognition.stop();
+            }
+        }
+
+        // Parse Spanish voice input to extract animal data
+        function parseVoiceDictation(text) {
+            const result = {
+                chapeta: null,
+                peso: null,
+                condicion: null,
+                observaciones: text // Store original text as observations
+            };
+
+            const lowerText = text.toLowerCase();
+
+            // Extract chapeta/animal number
+            // Patterns: "animal 1207", "numero 1207", "chapeta 1207", "el 1207"
+            const chapetaPatterns = [
+                /(?:animal|numero|número|chapeta|el)\s*(\d+)/i,
+                /(\d{3,4})\s*(?:tiene|pesa|esta|está)/i,
+                /^(\d{3,4})\b/i
+            ];
+
+            for (const pattern of chapetaPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    result.chapeta = match[1];
+                    break;
+                }
+            }
+
+            // Extract weight
+            // Patterns: "peso 300", "pesa 300", "300 kilos", "300 kg", "aproximado 300"
+            const pesoPatterns = [
+                /(?:peso|pesa|aproximado|aproximadamente)\s*(?:de\s*)?(\d+)\s*(?:kilos?|kg|kilogramos?)?/i,
+                /(\d+)\s*(?:kilos?|kg|kilogramos?)/i,
+                /(?:unos?|como)\s*(\d+)\s*(?:kilos?|kg)?/i
+            ];
+
+            for (const pattern of pesoPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    result.peso = parseInt(match[1]);
+                    break;
+                }
+            }
+
+            // Extract condition keywords
+            const conditionKeywords = {
+                'buenas condiciones': 'Buenas condiciones',
+                'buen estado': 'Buen estado',
+                'excelente': 'Excelente',
+                'muy bien': 'Muy bien',
+                'bien': 'Bien',
+                'regular': 'Regular',
+                'mal estado': 'Mal estado',
+                'malas condiciones': 'Malas condiciones',
+                'flaco': 'Flaco',
+                'delgado': 'Delgado',
+                'gordo': 'Gordo',
+                'enfermo': 'Enfermo',
+                'sano': 'Sano',
+                'saludable': 'Saludable',
+                'cojo': 'Cojo',
+                'rengo': 'Rengo',
+                'buen progreso': 'Buen progreso',
+                'mal progreso': 'Mal progreso',
+                'recuperándose': 'Recuperándose',
+                'mejorando': 'Mejorando'
+            };
+
+            for (const [keyword, value] of Object.entries(conditionKeywords)) {
+                if (lowerText.includes(keyword)) {
+                    result.condicion = value;
+                    break;
+                }
+            }
+
+            // If no specific condition found, try to extract general observation
+            if (!result.condicion) {
+                const condicionMatch = text.match(/(?:condici[oó]n|estado)\s*(?:es\s*)?(.+?)(?:\.|,|$)/i);
+                if (condicionMatch) {
+                    result.condicion = condicionMatch[1].trim();
+                }
+            }
+
+            return result;
+        }
+
+        function processVoiceDictation(transcript) {
+            console.log('📝 Processing dictation:', transcript);
+
+            const parsed = parseVoiceDictation(transcript);
+            console.log('📋 Parsed result:', parsed);
+
+            if (currentDictationContext === 'photos') {
+                // Add to pending dictations for photos
+                addPendingDictation(parsed, transcript);
+            } else if (currentDictationContext === 'weight') {
+                // Fill weight update form
+                fillWeightUpdateFromVoice(parsed);
+            } else if (currentDictationContext === 'profile') {
+                // Update animal profile
+                fillProfileFromVoice(parsed);
+            }
+        }
+
+        function addPendingDictation(parsed, originalText) {
+            const dictation = {
+                id: Date.now(),
+                chapeta: parsed.chapeta || '',
+                peso: parsed.peso || '',
+                condicion: parsed.condicion || '',
+                observaciones: originalText,
+                hasPhoto: false,
+                photoData: null,
+                timestamp: new Date().toISOString()
+            };
+
+            pendingDictations.push(dictation);
+            updatePendingDictationsUI();
+
+            if (parsed.chapeta) {
+                showToast(`✅ Animal ${parsed.chapeta} agregado. Puede tomar la foto.`, 'success');
+            } else {
+                showToast('⚠️ No se detectó número de animal. Edite manualmente.', 'warning');
+            }
+        }
+
+        function updatePendingDictationsUI() {
+            const container = document.getElementById('pendingDictationsContainer');
+            if (!container) return;
+
+            if (pendingDictations.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎤</div>
+                        <p>Presione el botón de micrófono y dicte la información del animal.</p>
+                        <p style="font-size: 0.85rem; color: #999;">Ejemplo: "Animal 1207, peso aproximado 300 kilos, se ve en buenas condiciones"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = pendingDictations.map((d, index) => `
+                <div class="pending-dictation-card" style="background: white; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${d.hasPhoto ? '#10b981' : '#f59e0b'};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                        <div style="font-weight: bold; font-size: 1.2rem;">
+                            ${d.hasPhoto ? '✅' : '📝'} Animal:
+                            <input type="text" value="${d.chapeta}" onchange="updatePendingDictation(${d.id}, 'chapeta', this.value)"
+                                   style="width: 80px; font-size: 1.1rem; font-weight: bold; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;">
+                        </div>
+                        <button onclick="removePendingDictation(${d.id})" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;">✕</button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div>
+                            <label style="font-size: 0.8rem; color: #666;">Peso Estimado (kg):</label>
+                            <input type="number" value="${d.peso}" onchange="updatePendingDictation(${d.id}, 'peso', this.value)"
+                                   style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8rem; color: #666;">Condición General:</label>
+                            <select onchange="updatePendingDictation(${d.id}, 'condicion', this.value)"
+                                    style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
+                                <option value="" ${!d.condicion ? 'selected' : ''}>Seleccionar...</option>
+                                <option value="Excelente" ${d.condicion === 'Excelente' ? 'selected' : ''}>Excelente</option>
+                                <option value="Muy bien" ${d.condicion === 'Muy bien' ? 'selected' : ''}>Muy bien</option>
+                                <option value="Buenas condiciones" ${d.condicion === 'Buenas condiciones' ? 'selected' : ''}>Buenas condiciones</option>
+                                <option value="Regular" ${d.condicion === 'Regular' ? 'selected' : ''}>Regular</option>
+                                <option value="Flaco" ${d.condicion === 'Flaco' ? 'selected' : ''}>Flaco</option>
+                                <option value="Enfermo" ${d.condicion === 'Enfermo' ? 'selected' : ''}>Enfermo</option>
+                                <option value="Recuperándose" ${d.condicion === 'Recuperándose' ? 'selected' : ''}>Recuperándose</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.8rem; color: #666;">Observaciones:</label>
+                        <textarea onchange="updatePendingDictation(${d.id}, 'observaciones', this.value)"
+                                  style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px; min-height: 60px; resize: vertical;">${d.observaciones}</textarea>
+                    </div>
+
+                    ${d.hasPhoto ? `
+                        <div style="text-align: center; margin-bottom: 0.5rem;">
+                            <img src="${d.photoData}" style="max-width: 150px; max-height: 100px; border-radius: 8px; border: 2px solid #10b981;">
+                        </div>
+                    ` : `
+                        <button onclick="takePendingPhoto(${d.id})" class="btn btn-primary" style="width: 100%;">
+                            📸 Tomar Foto
+                        </button>
+                    `}
+                </div>
+            `).join('');
+
+            // Update save all button visibility
+            const saveAllBtn = document.getElementById('saveAllDictationsBtn');
+            if (saveAllBtn) {
+                const readyCount = pendingDictations.filter(d => d.chapeta && d.hasPhoto).length;
+                saveAllBtn.style.display = pendingDictations.length > 0 ? 'block' : 'none';
+                saveAllBtn.innerHTML = `💾 Guardar Todo (${readyCount}/${pendingDictations.length} listos)`;
+                saveAllBtn.disabled = readyCount === 0;
+            }
+        }
+
+        function updatePendingDictation(id, field, value) {
+            const dictation = pendingDictations.find(d => d.id === id);
+            if (dictation) {
+                dictation[field] = value;
+            }
+        }
+
+        function removePendingDictation(id) {
+            pendingDictations = pendingDictations.filter(d => d.id !== id);
+            updatePendingDictationsUI();
+        }
+
+        function clearAllPendingDictations() {
+            if (pendingDictations.length === 0) return;
+            if (confirm('¿Está seguro de borrar todas las dictaciones pendientes?')) {
+                pendingDictations = [];
+                updatePendingDictationsUI();
+                showToast('🗑️ Dictaciones borradas', 'info');
+            }
+        }
+
+        function takePendingPhoto(id) {
+            const dictation = pendingDictations.find(d => d.id === id);
+            if (!dictation) return;
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment'; // Use back camera
+
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                compressImage(file, function(dataUrl) {
+                    dictation.photoData = dataUrl;
+                    dictation.hasPhoto = true;
+                    updatePendingDictationsUI();
+                    showToast('📸 Foto capturada', 'success');
+                });
+            };
+
+            input.click();
+        }
+
+        function saveAllPendingDictations() {
+            const readyDictations = pendingDictations.filter(d => d.chapeta && d.hasPhoto);
+
+            if (readyDictations.length === 0) {
+                showToast('⚠️ No hay dictaciones completas para guardar', 'warning');
+                return;
+            }
+
+            let savedCount = 0;
+            let errorCount = 0;
+
+            readyDictations.forEach(d => {
+                try {
+                    // Save photo
+                    if (!animalPhotos[d.chapeta]) {
+                        animalPhotos[d.chapeta] = {};
+                    }
+                    animalPhotos[d.chapeta].photo = d.photoData;
+                    animalPhotos[d.chapeta].dateAdded = d.timestamp;
+
+                    // Update animal data with condition and weight if animal exists
+                    const animal = data.entradas.find(e => e.numero == d.chapeta);
+                    if (animal) {
+                        // Add condicion general to animal
+                        animal.condicionGeneral = d.condicion;
+
+                        // If peso was dictated and different from current, add weight update
+                        if (d.peso && d.peso !== animal.peso) {
+                            const lastUpdate = data.pesoUpdates
+                                .filter(u => u.numero == d.chapeta)
+                                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+
+                            const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
+
+                            if (d.peso !== pesoAnterior) {
+                                const diasDesdeUltimo = lastUpdate
+                                    ? Math.max(1, Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24)))
+                                    : getDiasEnFinca(animal.fechaEntrada);
+
+                                const ganancia = d.peso - pesoAnterior;
+                                const gdpReal = diasDesdeUltimo > 0 ? (ganancia / diasDesdeUltimo).toFixed(2) : 0;
+
+                                data.pesoUpdates.push({
+                                    id: Date.now() + Math.random(),
+                                    numero: d.chapeta,
+                                    fecha: new Date().toISOString().split('T')[0],
+                                    pesoAnterior: pesoAnterior,
+                                    pesoNuevo: d.peso,
+                                    ganancia: ganancia,
+                                    dias: diasDesdeUltimo,
+                                    gdpReal: parseFloat(gdpReal),
+                                    observaciones: d.observaciones || 'Actualizado por dictado de voz'
+                                });
+                            }
+                        }
+                    }
+
+                    savedCount++;
+                } catch (error) {
+                    console.error('Error saving dictation for', d.chapeta, error);
+                    errorCount++;
+                }
+            });
+
+            // Save all data
+            saveAnimalPhotos();
+            saveData();
+
+            // Remove saved dictations from pending
+            const savedIds = readyDictations.map(d => d.id);
+            pendingDictations = pendingDictations.filter(d => !savedIds.includes(d.id));
+            updatePendingDictationsUI();
+
+            // Update views
+            updateAllViews();
+
+            if (errorCount > 0) {
+                showToast(`✅ ${savedCount} guardados, ⚠️ ${errorCount} errores`, 'warning');
+            } else {
+                showToast(`✅ ${savedCount} animal(es) guardados exitosamente`, 'success');
+            }
+
+            // Trigger cloud sync
+            if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                cloudSync.triggerAutoSync();
+            }
+        }
+
+        // Fill weight update modal from voice
+        function fillWeightUpdateFromVoice(parsed) {
+            const pesoInput = document.getElementById('quickPesoNuevo');
+            const obsInput = document.getElementById('quickPesoObservaciones');
+
+            if (pesoInput && parsed.peso) {
+                pesoInput.value = parsed.peso;
+            }
+
+            if (obsInput) {
+                let obs = parsed.observaciones || '';
+                if (parsed.condicion) {
+                    obs = `Condición: ${parsed.condicion}. ${obs}`;
+                }
+                obsInput.value = obs;
+            }
+
+            showToast('✅ Datos de voz aplicados al formulario', 'success');
+        }
+
+        // Fill profile from voice
+        function fillProfileFromVoice(parsed) {
+            // This would update the animal's condicion general in their profile
+            if (parsed.chapeta) {
+                const animal = data.entradas.find(e => e.numero == parsed.chapeta);
+                if (animal && parsed.condicion) {
+                    animal.condicionGeneral = parsed.condicion;
+                    saveData();
+                    showToast(`✅ Condición actualizada para animal ${parsed.chapeta}`, 'success');
+                }
+            }
+        }
+
+        // Update animal condition from dropdown or voice
+        function updateAnimalCondicion(numero, condicion) {
+            const animal = data.entradas.find(e => e.numero == numero);
+            if (animal) {
+                animal.condicionGeneral = condicion;
+                saveData();
+
+                // Update display
+                const displayEl = document.getElementById('animalCondicion_' + numero);
+                if (displayEl) {
+                    displayEl.textContent = condicion || 'Sin observaciones';
+                }
+
+                showToast(`✅ Condición actualizada para animal #${numero}`, 'success');
+
+                // Trigger cloud sync
+                if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                    cloudSync.triggerAutoSync();
+                }
+            }
+        }
+
+        // Variable to store current animal for voice dictation
+        let currentVoiceAnimal = null;
+
+        // Start voice dictation for a specific animal (from profile)
+        function startVoiceDictationForAnimal(numero) {
+            currentVoiceAnimal = numero;
+
+            if (!SpeechRecognition) {
+                showToast('⚠️ Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.', 'error');
+                return;
+            }
+
+            if (!recognition) {
+                initSpeechRecognition();
+            }
+
+            // Set up special handler for animal-specific dictation
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    const parsed = parseVoiceDictation(finalTranscript);
+
+                    // Update animal condition
+                    if (parsed.condicion || finalTranscript) {
+                        const condicion = parsed.condicion || finalTranscript;
+                        updateAnimalCondicion(currentVoiceAnimal, condicion);
+
+                        // Update the select dropdown
+                        const selectEl = document.getElementById('condicionSelect_' + currentVoiceAnimal);
+                        if (selectEl) {
+                            // Check if the condition matches an option
+                            const options = Array.from(selectEl.options);
+                            const matchingOption = options.find(opt => opt.value === parsed.condicion);
+                            if (matchingOption) {
+                                selectEl.value = parsed.condicion;
+                            } else {
+                                selectEl.value = '';
+                            }
+                        }
+                    }
+
+                    // If weight was mentioned, offer to update it
+                    if (parsed.peso) {
+                        if (confirm(`¿Desea actualizar el peso del animal #${currentVoiceAnimal} a ${parsed.peso} kg?`)) {
+                            // Close profile and open weight update modal
+                            closeAnimalProfile();
+                            setTimeout(() => {
+                                showQuickWeightUpdate(currentVoiceAnimal);
+                                setTimeout(() => {
+                                    const pesoInput = document.getElementById('quickPesoNuevo');
+                                    if (pesoInput) pesoInput.value = parsed.peso;
+                                }, 100);
+                            }, 300);
+                        }
+                    }
+                }
+            };
+
+            try {
+                recognition.start();
+                showToast('🎤 Dicte la condición del animal. Ej: "Se ve en buenas condiciones, gordo y sano"', 'info');
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showToast('⚠️ Error al iniciar micrófono', 'error');
+            }
+        }
+
+        // Start voice dictation for weight update modal
+        function startVoiceForWeightUpdate(numero) {
+            if (!SpeechRecognition) {
+                showToast('⚠️ Tu navegador no soporta reconocimiento de voz. Usa Chrome o Safari.', 'error');
+                return;
+            }
+
+            if (!recognition) {
+                initSpeechRecognition();
+            }
+
+            // Set up handler for weight update
+            recognition.onresult = function(event) {
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    const parsed = parseVoiceDictation(finalTranscript);
+
+                    // Fill weight if detected
+                    const pesoInput = document.getElementById('quickPesoNuevo');
+                    if (pesoInput && parsed.peso) {
+                        pesoInput.value = parsed.peso;
+                    }
+
+                    // Fill observations with full transcript
+                    const obsInput = document.getElementById('quickPesoObs');
+                    if (obsInput) {
+                        let obs = finalTranscript;
+                        if (parsed.condicion) {
+                            obs = `Condición: ${parsed.condicion}. ` + finalTranscript;
+                        }
+                        obsInput.value = obs;
+                    }
+
+                    showToast('✅ Datos de voz aplicados', 'success');
+                }
+            };
+
+            try {
+                recognition.start();
+                showToast('🎤 Dicte el peso y observaciones. Ej: "Pesa 320 kilos, se ve en buenas condiciones"', 'info');
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                showToast('⚠️ Error al iniciar micrófono', 'error');
+            }
+        }
+
+        // Initialize speech recognition on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (SpeechRecognition) {
+                initSpeechRecognition();
+                console.log('🎤 Speech recognition available');
+            } else {
+                console.warn('🎤 Speech recognition not available');
+            }
+        });
+
+        // ==================== END VOICE DICTATION MODULE ====================
+
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = 'toast ' + type;
             toast.innerHTML = `<span>${message}</span>`;
             container.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.style.animation = 'slideIn 0.3s ease reverse';
                 setTimeout(() => toast.remove(), 300);
