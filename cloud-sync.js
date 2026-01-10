@@ -52,7 +52,7 @@ class CloudSync {
     async initialize(firebaseConfig) {
         try {
             this.firebaseConfig = firebaseConfig;
-            
+
             // Check if Firebase is loaded
             if (typeof firebase === 'undefined') {
                 console.error('Firebase SDK not loaded');
@@ -65,29 +65,105 @@ class CloudSync {
             }
 
             this.db = firebase.database();
-            
-            // Get or create user ID
+
+            // Get or create user ID (use family ID if set)
             this.userId = localStorage.getItem('cloudSync_userId');
             if (!this.userId) {
-                this.userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                this.userId = 'familia_ganado_venecia'; // Default family ID
                 localStorage.setItem('cloudSync_userId', this.userId);
             }
 
             this.enabled = true;
+            this.isInitialized = true;
             console.log('Cloud sync initialized with user ID:', this.userId);
-            
-            // Setup listeners
+
+            // Check if this is a new device (no local data)
+            const localAnimalCount = this.countLocalAnimals();
+            const isNewDevice = localAnimalCount === 0;
+
+            if (isNewDevice) {
+                console.log('📱 NEW DEVICE DETECTED - Will download data from cloud');
+                // Force download from cloud for new devices
+                await this.forceDownloadFromCloud();
+            } else {
+                // Normal sync - first upload local, then setup listeners
+                await this.syncToCloud();
+                await this.syncFromCloud();
+            }
+
+            // Setup real-time listeners
             this.setupListeners();
-            
-            // Initial sync
-            await this.syncFromCloud();
-            
+
             // Auto-sync every 30 seconds
             this.syncInterval = setInterval(() => this.syncToCloud(), 30000);
-            
+
             return true;
         } catch (error) {
             console.error('Error initializing cloud sync:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Force download from cloud (for new devices)
+     */
+    async forceDownloadFromCloud() {
+        if (!this.enabled) return;
+
+        try {
+            console.log('⬇️ Downloading data from cloud...');
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            const cloudData = snapshot.val();
+
+            if (!cloudData || !cloudData.ranches) {
+                console.log('No data in cloud yet');
+                return false;
+            }
+
+            const RANCHES = this.getRanches();
+
+            // Apply ranch data without validation (trust cloud data for new devices)
+            Object.keys(cloudData.ranches).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                if (ranch) {
+                    try {
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
+                        console.log(`✅ Downloaded data for: ${ranch.name}`);
+                    } catch (e) {
+                        console.error(`Error saving data for ${ranchId}:`, e);
+                    }
+                }
+            });
+
+            // Apply photos
+            if (cloudData.photos) {
+                Object.keys(cloudData.photos).forEach(ranchId => {
+                    const photosKey = 'animalPhotos_' + ranchId;
+                    try {
+                        localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
+                        console.log(`✅ Downloaded photos for: ${ranchId}`);
+                    } catch (e) {
+                        console.error(`Error saving photos for ${ranchId}:`, e);
+                    }
+                });
+            }
+
+            this.lastSync = cloudData.lastModified;
+            localStorage.setItem('cloudSync_lastSync', this.lastSync);
+
+            // Reload the page to show new data
+            console.log('🔄 Data downloaded! Reloading page...');
+            if (typeof showToast === 'function') {
+                showToast('☁️ Datos descargados de la nube. Recargando...', 'success');
+            }
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+            return true;
+        } catch (error) {
+            console.error('Error downloading from cloud:', error);
             return false;
         }
     }
@@ -311,15 +387,18 @@ class CloudSync {
      */
     countAnimalsInData(cloudData) {
         if (!cloudData || !cloudData.ranches) return 0;
-        
+
         let count = 0;
         Object.keys(cloudData.ranches).forEach(ranchId => {
             const ranchData = cloudData.ranches[ranchId];
-            if (ranchData && ranchData.cattle && Array.isArray(ranchData.cattle)) {
+            // Check both 'entradas' (app uses this) and 'cattle' (legacy)
+            if (ranchData && ranchData.entradas && Array.isArray(ranchData.entradas)) {
+                count += ranchData.entradas.length;
+            } else if (ranchData && ranchData.cattle && Array.isArray(ranchData.cattle)) {
                 count += ranchData.cattle.length;
             }
         });
-        
+
         return count;
     }
 
@@ -329,14 +408,17 @@ class CloudSync {
     countLocalAnimals() {
         const RANCHES = this.getRanches();
         let count = 0;
-        
+
         Object.keys(RANCHES).forEach(ranchId => {
             const ranch = RANCHES[ranchId];
             const ranchData = localStorage.getItem(ranch.storageKey);
             if (ranchData) {
                 try {
                     const data = JSON.parse(ranchData);
-                    if (data && data.cattle && Array.isArray(data.cattle)) {
+                    // Check both 'entradas' (app uses this) and 'cattle' (legacy)
+                    if (data && data.entradas && Array.isArray(data.entradas)) {
+                        count += data.entradas.length;
+                    } else if (data && data.cattle && Array.isArray(data.cattle)) {
                         count += data.cattle.length;
                     }
                 } catch (e) {
@@ -344,7 +426,7 @@ class CloudSync {
                 }
             }
         });
-        
+
         return count;
     }
 
@@ -416,10 +498,43 @@ class CloudSync {
 // Create global instance
 window.cloudSync = new CloudSync();
 
-// DISABLED: Auto-initialization to prevent accidental data loss
-// Users must manually enable cloud sync from Config tab
+// FAMILY SYNC CODE - Shared user ID for all family members
+const FAMILY_SYNC_ID = 'familia_ganado_venecia';
+
+// Auto-initialize with family sync
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔄 Cloud Sync: Auto-initialization is DISABLED');
-    console.log('ℹ️ To enable sync, go to Config tab and manually activate it');
-    console.log('⚠️ WARNING: Only enable if you understand the risks of data synchronization');
+    console.log('🔄 Cloud Sync: Initializing family sync...');
+
+    // Set the shared family ID for everyone
+    const currentUserId = localStorage.getItem('cloudSync_userId');
+    if (currentUserId !== FAMILY_SYNC_ID) {
+        console.log('📱 Setting shared family sync ID:', FAMILY_SYNC_ID);
+        localStorage.setItem('cloudSync_userId', FAMILY_SYNC_ID);
+        cloudSync.userId = FAMILY_SYNC_ID;
+    }
+
+    // Check if Firebase config is available
+    if (typeof firebaseConfig !== 'undefined') {
+        try {
+            // Small delay to ensure page is fully loaded
+            setTimeout(async () => {
+                const success = await cloudSync.initialize(firebaseConfig);
+                if (success) {
+                    console.log('✅ Family sync initialized successfully!');
+                    localStorage.setItem('cloudSync_enabled', 'true');
+
+                    // Update sync status in UI
+                    if (typeof updateSyncStatus === 'function') {
+                        updateSyncStatus();
+                    }
+                } else {
+                    console.error('❌ Failed to initialize family sync');
+                }
+            }, 1000);
+        } catch (error) {
+            console.error('Error initializing family sync:', error);
+        }
+    } else {
+        console.warn('⚠️ Firebase config not found - sync disabled');
+    }
 });

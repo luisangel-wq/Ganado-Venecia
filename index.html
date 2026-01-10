@@ -1549,6 +1549,11 @@
                     <span class="ranch-name">La Vega</span>
                 </button>
             </div>
+            <!-- Cloud Sync Status Indicator -->
+            <div id="cloudSyncIndicator" style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;" onclick="showTab('config')" title="Estado de sincronización">
+                <span id="syncIndicatorIcon" style="font-size: 1rem;">☁️</span>
+                <span id="syncIndicatorText" style="color: white;">Conectando...</span>
+            </div>
         </div>
     </div>
 
@@ -6873,15 +6878,24 @@
         }
         
         function updateSyncStatus() {
-            if (typeof cloudSync === 'undefined') return;
-            
+            // Update header indicator
+            const indicatorIcon = document.getElementById('syncIndicatorIcon');
+            const indicatorText = document.getElementById('syncIndicatorText');
+
+            if (typeof cloudSync === 'undefined') {
+                if (indicatorIcon) indicatorIcon.textContent = '⚫';
+                if (indicatorText) indicatorText.textContent = 'Sin sync';
+                return;
+            }
+
             const statusEl = document.getElementById('syncStatus');
             const lastSyncEl = document.getElementById('lastSyncTime');
             const pendingEl = document.getElementById('pendingChanges');
-            
+
+            // Check connection status
+            const isConnected = cloudSync && cloudSync.enabled && cloudSync.isInitialized;
+
             if (statusEl) {
-                // Check if cloud sync exists and has synced (more reliable than isInitialized)
-                const isConnected = cloudSync && cloudSync.lastSync !== undefined;
                 if (isConnected) {
                     statusEl.innerHTML = '🟢 Conectado';
                     statusEl.style.color = '#10b981';
@@ -6890,26 +6904,39 @@
                     statusEl.style.color = '#ef4444';
                 }
             }
-            
+
+            // Update header indicator
+            if (indicatorIcon && indicatorText) {
+                if (isConnected) {
+                    indicatorIcon.textContent = '☁️';
+                    indicatorText.textContent = 'Sincronizado';
+                    indicatorText.style.color = '#a7f3d0';
+                } else {
+                    indicatorIcon.textContent = '⚫';
+                    indicatorText.textContent = 'Sin conexión';
+                    indicatorText.style.color = '#fca5a5';
+                }
+            }
+
             if (lastSyncEl) {
-                const lastSync = cloudSync.getLastSyncTime ? cloudSync.getLastSyncTime() : null;
+                const lastSync = cloudSync.lastSync || localStorage.getItem('cloudSync_lastSync');
                 if (lastSync) {
                     const date = new Date(lastSync);
                     const now = new Date();
                     const diff = Math.floor((now - date) / 1000);
-                    
+
                     let timeStr;
                     if (diff < 60) timeStr = 'hace unos segundos';
                     else if (diff < 3600) timeStr = `hace ${Math.floor(diff / 60)} minutos`;
                     else if (diff < 86400) timeStr = `hace ${Math.floor(diff / 3600)} horas`;
                     else timeStr = `hace ${Math.floor(diff / 86400)} días`;
-                    
+
                     lastSyncEl.textContent = timeStr;
                 } else {
                     lastSyncEl.textContent = 'Nunca';
                 }
             }
-            
+
             if (pendingEl) {
                 pendingEl.textContent = '0'; // Cloud sync handles this automatically
             }
