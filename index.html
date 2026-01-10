@@ -2260,107 +2260,55 @@
                     <span>📸 Gestión de Fotos del Ganado</span>
                 </div>
                 <div class="card-body">
-                    <!-- Pending Dictations Panel -->
-                    <div id="pendingDictationsSection" style="margin-bottom: 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h3 style="margin: 0;">📝 Dictaciones Pendientes</h3>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button onclick="clearAllPendingDictations()" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-                                    🗑️ Limpiar
-                                </button>
-                                <button id="saveAllDictationsBtn" onclick="saveAllPendingDictations()" class="btn btn-success" style="display: none; font-size: 0.9rem; padding: 0.5rem 1rem; background: #10b981;">
-                                    💾 Guardar Todo
-                                </button>
-                            </div>
-                        </div>
-                        <div id="pendingDictationsContainer" style="background: #f9fafb; border-radius: 12px; padding: 1rem; min-height: 150px;">
-                            <div style="text-align: center; color: #666; padding: 2rem;">
-                                <div style="font-size: 3rem; margin-bottom: 1rem;">🎤</div>
-                                <p>Presione el botón de micrófono y dicte la información del animal.</p>
-                                <p style="font-size: 0.85rem; color: #999;">Ejemplo: "Animal 1207, peso aproximado 300 kilos, se ve en buenas condiciones"</p>
-                            </div>
+                    <!-- Compact Photo Options Grid - 5 buttons in a row on desktop, 2-3 on mobile -->
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                        <!-- AI Photo Voice -->
+                        <button id="voiceDictationBtn" onclick="startVoiceDictation('photos')" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
+                            <span style="font-size: 1.2rem;">🎤</span>
+                            <span style="font-weight: 600;">AI Voice</span>
+                        </button>
+                        <!-- Foto Individual -->
+                        <button onclick="showAddAnimalPhoto()" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
+                            <span style="font-size: 1.2rem;">📸</span>
+                            <span style="font-weight: 600;">Foto</span>
+                        </button>
+                        <!-- Captura Rápida -->
+                        <button onclick="startQuickCaptureMode()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
+                            <span style="font-size: 1.2rem;">⚡</span>
+                            <span style="font-weight: 600;">Rápido</span>
+                        </button>
+                        <!-- Subir Archivos -->
+                        <button onclick="openMultiplePhotosPicker()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
+                            <span style="font-size: 1.2rem;">📁</span>
+                            <span style="font-weight: 600;">Subir</span>
+                        </button>
+                        <!-- Nota de Voz -->
+                        <button onclick="startVoiceNoteMode()" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
+                            <span style="font-size: 1.2rem;">🎙️</span>
+                            <span style="font-weight: 600;">Audio</span>
+                        </button>
+                    </div>
+
+                    <!-- Voice Status (shown when recording) -->
+                    <div id="voiceStatus" style="display: none; margin-bottom: 0.75rem;">
+                        <div style="background: #fef3c7; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.8rem;">
+                            <div id="voiceTranscriptPreview" style="color: #92400e;">🎤 Escuchando...</div>
                         </div>
                     </div>
 
-                    <hr style="border: none; border-top: 2px dashed #e5e7eb; margin: 2rem 0;">
-
-                    <!-- Photo Options Grid -->
-                    <h3 style="margin-bottom: 1rem; color: #333; text-align: center;">📷 Opciones de Captura de Fotos</h3>
-
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-
-                        <!-- Option 1: AI Photo Voice (Dictation) -->
-                        <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 12px; padding: 1.25rem; border: 2px solid #8b5cf6;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">🎤</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #6d28d9;">AI Photo Voice</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #7c3aed;">Dicte info + tome foto</p>
-                                </div>
-                            </div>
-                            <button id="voiceDictationBtn" class="btn-voice" onclick="startVoiceDictation('photos')" style="width: 100%;">
-                                🎤 Dictar Animal
-                            </button>
-                            <div id="voiceStatus" style="display: none; margin-top: 0.5rem;">
-                                <div style="background: white; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.85rem;">
-                                    <div id="voiceTranscriptPreview" style="color: #333; min-height: 24px;">Escuchando...</div>
-                                </div>
+                    <!-- Pending Dictations Panel - Compact for mobile -->
+                    <div id="pendingDictationsSection" style="margin-bottom: 1rem;">
+                        <div id="pendingDictationsContainer" style="background: #f9fafb; border-radius: 8px; padding: 0.75rem; min-height: auto;">
+                            <div style="text-align: center; color: #999; padding: 0.5rem; font-size: 0.8rem;">
+                                🎤 Use AI Voice para dictar información del animal
                             </div>
                         </div>
-
-                        <!-- Option 2: Single Photo with Manual Entry -->
-                        <div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 12px; padding: 1.25rem; border: 2px solid #0ea5e9;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">📸</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #0369a1;">Foto Individual</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #0c4a6e;">Una foto + número manual</p>
-                                </div>
-                            </div>
-                            <button onclick="showAddAnimalPhoto()" class="btn btn-primary" style="width: 100%; background: #0ea5e9;">
-                                📸 Tomar Foto
+                        <div id="dictationActions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <button onclick="clearAllPendingDictations()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.75rem;">
+                                🗑️ Limpiar
                             </button>
-                        </div>
-
-                        <!-- Option 3: Quick Capture Mode (Multiple photos, assign later) -->
-                        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 1.25rem; border: 2px solid #f59e0b;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">⚡</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #92400e;">Captura Rápida</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #78350f;">Muchas fotos, asignar después</p>
-                                </div>
-                            </div>
-                            <button onclick="startQuickCaptureMode()" class="btn" style="width: 100%; background: #f59e0b; color: white;">
-                                ⚡ Modo Rápido
-                            </button>
-                        </div>
-
-                        <!-- Option 4: Upload from Files -->
-                        <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 12px; padding: 1.25rem; border: 2px solid #10b981;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">📁</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #065f46;">Subir Archivos</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #064e3b;">Desde computador o teléfono</p>
-                                </div>
-                            </div>
-                            <button onclick="openMultiplePhotosPicker()" class="btn" style="width: 100%; background: #10b981; color: white;">
-                                📁 Subir Fotos
-                            </button>
-                        </div>
-
-                        <!-- Option 5: Voice Recording Fallback -->
-                        <div style="background: linear-gradient(135deg, #fce7f3, #fbcfe8); border-radius: 12px; padding: 1.25rem; border: 2px solid #ec4899;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">🎙️</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #9d174d;">Nota de Voz + Foto</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #831843;">Sin internet/IA - grabe audio</p>
-                                </div>
-                            </div>
-                            <button onclick="startVoiceNoteMode()" class="btn" style="width: 100%; background: #ec4899; color: white;">
-                                🎙️ Grabar Nota
+                            <button id="saveAllDictationsBtn" onclick="saveAllPendingDictations()" class="btn btn-success" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; background: #10b981;">
+                                💾 Guardar
                             </button>
                         </div>
                     </div>
@@ -12489,84 +12437,67 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         function updatePendingDictationsUI() {
             const container = document.getElementById('pendingDictationsContainer');
+            const actionsDiv = document.getElementById('dictationActions');
             if (!container) return;
 
             if (pendingDictations.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; color: #666; padding: 2rem;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🎤</div>
-                        <p>Presione el botón de micrófono y dicte la información del animal.</p>
-                        <p style="font-size: 0.85rem; color: #999;">Ejemplo: "Animal 1207, peso aproximado 300 kilos, se ve en buenas condiciones"</p>
+                    <div style="text-align: center; color: #999; padding: 0.5rem; font-size: 0.8rem;">
+                        🎤 Use AI Voice para dictar información del animal
                     </div>
                 `;
+                if (actionsDiv) actionsDiv.style.display = 'none';
                 return;
             }
 
+            // Show actions when there are dictations
+            if (actionsDiv) actionsDiv.style.display = 'flex';
+
+            // Compact card layout for mobile
             container.innerHTML = pendingDictations.map((d, index) => `
-                <div class="pending-dictation-card" style="background: white; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${d.hasPhoto ? '#10b981' : '#f59e0b'};">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                        <div style="font-weight: bold; font-size: 1.2rem;">
-                            ${d.hasPhoto ? '✅' : '📝'} Animal:
-                            <input type="text" value="${d.chapeta}" onchange="updatePendingDictation(${d.id}, 'chapeta', this.value)"
-                                   style="width: 80px; font-size: 1.1rem; font-weight: bold; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;">
-                        </div>
-                        <button onclick="removePendingDictation(${d.id})" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;">✕</button>
+                <div style="background: white; border-radius: 8px; padding: 0.6rem; margin-bottom: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 3px solid ${d.hasPhoto ? '#10b981' : '#f59e0b'};">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem;">
+                        <span style="font-size: 0.9rem;">${d.hasPhoto ? '✅' : '📝'}</span>
+                        <input type="text" value="${d.chapeta}" placeholder="#" onchange="updatePendingDictation(${d.id}, 'chapeta', this.value)"
+                               style="width: 60px; font-size: 0.9rem; font-weight: bold; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px;">
+                        <input type="number" value="${d.peso}" placeholder="kg" onchange="updatePendingDictation(${d.id}, 'peso', this.value)"
+                               style="width: 55px; font-size: 0.85rem; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px;">
+                        <select onchange="updatePendingDictation(${d.id}, 'condicion', this.value)"
+                                style="flex: 1; font-size: 0.75rem; border: 1px solid #ddd; border-radius: 4px; padding: 3px; min-width: 0;">
+                            <option value="" ${!d.condicion ? 'selected' : ''}>Condición</option>
+                            <option value="Excelente" ${d.condicion === 'Excelente' ? 'selected' : ''}>Excelente</option>
+                            <option value="Buenas condiciones" ${d.condicion === 'Buenas condiciones' ? 'selected' : ''}>Buena</option>
+                            <option value="Regular" ${d.condicion === 'Regular' ? 'selected' : ''}>Regular</option>
+                            <option value="Flaco" ${d.condicion === 'Flaco' ? 'selected' : ''}>Flaco</option>
+                            <option value="Enfermo" ${d.condicion === 'Enfermo' ? 'selected' : ''}>Enfermo</option>
+                        </select>
+                        <button onclick="removePendingDictation(${d.id})" style="background: none; border: none; font-size: 1rem; cursor: pointer; color: #ef4444; padding: 0;">✕</button>
                     </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-                        <div>
-                            <label style="font-size: 0.8rem; color: #666;">Peso Estimado (kg):</label>
-                            <input type="number" value="${d.peso}" onchange="updatePendingDictation(${d.id}, 'peso', this.value)"
-                                   style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8rem; color: #666;">Condición General:</label>
-                            <select onchange="updatePendingDictation(${d.id}, 'condicion', this.value)"
-                                    style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px;">
-                                <option value="" ${!d.condicion ? 'selected' : ''}>Seleccionar...</option>
-                                <option value="Excelente" ${d.condicion === 'Excelente' ? 'selected' : ''}>Excelente</option>
-                                <option value="Muy bien" ${d.condicion === 'Muy bien' ? 'selected' : ''}>Muy bien</option>
-                                <option value="Buenas condiciones" ${d.condicion === 'Buenas condiciones' ? 'selected' : ''}>Buenas condiciones</option>
-                                <option value="Regular" ${d.condicion === 'Regular' ? 'selected' : ''}>Regular</option>
-                                <option value="Flaco" ${d.condicion === 'Flaco' ? 'selected' : ''}>Flaco</option>
-                                <option value="Enfermo" ${d.condicion === 'Enfermo' ? 'selected' : ''}>Enfermo</option>
-                                <option value="Recuperándose" ${d.condicion === 'Recuperándose' ? 'selected' : ''}>Recuperándose</option>
-                            </select>
-                        </div>
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                        ${d.hasPhoto ? `
+                            <img src="${d.photoData}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #10b981;">
+                        ` : `
+                            <button onclick="takePendingPhoto(${d.id})" style="background: #0ea5e9; color: white; border: none; border-radius: 4px; padding: 0.3rem 0.6rem; font-size: 0.75rem; cursor: pointer;">
+                                📸 Foto
+                            </button>
+                        `}
+                        ${d.audioUrl ? `
+                            <audio src="${d.audioUrl}" controls style="height: 28px; flex: 1;"></audio>
+                        ` : `
+                            <input type="text" value="${d.observaciones}" placeholder="Notas..." onchange="updatePendingDictation(${d.id}, 'observaciones', this.value)"
+                                   style="flex: 1; font-size: 0.75rem; border: 1px solid #ddd; border-radius: 4px; padding: 3px 6px; color: #666;">
+                        `}
                     </div>
-
-                    <div style="margin-bottom: 0.75rem;">
-                        <label style="font-size: 0.8rem; color: #666;">Observaciones:</label>
-                        <textarea onchange="updatePendingDictation(${d.id}, 'observaciones', this.value)"
-                                  style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px; min-height: 60px; resize: vertical;">${d.observaciones}</textarea>
-                    </div>
-
-                    ${d.audioUrl ? `
-                        <div style="margin-bottom: 0.75rem; background: #fce7f3; padding: 0.75rem; border-radius: 8px;">
-                            <label style="font-size: 0.8rem; color: #9d174d; font-weight: bold;">🎙️ Nota de Voz:</label>
-                            <audio src="${d.audioUrl}" controls style="width: 100%; height: 32px; margin-top: 0.25rem;"></audio>
-                        </div>
-                    ` : ''}
-
-                    ${d.hasPhoto ? `
-                        <div style="text-align: center; margin-bottom: 0.5rem;">
-                            <img src="${d.photoData}" style="max-width: 150px; max-height: 100px; border-radius: 8px; border: 2px solid #10b981;">
-                        </div>
-                    ` : `
-                        <button onclick="takePendingPhoto(${d.id})" class="btn btn-primary" style="width: 100%;">
-                            📸 Tomar Foto
-                        </button>
-                    `}
                 </div>
             `).join('');
 
-            // Update save all button visibility
+            // Update save button text
             const saveAllBtn = document.getElementById('saveAllDictationsBtn');
             if (saveAllBtn) {
                 const readyCount = pendingDictations.filter(d => d.chapeta && d.hasPhoto).length;
-                saveAllBtn.style.display = pendingDictations.length > 0 ? 'block' : 'none';
-                saveAllBtn.innerHTML = `💾 Guardar Todo (${readyCount}/${pendingDictations.length} listos)`;
+                saveAllBtn.innerHTML = `💾 Guardar (${readyCount})`;
                 saveAllBtn.disabled = readyCount === 0;
+                saveAllBtn.style.opacity = readyCount === 0 ? '0.5' : '1';
             }
         }
 
