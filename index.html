@@ -4462,8 +4462,9 @@
                         valA = getDiasEnFinca(a.fechaEntrada);
                         valB = getDiasEnFinca(b.fechaEntrada);
                     } else if (column === 'pesoEstimado') {
-                        valA = a.peso + (getDiasEnFinca(a.fechaEntrada) * data.config.gdp);
-                        valB = b.peso + (getDiasEnFinca(b.fechaEntrada) * data.config.gdp);
+                        // Females go to bottom when sorting by estimated weight
+                        valA = a.sexo === 'HEMBRA' ? -1 : a.peso + (getDiasEnFinca(a.fechaEntrada) * data.config.gdp);
+                        valB = b.sexo === 'HEMBRA' ? -1 : b.peso + (getDiasEnFinca(b.fechaEntrada) * data.config.gdp);
                     } else {
                         valA = a[column];
                         valB = b[column];
@@ -5911,7 +5912,10 @@
                 const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
 
                 let pesoDisplay, pesoStyle;
-                if (lastManualUpdate) {
+                // Only show estimated/actual weight for MACHOS - females are not raised for weight gain
+                if (animal.sexo === 'HEMBRA') {
+                    pesoDisplay = `<span style="color: #9ca3af; font-style: italic;">Hembra</span>`;
+                } else if (lastManualUpdate) {
                     // Has manual weight update - compare to default estimate
                     const pesoReal = lastManualUpdate.pesoNuevo;
                     if (pesoReal > pesoEstimadoDefault) {
@@ -5926,8 +5930,8 @@
                     }
                     pesoDisplay = `<span style="${pesoStyle}">${pesoReal.toFixed(0)} kg</span>`;
                 } else {
-                    // No manual update - default black
-                    pesoDisplay = `<strong>${pesoEstimadoDefault.toFixed(0)} kg</strong>`;
+                    // No manual update - default black (not bold, just regular)
+                    pesoDisplay = `<span>${pesoEstimadoDefault.toFixed(0)} kg</span>`;
                 }
 
                 return `
