@@ -2933,57 +2933,222 @@
                     <span>📈 Seguimiento de Peso y Progreso</span>
                 </div>
                 <div class="card-body">
-                    <!-- AI Dictation for Weight Updates -->
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 12px; padding: 1.25rem; border: 2px solid #8b5cf6;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">🎤</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #6d28d9;">AI Dictation</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #7c3aed;">Dicte chapeta, peso y condición</p>
-                                </div>
+                    <!-- ==================== ANALYTICS DASHBOARD ==================== -->
+
+                    <!-- Quick Actions Row -->
+                    <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 10px; padding: 1rem; border: 2px solid #8b5cf6;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.2rem;">🎤</span>
+                                <h4 style="margin: 0; font-size: 0.9rem; color: #6d28d9;">AI Dictation</h4>
                             </div>
-                            <button onclick="startProgressoDictation()" class="btn-voice" style="width: 100%;">
+                            <button onclick="startProgressoDictation()" class="btn-voice" style="width: 100%; padding: 0.5rem; font-size: 0.85rem;">
                                 🎤 Dictar Peso
                             </button>
-                            <div id="progresoVoiceStatus" style="display: none; margin-top: 0.5rem;">
-                                <div style="background: white; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.85rem;">
-                                    <div id="progresoVoiceTranscript" style="color: #333; min-height: 24px;">Escuchando...</div>
+                            <div id="progresoVoiceStatus" style="display: none; margin-top: 0.4rem;">
+                                <div style="background: white; border-radius: 4px; padding: 0.3rem; font-size: 0.75rem;">
+                                    <div id="progresoVoiceTranscript" style="color: #333;">Escuchando...</div>
                                 </div>
                             </div>
                         </div>
-                        <div style="flex: 1; min-width: 280px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-radius: 12px; padding: 1.25rem; border: 2px solid #10b981;">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                                <span style="font-size: 1.5rem;">⚖️</span>
-                                <div>
-                                    <h4 style="margin: 0; color: #065f46;">Registro Manual</h4>
-                                    <p style="margin: 0; font-size: 0.8rem; color: #047857;">Formulario tradicional</p>
-                                </div>
+                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-radius: 10px; padding: 1rem; border: 2px solid #10b981;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.2rem;">⚖️</span>
+                                <h4 style="margin: 0; font-size: 0.9rem; color: #065f46;">Registro Manual</h4>
                             </div>
-                            <button class="btn btn-primary" onclick="showRegistrarPesoForm()" style="width: 100%; background: #10b981;">
+                            <button class="btn btn-primary" onclick="showRegistrarPesoForm()" style="width: 100%; background: #10b981; padding: 0.5rem; font-size: 0.85rem;">
                                 ➕ Registrar Peso
+                            </button>
+                        </div>
+                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.2rem;">📊</span>
+                                <h4 style="margin: 0; font-size: 0.9rem; color: #92400e;">Actualizar Análisis</h4>
+                            </div>
+                            <button onclick="refreshPerformanceAnalytics()" class="btn" style="width: 100%; background: #f59e0b; color: white; padding: 0.5rem; font-size: 0.85rem;">
+                                🔄 Recalcular
                             </button>
                         </div>
                     </div>
 
                     <!-- Pending Progreso Dictations -->
                     <div id="pendingProgresoDictations" style="display: none; margin-bottom: 1.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h3 style="margin: 0;">📝 Dictaciones de Peso Pendientes</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h4 style="margin: 0;">📝 Dictaciones Pendientes</h4>
                             <div style="display: flex; gap: 0.5rem;">
-                                <button onclick="clearProgresoDictations()" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
-                                    🗑️ Limpiar
-                                </button>
-                                <button id="saveProgresoDictationsBtn" onclick="saveAllProgresoDictations()" class="btn btn-success" style="font-size: 0.9rem; padding: 0.5rem 1rem; background: #10b981;">
-                                    💾 Guardar Todo
-                                </button>
+                                <button onclick="clearProgresoDictations()" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">🗑️</button>
+                                <button id="saveProgresoDictationsBtn" onclick="saveAllProgresoDictations()" class="btn btn-success" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: #10b981;">💾 Guardar</button>
                             </div>
                         </div>
-                        <div id="progresoDictationsContainer" style="background: #f9fafb; border-radius: 12px; padding: 1rem;">
+                        <div id="progresoDictationsContainer" style="background: #f9fafb; border-radius: 8px; padding: 0.75rem;"></div>
+                    </div>
+
+                    <!-- ==================== PERFORMANCE TIERS ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem; border: 2px solid #10b981;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <span>🏆 Clasificación de Rendimiento (GDP)</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="performanceTiers" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                                <!-- Top Performers -->
+                                <div onclick="showTierAnimals('top')" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 12px; padding: 1.25rem; border: 3px solid #10b981; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🟢</div>
+                                        <h3 style="margin: 0; color: #065f46; font-size: 1.1rem;">TOP PERFORMERS</h3>
+                                        <p style="margin: 0.25rem 0; font-size: 0.8rem; color: #047857;">GDP > 0.40 kg/día</p>
+                                        <div id="topPerformersCount" style="font-size: 2rem; font-weight: bold; color: #059669; margin: 0.5rem 0;">0</div>
+                                        <div style="font-size: 0.85rem; color: #065f46;">animales</div>
+                                        <div id="topPerformersAvgGDP" style="font-size: 1.1rem; font-weight: bold; color: #047857; margin-top: 0.5rem;">GDP: -- kg/día</div>
+                                    </div>
+                                </div>
+
+                                <!-- Average Performers -->
+                                <div onclick="showTierAnimals('average')" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 1.25rem; border: 3px solid #f59e0b; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🟡</div>
+                                        <h3 style="margin: 0; color: #92400e; font-size: 1.1rem;">PROMEDIO</h3>
+                                        <p style="margin: 0.25rem 0; font-size: 0.8rem; color: #b45309;">GDP 0.25 - 0.40 kg/día</p>
+                                        <div id="avgPerformersCount" style="font-size: 2rem; font-weight: bold; color: #d97706; margin: 0.5rem 0;">0</div>
+                                        <div style="font-size: 0.85rem; color: #92400e;">animales</div>
+                                        <div id="avgPerformersAvgGDP" style="font-size: 1.1rem; font-weight: bold; color: #b45309; margin-top: 0.5rem;">GDP: -- kg/día</div>
+                                    </div>
+                                </div>
+
+                                <!-- Below Average -->
+                                <div onclick="showTierAnimals('poor')" style="background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 12px; padding: 1.25rem; border: 3px solid #ef4444; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔴</div>
+                                        <h3 style="margin: 0; color: #991b1b; font-size: 1.1rem;">BAJO RENDIMIENTO</h3>
+                                        <p style="margin: 0.25rem 0; font-size: 0.8rem; color: #dc2626;">GDP < 0.25 kg/día</p>
+                                        <div id="poorPerformersCount" style="font-size: 2rem; font-weight: bold; color: #ef4444; margin: 0.5rem 0;">0</div>
+                                        <div style="font-size: 0.85rem; color: #991b1b;">animales</div>
+                                        <div id="poorPerformersAvgGDP" style="font-size: 1.1rem; font-weight: bold; color: #dc2626; margin-top: 0.5rem;">GDP: -- kg/día</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- No Data Message -->
+                            <div id="noPerformanceData" style="display: none; text-align: center; padding: 2rem; color: #666;">
+                                <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                                <p>No hay suficientes datos de peso para calcular rendimiento.</p>
+                                <p style="font-size: 0.9rem; color: #999;">Registre actualizaciones de peso para ver el análisis de GDP.</p>
+                            </div>
+
+                            <!-- Herd Summary -->
+                            <div id="herdSummary" style="background: #f8fafc; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #666;">Total Animales</div>
+                                    <div id="herdTotalAnimals" style="font-size: 1.5rem; font-weight: bold; color: #333;">0</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #666;">Con Datos GDP</div>
+                                    <div id="herdWithGDP" style="font-size: 1.5rem; font-weight: bold; color: #0ea5e9;">0</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #666;">GDP Promedio</div>
+                                    <div id="herdAvgGDP" style="font-size: 1.5rem; font-weight: bold; color: #10b981;">-- kg/día</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.8rem; color: #666;">Mejor GDP</div>
+                                    <div id="herdBestGDP" style="font-size: 1.5rem; font-weight: bold; color: #059669;">-- kg/día</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Peso Registration Form (hidden by default) -->
+
+                    <!-- ==================== GDP CHARTS ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                            <span>📈 Análisis de Crecimiento</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <!-- GDP Distribution Chart -->
+                                <div>
+                                    <h4 style="margin: 0 0 1rem 0; color: #333;">Distribución de GDP</h4>
+                                    <canvas id="gdpDistributionChart" height="200"></canvas>
+                                </div>
+                                <!-- Performance by Raza -->
+                                <div>
+                                    <h4 style="margin: 0 0 1rem 0; color: #333;">GDP por Raza</h4>
+                                    <canvas id="gdpByRazaChart" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== CORRELATION ANALYSIS ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <span>🔍 Factores que Afectan el Rendimiento</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="correlationAnalysis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <!-- By Raza -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">🐄 Por Raza</h4>
+                                    <div id="correlationByRaza" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Condition -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">💪 Por Condición</h4>
+                                    <div id="correlationByCondition" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Entry Weight -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">⚖️ Por Peso Entrada</h4>
+                                    <div id="correlationByWeight" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Sex -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">♂️♀️ Por Sexo</h4>
+                                    <div id="correlationBySex" style="font-size: 0.85rem;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== ACTIONABLE LISTS ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                            <span>📋 Listas de Acción</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                                <!-- Ready to Sell -->
+                                <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; padding: 1rem; border: 2px solid #10b981;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #065f46; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>💰</span> Listos para Venta
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #047857; margin: 0 0 0.75rem 0;">Buen GDP + peso objetivo alcanzado</p>
+                                    <div id="readyToSellList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="readyToSellCount" style="text-align: center; font-weight: bold; color: #059669; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+
+                                <!-- Stars - Keep -->
+                                <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>⭐</span> Estrellas
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #b45309; margin: 0 0 0.75rem 0;">Excelente GDP - considerar retener</p>
+                                    <div id="starAnimalsList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="starAnimalsCount" style="text-align: center; font-weight: bold; color: #d97706; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+
+                                <!-- Underperformers -->
+                                <div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 10px; padding: 1rem; border: 2px solid #ef4444;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #991b1b; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>⚠️</span> Bajo Rendimiento
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #dc2626; margin: 0 0 0.75rem 0;">Considerar venta o revisar salud</p>
+                                    <div id="underperformersList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="underperformersCount" style="text-align: center; font-weight: bold; color: #ef4444; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== PESO REGISTRATION FORM ==================== -->
                     <div id="pesoFormContainer" style="display: none;">
                         <div class="card" style="border: 2px solid #10b981; margin-bottom: 1.5rem;">
                             <div class="card-header" style="background: linear-gradient(135deg, #10b981, #059669);">
@@ -2998,12 +3163,12 @@
                                         <div class="animal-selector" id="pesoAnimalSelector" style="max-height: 200px;"></div>
                                         <input type="hidden" id="pesoAnimalNumero" required>
                                     </div>
-                                    
+
                                     <div id="pesoAnimalInfo" style="display: none; background: #f0f7f0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
                                         <strong>Animal Seleccionado:</strong>
                                         <div id="pesoAnimalInfoContent"></div>
                                     </div>
-                                    
+
                                     <div class="form-grid">
                                         <div class="form-group">
                                             <label class="form-label">Peso Actualizado (kg) <span class="required">*</span></label>
@@ -3014,12 +3179,12 @@
                                             <input type="date" class="form-input" id="pesoFecha" required>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="form-group">
                                         <label class="form-label">Observaciones</label>
                                         <textarea class="form-input" id="pesoObservaciones" rows="2" placeholder="Notas sobre el estado del animal..."></textarea>
                                     </div>
-                                    
+
                                     <button type="submit" class="btn btn-success" style="width: 100%;">
                                         💾 Guardar Actualización de Peso
                                     </button>
@@ -3027,15 +3192,15 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Progress History -->
+
+                    <!-- ==================== WEIGHT HISTORY TABLE ==================== -->
                     <div class="card">
                         <div class="card-header">
-                            <span>📜 Historial de Actualizaciones</span>
+                            <span>📜 Historial de Actualizaciones de Peso</span>
                         </div>
                         <div class="card-body">
                             <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                                <input type="text" class="form-input" id="progresoSearch" placeholder="Buscar..." oninput="filterProgreso()" style="flex: 1; min-width: 150px;">
+                                <input type="text" class="form-input" id="progresoSearch" placeholder="Buscar por chapeta..." oninput="filterProgreso()" style="flex: 1; min-width: 150px;">
                             </div>
                             <div class="table-container">
                                 <table>
@@ -5476,6 +5641,7 @@
             updatePotrerosView();
             updateAIStats();
             updateAnimalPhotosGrid(); // Update animal photos grid
+            refreshPerformanceAnalytics(); // Update performance analytics dashboard
         }
         
         function updateSummary() {
@@ -12936,6 +13102,446 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
         // ==================== END PROGRESO DICTATION ====================
+
+        // ==================== PERFORMANCE ANALYTICS SYSTEM ====================
+        let gdpDistributionChart = null;
+        let gdpByRazaChart = null;
+        let performanceData = { top: [], average: [], poor: [], all: [] };
+
+        // GDP Thresholds
+        const GDP_TOP_THRESHOLD = 0.40;
+        const GDP_AVG_THRESHOLD = 0.25;
+        const TARGET_WEIGHT = 450; // kg - target weight for sale
+
+        function calculateAnimalGDP(numero) {
+            const animal = data.entradas.find(e => String(e.numero) === String(numero));
+            if (!animal) return null;
+
+            // Get weight updates for this animal
+            const updates = (data.pesoUpdates || [])
+                .filter(u => String(u.numero) === String(numero))
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            if (updates.length === 0) {
+                // Calculate estimated GDP based on days in farm
+                const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+                if (diasEnFinca > 30) {
+                    // Use default GDP estimate
+                    return {
+                        numero: numero,
+                        animal: animal,
+                        gdp: data.config.gdp || 0.31,
+                        isEstimated: true,
+                        pesoActual: animal.peso + (diasEnFinca * (data.config.gdp || 0.31)),
+                        pesoInicial: animal.peso,
+                        diasTotal: diasEnFinca,
+                        updates: 0
+                    };
+                }
+                return null;
+            }
+
+            // Calculate actual GDP from weight updates
+            const lastUpdate = updates[updates.length - 1];
+            const pesoInicial = animal.peso;
+            const pesoActual = lastUpdate.pesoNuevo;
+            const gananciaTotal = pesoActual - pesoInicial;
+            const diasTotal = getDiasEnFinca(animal.fechaEntrada);
+            const gdpReal = diasTotal > 0 ? gananciaTotal / diasTotal : 0;
+
+            // Also calculate GDP from last update period
+            let gdpUltimoPeriodo = lastUpdate.gdpReal || gdpReal;
+
+            return {
+                numero: numero,
+                animal: animal,
+                gdp: gdpReal,
+                gdpUltimoPeriodo: gdpUltimoPeriodo,
+                isEstimated: false,
+                pesoActual: pesoActual,
+                pesoInicial: pesoInicial,
+                gananciaTotal: gananciaTotal,
+                diasTotal: diasTotal,
+                updates: updates.length,
+                lastUpdate: lastUpdate
+            };
+        }
+
+        function refreshPerformanceAnalytics() {
+            const inventario = getInventario();
+            performanceData = { top: [], average: [], poor: [], all: [] };
+
+            // Calculate GDP for all animals
+            inventario.forEach(animal => {
+                const gdpData = calculateAnimalGDP(animal.numero);
+                if (gdpData && gdpData.gdp !== null) {
+                    gdpData.raza = animal.raza || 'Sin raza';
+                    gdpData.sexo = animal.sexo || 'N/A';
+                    gdpData.condicion = animal.condicionGeneral || 'Sin datos';
+
+                    performanceData.all.push(gdpData);
+
+                    // Classify by tier
+                    if (gdpData.gdp >= GDP_TOP_THRESHOLD) {
+                        performanceData.top.push(gdpData);
+                    } else if (gdpData.gdp >= GDP_AVG_THRESHOLD) {
+                        performanceData.average.push(gdpData);
+                    } else {
+                        performanceData.poor.push(gdpData);
+                    }
+                }
+            });
+
+            // Sort each tier by GDP (best first)
+            performanceData.top.sort((a, b) => b.gdp - a.gdp);
+            performanceData.average.sort((a, b) => b.gdp - a.gdp);
+            performanceData.poor.sort((a, b) => b.gdp - a.gdp);
+            performanceData.all.sort((a, b) => b.gdp - a.gdp);
+
+            // Update UI
+            updatePerformanceTiers();
+            updateHerdSummary(inventario);
+            updateCorrelationAnalysis();
+            updateActionableLists();
+            updateGDPCharts();
+        }
+
+        function updatePerformanceTiers() {
+            const noDataEl = document.getElementById('noPerformanceData');
+            const tiersEl = document.getElementById('performanceTiers');
+
+            if (performanceData.all.length === 0) {
+                if (noDataEl) noDataEl.style.display = 'block';
+                if (tiersEl) tiersEl.style.display = 'none';
+                return;
+            }
+
+            if (noDataEl) noDataEl.style.display = 'none';
+            if (tiersEl) tiersEl.style.display = 'grid';
+
+            // Top performers
+            document.getElementById('topPerformersCount').textContent = performanceData.top.length;
+            const topAvgGDP = performanceData.top.length > 0
+                ? performanceData.top.reduce((sum, a) => sum + a.gdp, 0) / performanceData.top.length
+                : 0;
+            document.getElementById('topPerformersAvgGDP').textContent = `GDP: ${topAvgGDP.toFixed(2)} kg/día`;
+
+            // Average performers
+            document.getElementById('avgPerformersCount').textContent = performanceData.average.length;
+            const avgAvgGDP = performanceData.average.length > 0
+                ? performanceData.average.reduce((sum, a) => sum + a.gdp, 0) / performanceData.average.length
+                : 0;
+            document.getElementById('avgPerformersAvgGDP').textContent = `GDP: ${avgAvgGDP.toFixed(2)} kg/día`;
+
+            // Poor performers
+            document.getElementById('poorPerformersCount').textContent = performanceData.poor.length;
+            const poorAvgGDP = performanceData.poor.length > 0
+                ? performanceData.poor.reduce((sum, a) => sum + a.gdp, 0) / performanceData.poor.length
+                : 0;
+            document.getElementById('poorPerformersAvgGDP').textContent = `GDP: ${poorAvgGDP.toFixed(2)} kg/día`;
+        }
+
+        function updateHerdSummary(inventario) {
+            document.getElementById('herdTotalAnimals').textContent = inventario.length;
+            document.getElementById('herdWithGDP').textContent = performanceData.all.length;
+
+            if (performanceData.all.length > 0) {
+                const avgGDP = performanceData.all.reduce((sum, a) => sum + a.gdp, 0) / performanceData.all.length;
+                const bestGDP = performanceData.all[0].gdp;
+
+                document.getElementById('herdAvgGDP').textContent = avgGDP.toFixed(2) + ' kg/día';
+                document.getElementById('herdBestGDP').textContent = bestGDP.toFixed(2) + ' kg/día';
+            } else {
+                document.getElementById('herdAvgGDP').textContent = '-- kg/día';
+                document.getElementById('herdBestGDP').textContent = '-- kg/día';
+            }
+        }
+
+        function updateCorrelationAnalysis() {
+            // By Raza
+            const byRaza = {};
+            performanceData.all.forEach(a => {
+                const raza = a.raza || 'Sin raza';
+                if (!byRaza[raza]) byRaza[raza] = { total: 0, gdpSum: 0 };
+                byRaza[raza].total++;
+                byRaza[raza].gdpSum += a.gdp;
+            });
+
+            let razaHtml = '';
+            Object.entries(byRaza)
+                .map(([raza, data]) => ({ raza, avg: data.gdpSum / data.total, count: data.total }))
+                .sort((a, b) => b.avg - a.avg)
+                .forEach(item => {
+                    const color = item.avg >= GDP_TOP_THRESHOLD ? '#10b981' : item.avg >= GDP_AVG_THRESHOLD ? '#f59e0b' : '#ef4444';
+                    razaHtml += `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #eee;">
+                        <span>${item.raza} (${item.count})</span>
+                        <span style="color: ${color}; font-weight: bold;">${item.avg.toFixed(2)} kg/día</span>
+                    </div>`;
+                });
+            document.getElementById('correlationByRaza').innerHTML = razaHtml || '<span style="color: #999;">Sin datos</span>';
+
+            // By Condition
+            const byCondition = {};
+            performanceData.all.forEach(a => {
+                const cond = a.condicion || 'Sin datos';
+                if (!byCondition[cond]) byCondition[cond] = { total: 0, gdpSum: 0 };
+                byCondition[cond].total++;
+                byCondition[cond].gdpSum += a.gdp;
+            });
+
+            let condHtml = '';
+            Object.entries(byCondition)
+                .map(([cond, data]) => ({ cond, avg: data.gdpSum / data.total, count: data.total }))
+                .sort((a, b) => b.avg - a.avg)
+                .forEach(item => {
+                    const color = item.avg >= GDP_TOP_THRESHOLD ? '#10b981' : item.avg >= GDP_AVG_THRESHOLD ? '#f59e0b' : '#ef4444';
+                    condHtml += `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #eee;">
+                        <span>${item.cond} (${item.count})</span>
+                        <span style="color: ${color}; font-weight: bold;">${item.avg.toFixed(2)} kg/día</span>
+                    </div>`;
+                });
+            document.getElementById('correlationByCondition').innerHTML = condHtml || '<span style="color: #999;">Sin datos</span>';
+
+            // By Entry Weight Range
+            const weightRanges = [
+                { label: '< 200 kg', min: 0, max: 200 },
+                { label: '200-300 kg', min: 200, max: 300 },
+                { label: '300-400 kg', min: 300, max: 400 },
+                { label: '> 400 kg', min: 400, max: 9999 }
+            ];
+
+            let weightHtml = '';
+            weightRanges.forEach(range => {
+                const animals = performanceData.all.filter(a => a.pesoInicial >= range.min && a.pesoInicial < range.max);
+                if (animals.length > 0) {
+                    const avgGDP = animals.reduce((sum, a) => sum + a.gdp, 0) / animals.length;
+                    const color = avgGDP >= GDP_TOP_THRESHOLD ? '#10b981' : avgGDP >= GDP_AVG_THRESHOLD ? '#f59e0b' : '#ef4444';
+                    weightHtml += `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #eee;">
+                        <span>${range.label} (${animals.length})</span>
+                        <span style="color: ${color}; font-weight: bold;">${avgGDP.toFixed(2)} kg/día</span>
+                    </div>`;
+                }
+            });
+            document.getElementById('correlationByWeight').innerHTML = weightHtml || '<span style="color: #999;">Sin datos</span>';
+
+            // By Sex
+            const bySex = {};
+            performanceData.all.forEach(a => {
+                const sex = a.sexo || 'N/A';
+                if (!bySex[sex]) bySex[sex] = { total: 0, gdpSum: 0 };
+                bySex[sex].total++;
+                bySex[sex].gdpSum += a.gdp;
+            });
+
+            let sexHtml = '';
+            Object.entries(bySex)
+                .map(([sex, data]) => ({ sex, avg: data.gdpSum / data.total, count: data.total }))
+                .sort((a, b) => b.avg - a.avg)
+                .forEach(item => {
+                    const icon = item.sex === 'MACHO' ? '♂️' : item.sex === 'HEMBRA' ? '♀️' : '❓';
+                    const color = item.avg >= GDP_TOP_THRESHOLD ? '#10b981' : item.avg >= GDP_AVG_THRESHOLD ? '#f59e0b' : '#ef4444';
+                    sexHtml += `<div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #eee;">
+                        <span>${icon} ${item.sex} (${item.count})</span>
+                        <span style="color: ${color}; font-weight: bold;">${item.avg.toFixed(2)} kg/día</span>
+                    </div>`;
+                });
+            document.getElementById('correlationBySex').innerHTML = sexHtml || '<span style="color: #999;">Sin datos</span>';
+        }
+
+        function updateActionableLists() {
+            // Ready to Sell: Good GDP + weight >= TARGET_WEIGHT
+            const readyToSell = performanceData.all.filter(a =>
+                a.gdp >= GDP_AVG_THRESHOLD && a.pesoActual >= TARGET_WEIGHT
+            ).slice(0, 10);
+
+            let sellHtml = readyToSell.map(a => `
+                <div onclick="showAnimalProfile('${a.numero}')" style="background: white; border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; border-left: 3px solid #10b981;">
+                    <div style="font-weight: bold;">#${a.numero}</div>
+                    <div style="font-size: 0.75rem; color: #666;">${Math.round(a.pesoActual)}kg | GDP: ${a.gdp.toFixed(2)}</div>
+                </div>
+            `).join('');
+            document.getElementById('readyToSellList').innerHTML = sellHtml || '<div style="color: #999; font-size: 0.85rem;">Ninguno listo aún</div>';
+            document.getElementById('readyToSellCount').textContent = `${readyToSell.length} animales`;
+
+            // Stars: Top 10 by GDP
+            const stars = performanceData.top.slice(0, 10);
+            let starsHtml = stars.map(a => `
+                <div onclick="showAnimalProfile('${a.numero}')" style="background: white; border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; border-left: 3px solid #f59e0b;">
+                    <div style="font-weight: bold;">#${a.numero} <span style="color: #f59e0b;">⭐</span></div>
+                    <div style="font-size: 0.75rem; color: #666;">${a.raza} | GDP: ${a.gdp.toFixed(2)}</div>
+                </div>
+            `).join('');
+            document.getElementById('starAnimalsList').innerHTML = starsHtml || '<div style="color: #999; font-size: 0.85rem;">Sin estrellas aún</div>';
+            document.getElementById('starAnimalsCount').textContent = `${stars.length} animales`;
+
+            // Underperformers: Poor GDP
+            const underperformers = performanceData.poor.slice(0, 10);
+            let underHtml = underperformers.map(a => `
+                <div onclick="showAnimalProfile('${a.numero}')" style="background: white; border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; cursor: pointer; border-left: 3px solid #ef4444;">
+                    <div style="font-weight: bold;">#${a.numero} <span style="color: #ef4444;">⚠️</span></div>
+                    <div style="font-size: 0.75rem; color: #666;">${a.raza} | GDP: ${a.gdp.toFixed(2)}</div>
+                </div>
+            `).join('');
+            document.getElementById('underperformersList').innerHTML = underHtml || '<div style="color: #999; font-size: 0.85rem;">Ninguno con bajo rendimiento</div>';
+            document.getElementById('underperformersCount').textContent = `${underperformers.length} animales`;
+        }
+
+        function updateGDPCharts() {
+            // GDP Distribution Chart
+            const ctx1 = document.getElementById('gdpDistributionChart');
+            if (!ctx1) return;
+
+            // Destroy existing chart
+            if (gdpDistributionChart) {
+                gdpDistributionChart.destroy();
+            }
+
+            gdpDistributionChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Top (>0.40)', 'Promedio (0.25-0.40)', 'Bajo (<0.25)'],
+                    datasets: [{
+                        label: 'Cantidad de Animales',
+                        data: [performanceData.top.length, performanceData.average.length, performanceData.poor.length],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // GDP by Raza Chart
+            const ctx2 = document.getElementById('gdpByRazaChart');
+            if (!ctx2) return;
+
+            if (gdpByRazaChart) {
+                gdpByRazaChart.destroy();
+            }
+
+            // Aggregate by raza
+            const razaData = {};
+            performanceData.all.forEach(a => {
+                const raza = a.raza || 'Sin raza';
+                if (!razaData[raza]) razaData[raza] = { total: 0, gdpSum: 0 };
+                razaData[raza].total++;
+                razaData[raza].gdpSum += a.gdp;
+            });
+
+            const razaLabels = Object.keys(razaData);
+            const razaAvgs = razaLabels.map(r => razaData[r].gdpSum / razaData[r].total);
+            const razaColors = razaAvgs.map(avg =>
+                avg >= GDP_TOP_THRESHOLD ? '#10b981' : avg >= GDP_AVG_THRESHOLD ? '#f59e0b' : '#ef4444'
+            );
+
+            gdpByRazaChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: razaLabels,
+                    datasets: [{
+                        label: 'GDP Promedio (kg/día)',
+                        data: razaAvgs,
+                        backgroundColor: razaColors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function showTierAnimals(tier) {
+            let animals = [];
+            let tierName = '';
+            let tierColor = '';
+
+            switch(tier) {
+                case 'top':
+                    animals = performanceData.top;
+                    tierName = 'Top Performers (GDP > 0.40 kg/día)';
+                    tierColor = '#10b981';
+                    break;
+                case 'average':
+                    animals = performanceData.average;
+                    tierName = 'Rendimiento Promedio (GDP 0.25 - 0.40 kg/día)';
+                    tierColor = '#f59e0b';
+                    break;
+                case 'poor':
+                    animals = performanceData.poor;
+                    tierName = 'Bajo Rendimiento (GDP < 0.25 kg/día)';
+                    tierColor = '#ef4444';
+                    break;
+            }
+
+            if (animals.length === 0) {
+                showToast('No hay animales en esta categoría', 'info');
+                return;
+            }
+
+            // Create modal with animal list
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'tierAnimalsModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 700px; max-height: 80vh;">
+                    <div class="modal-header" style="background: ${tierColor};">
+                        <span>🏆 ${tierName}</span>
+                        <button class="modal-close" onclick="document.getElementById('tierAnimalsModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1rem; overflow-y: auto; max-height: 60vh;">
+                        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold;">${animals.length} animales</span>
+                            <span style="color: #666; font-size: 0.85rem;">Click para ver perfil</span>
+                        </div>
+                        <div class="table-container">
+                            <table style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Chapeta</th>
+                                        <th>Raza</th>
+                                        <th>Sexo</th>
+                                        <th class="text-right">Peso Actual</th>
+                                        <th class="text-right">GDP</th>
+                                        <th>Condición</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${animals.map(a => `
+                                        <tr onclick="document.getElementById('tierAnimalsModal').remove(); showAnimalProfile('${a.numero}');" style="cursor: pointer;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+                                            <td><strong>#${a.numero}</strong></td>
+                                            <td>${a.raza}</td>
+                                            <td>${a.sexo === 'MACHO' ? '♂️' : '♀️'} ${a.sexo}</td>
+                                            <td class="text-right">${Math.round(a.pesoActual)} kg</td>
+                                            <td class="text-right" style="color: ${tierColor}; font-weight: bold;">${a.gdp.toFixed(2)}</td>
+                                            <td>${a.condicion}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        // ==================== END PERFORMANCE ANALYTICS ====================
 
         // Fill weight update modal from voice
         function fillWeightUpdateFromVoice(parsed) {
