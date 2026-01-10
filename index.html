@@ -4423,6 +4423,22 @@
             updateLoteProgress();
         }
 
+        function getNextChapetaNumber() {
+            // Find the highest numeric chapeta number from all animals (active and sold)
+            let maxNumber = 0;
+
+            if (data.entradas && data.entradas.length > 0) {
+                data.entradas.forEach(animal => {
+                    const num = parseInt(animal.numero);
+                    if (!isNaN(num) && num > maxNumber) {
+                        maxNumber = num;
+                    }
+                });
+            }
+
+            return maxNumber + 1;
+        }
+
         function buildBulkCompraTable(count) {
             const tbody = document.getElementById('compraAnimalesBulkTable');
             if (!tbody) return;
@@ -4432,10 +4448,13 @@
                 return;
             }
 
+            // Get the next consecutive chapeta number
+            const startingNumber = getNextChapetaNumber();
+
             tbody.innerHTML = Array.from({ length: count }).map((_, index) => `
                 <tr>
                     <td class="text-center">${index + 1}</td>
-                    <td><input type="text" class="form-input" data-field="numero" placeholder="ej: 301"></td>
+                    <td><input type="text" class="form-input" data-field="numero" value="${startingNumber + index}" placeholder="ej: 301"></td>
                     <td>
                         <select class="form-select" data-field="raza">
                             <option value="">Seleccionar</option>
