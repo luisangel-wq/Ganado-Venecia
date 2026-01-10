@@ -9417,18 +9417,21 @@
         function showMoverAnimalesForm() {
             document.getElementById('moverAnimalesFormContainer').style.display = 'block';
             document.getElementById('moverFecha').value = new Date().toISOString().split('T')[0];
-            
-            // Populate potrero selectors
+
+            // Use shared potreros from all connected ranches (La Coruña + Santa Catalina)
+            const allPotreros = getSharedPotreros();
+
+            // Populate potrero selectors with ALL potreros from shared ranches
             const desdeSelect = document.getElementById('moverDesde');
             const haciaSelect = document.getElementById('moverHacia');
-            
-            desdeSelect.innerHTML = '<option value="">-- Sin potrero asignado --</option>' + 
-                data.potreros.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-            
-            haciaSelect.innerHTML = '<option value="">-- Seleccionar destino --</option>' + 
-                data.potreros.filter(p => p.estado !== 'mantenimiento')
-                    .map(p => `<option value="${p.id}">${p.nombre} (${p.estado})</option>`).join('');
-            
+
+            desdeSelect.innerHTML = '<option value="">-- Sin potrero asignado --</option>' +
+                allPotreros.map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName || p.nombre}</option>`).join('');
+
+            haciaSelect.innerHTML = '<option value="">-- Seleccionar destino --</option>' +
+                allPotreros.filter(p => p.estado !== 'mantenimiento')
+                    .map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName || p.nombre} (${p.estado})</option>`).join('');
+
             selectedMoverAnimals.clear();
             updateAnimalesEnPotrero();
         }
@@ -9439,28 +9442,39 @@
         }
         
         function updateAnimalesEnPotrero() {
-            const desdeId = document.getElementById('moverDesde').value;
+            const desdeValue = document.getElementById('moverDesde').value;
             const container = document.getElementById('moverAnimalSelector');
             const inventario = getInventario();
-            
+
             let animalesFiltrados;
-            if (desdeId === '') {
+            if (desdeValue === '') {
                 // Animals without assigned potrero
                 animalesFiltrados = inventario.filter(a => !data.animalPotreros[a.numero]);
             } else {
-                // Animals in selected potrero
-                animalesFiltrados = inventario.filter(a => data.animalPotreros[a.numero] === parseInt(desdeId));
+                // Parse the combined ID (format: "ranchId_potreroId")
+                const parts = desdeValue.split('_');
+                const sourceRanch = parts[0];
+                const potreroId = parseInt(parts.slice(1).join('_')); // Handle IDs that might have underscores
+
+                // Animals in selected potrero (check both old format and new format)
+                animalesFiltrados = inventario.filter(a => {
+                    const assignedPotrero = data.animalPotreros[a.numero];
+                    // Support both old format (just ID) and new format (ranch_id)
+                    return assignedPotrero === potreroId ||
+                           assignedPotrero === desdeValue ||
+                           assignedPotrero === `${sourceRanch}_${potreroId}`;
+                });
             }
-            
+
             if (animalesFiltrados.length === 0) {
                 container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--gray);">No hay animales en esta ubicación</div>';
                 return;
             }
-            
-            container.innerHTML = animalesFiltrados.map(a => 
+
+            container.innerHTML = animalesFiltrados.map(a =>
                 `<div class="animal-chip" data-numero="${a.numero}" onclick="toggleMoverAnimal('${a.numero}')">${a.numero}</div>`
             ).join('');
-            
+
             selectedMoverAnimals.clear();
             updateMoverSelectedCount();
         }
@@ -9503,73 +9517,126 @@
         
         function moverAnimales(event) {
             event.preventDefault();
-            
+
             if (selectedMoverAnimals.size === 0) {
                 showToast('Debe seleccionar al menos un animal', 'error');
                 return;
             }
-            
-            const haciaId = parseInt(document.getElementById('moverHacia').value);
-            if (!haciaId) {
+
+            const haciaValue = document.getElementById('moverHacia').value;
+            if (!haciaValue) {
                 showToast('Debe seleccionar potrero destino', 'error');
                 return;
             }
-            
-            const desdeId = document.getElementById('moverDesde').value ? parseInt(document.getElementById('moverDesde').value) : null;
+
+            const desdeValue = document.getElementById('moverDesde').value || null;
             const fecha = document.getElementById('moverFecha').value;
-            
+
+            // Parse the combined IDs (format: "ranchId_potreroId")
+            const allPotreros = getSharedPotreros();
+
+            // Find destination potrero info
+            let haciaRanch, haciaPotreroId, haciaPotreroInfo;
+            if (haciaValue.includes('_')) {
+                const parts = haciaValue.split('_');
+                haciaRanch = parts[0];
+                haciaPotreroId = parseInt(parts.slice(1).join('_'));
+                haciaPotreroInfo = allPotreros.find(p => p.sourceRanch === haciaRanch && p.id === haciaPotreroId);
+            }
+
+            // Find source potrero info
+            let desdeRanch, desdePotreroId, desdePotreroInfo;
+            if (desdeValue && desdeValue.includes('_')) {
+                const parts = desdeValue.split('_');
+                desdeRanch = parts[0];
+                desdePotreroId = parseInt(parts.slice(1).join('_'));
+                desdePotreroInfo = allPotreros.find(p => p.sourceRanch === desdeRanch && p.id === desdePotreroId);
+            }
+
             // Calculate days in previous potrero
             let diasEnAnterior = null;
-            if (desdeId) {
-                const potrero = data.potreros.find(p => p.id === desdeId);
-                if (potrero && potrero.ultimaEntrada) {
-                    const entrada = new Date(potrero.ultimaEntrada);
-                    const hoy = new Date(fecha);
-                    diasEnAnterior = Math.floor((hoy - entrada) / (1000 * 60 * 60 * 24));
-                }
+            if (desdePotreroInfo && desdePotreroInfo.ultimaEntrada) {
+                const entrada = new Date(desdePotreroInfo.ultimaEntrada);
+                const hoy = new Date(fecha);
+                diasEnAnterior = Math.floor((hoy - entrada) / (1000 * 60 * 60 * 24));
             }
-            
-            // Record rotation
+
+            // Record rotation with full info
             const rotacion = {
                 id: Date.now(),
                 fecha: fecha,
-                desdeId: desdeId,
-                haciaId: haciaId,
+                desdeId: desdeValue,
+                desdeNombre: desdePotreroInfo?.displayName || desdePotreroInfo?.nombre || 'Sin asignar',
+                haciaId: haciaValue,
+                haciaNombre: haciaPotreroInfo?.displayName || haciaPotreroInfo?.nombre || 'Desconocido',
                 animales: Array.from(selectedMoverAnimals),
                 diasEnAnterior: diasEnAnterior
             };
             data.rotaciones.push(rotacion);
-            
-            // Update animal assignments
+
+            // Update animal assignments with the full ID (for cross-ranch tracking)
             selectedMoverAnimals.forEach(numero => {
-                data.animalPotreros[numero] = haciaId;
+                data.animalPotreros[numero] = haciaValue;
             });
-            
-            // Update potrero states
-            if (desdeId) {
-                const potreroDesde = data.potreros.find(p => p.id === desdeId);
-                if (potreroDesde) {
-                    potreroDesde.ultimaSalida = fecha;
-                    // Check if potrero is now empty
-                    const remaining = Object.values(data.animalPotreros).filter(pId => pId === desdeId).length;
-                    if (remaining === 0) {
-                        potreroDesde.estado = 'descanso';
+
+            // Update potrero states in source ranch data
+            if (desdePotreroInfo && desdeRanch) {
+                const sourceRanchData = getRanchData(desdeRanch);
+                if (sourceRanchData) {
+                    const potreroDesde = sourceRanchData.potreros?.find(p => p.id === desdePotreroId);
+                    if (potreroDesde) {
+                        potreroDesde.ultimaSalida = fecha;
+                        // Check if potrero is now empty
+                        const remaining = Object.values(data.animalPotreros).filter(pId =>
+                            pId === desdeValue || pId === desdePotreroId
+                        ).length;
+                        if (remaining === 0) {
+                            potreroDesde.estado = 'descanso';
+                        }
+                        saveRanchData(desdeRanch, sourceRanchData);
                     }
                 }
             }
-            
-            const potreroHacia = data.potreros.find(p => p.id === haciaId);
-            if (potreroHacia) {
-                potreroHacia.ultimaEntrada = fecha;
-                potreroHacia.estado = 'ocupado';
+
+            // Update destination potrero state
+            if (haciaPotreroInfo && haciaRanch) {
+                const destRanchData = getRanchData(haciaRanch);
+                if (destRanchData) {
+                    const potreroHacia = destRanchData.potreros?.find(p => p.id === haciaPotreroId);
+                    if (potreroHacia) {
+                        potreroHacia.ultimaEntrada = fecha;
+                        potreroHacia.estado = 'ocupado';
+                        saveRanchData(haciaRanch, destRanchData);
+                    }
+                }
             }
-            
+
             saveData();
-            
-            const destino = data.potreros.find(p => p.id === haciaId)?.nombre || 'destino';
+
+            const destino = haciaPotreroInfo?.displayName || haciaPotreroInfo?.nombre || 'destino';
             showToast(`${selectedMoverAnimals.size} animales movidos a ${destino}`, 'success');
-            
+
             hideMoverAnimalesForm();
+        }
+
+        // Helper function to get ranch data
+        function getRanchData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            if (!ranch) return null;
+            const dataStr = localStorage.getItem(ranch.storageKey);
+            if (!dataStr) return null;
+            try {
+                return JSON.parse(dataStr);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Helper function to save ranch data
+        function saveRanchData(ranchId, ranchData) {
+            const ranch = RANCHES[ranchId];
+            if (!ranch) return;
+            localStorage.setItem(ranch.storageKey, JSON.stringify(ranchData));
         }
         
         function updatePotrerosView() {
@@ -9684,15 +9751,29 @@
             }
 
             // Use shared potreros for name lookup
-            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+            const allPotreros = getSharedPotreros();
 
             const sorted = [...data.rotaciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 20);
 
             tbody.innerHTML = sorted.map(r => {
-                const desdePotrero = r.desdeId ? potreros.find(p => p.id === r.desdeId) : null;
-                const haciaPotrero = potreros.find(p => p.id === r.haciaId);
-                const desde = desdePotrero ? desdePotrero.nombre : (r.desdeId ? 'Desconocido' : 'Sin asignar');
-                const hacia = haciaPotrero ? haciaPotrero.nombre : 'Desconocido';
+                // Use stored names if available (new format), otherwise look up
+                let desde = 'Sin asignar';
+                let hacia = 'Desconocido';
+
+                if (r.desdeNombre) {
+                    desde = r.desdeNombre;
+                } else if (r.desdeId) {
+                    // Try to find potrero (support both old and new ID formats)
+                    const desdePotrero = findPotreroById(allPotreros, r.desdeId);
+                    desde = desdePotrero ? (desdePotrero.displayName || desdePotrero.nombre) : 'Desconocido';
+                }
+
+                if (r.haciaNombre) {
+                    hacia = r.haciaNombre;
+                } else if (r.haciaId) {
+                    const haciaPotrero = findPotreroById(allPotreros, r.haciaId);
+                    hacia = haciaPotrero ? (haciaPotrero.displayName || haciaPotrero.nombre) : 'Desconocido';
+                }
 
                 return `<tr>
                     <td>${formatDate(r.fecha)}</td>
@@ -9702,6 +9783,23 @@
                     <td>${r.diasEnAnterior !== null ? r.diasEnAnterior + ' días' : '-'}</td>
                 </tr>`;
             }).join('');
+        }
+
+        // Helper to find potrero by ID (supports both old numeric ID and new "ranch_id" format)
+        function findPotreroById(potreros, id) {
+            if (!id) return null;
+
+            // Try direct match first (for new format "ranch_id")
+            let potrero = potreros.find(p => `${p.sourceRanch}_${p.id}` === id);
+            if (potrero) return potrero;
+
+            // Try numeric match (for old format)
+            const numericId = typeof id === 'number' ? id : parseInt(id);
+            if (!isNaN(numericId)) {
+                potrero = potreros.find(p => p.id === numericId);
+            }
+
+            return potrero;
         }
         
         // ==================== ANIMAL PROFILE MODULE ====================
