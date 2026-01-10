@@ -11488,10 +11488,40 @@
         }
         
         function viewAnimalPhotoLarge(chapeta) {
-            const photo = getAnimalPhoto(chapeta);
-            if (!photo) return;
-            
-            viewPhoto(photo, `Animal #${chapeta}`);
+            const photoData = getAnimalPhoto(chapeta);
+            console.log('viewAnimalPhotoLarge - chapeta:', chapeta, 'photoData:', photoData);
+
+            if (!photoData) {
+                console.log('No photo data found for animal', chapeta);
+                showToast('No hay foto disponible para este animal', 'warning');
+                return;
+            }
+
+            // Handle multiple formats:
+            // 1. String (old format - direct data URL)
+            // 2. Object with 'photo' property (new format)
+            // 3. Object with nested structure from cloud sync
+            let photoUrl;
+
+            if (typeof photoData === 'string') {
+                photoUrl = photoData;
+            } else if (photoData.photo) {
+                photoUrl = photoData.photo;
+            } else if (photoData.dataUrl) {
+                photoUrl = photoData.dataUrl;
+            } else if (photoData.url) {
+                photoUrl = photoData.url;
+            }
+
+            console.log('Extracted photoUrl:', photoUrl ? photoUrl.substring(0, 50) + '...' : 'null');
+
+            if (!photoUrl) {
+                console.log('Could not extract photo URL from data:', photoData);
+                showToast('Error al cargar la foto', 'error');
+                return;
+            }
+
+            viewPhoto(photoUrl, `Animal #${chapeta}`);
         }
         
         // ==================== AI ANALYTICS MODULE ====================
