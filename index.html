@@ -5470,7 +5470,12 @@
                 const hasPhoto = !!animalPhotos[animal.numero]?.photo;
 
                 // Check for manual weight updates from Progreso
-                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(animal.numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+                // Sort by date descending, then by id descending (for same-day updates)
+                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(animal.numero)).sort((a, b) => {
+                    const dateCompare = new Date(b.fecha) - new Date(a.fecha);
+                    if (dateCompare !== 0) return dateCompare;
+                    return (b.id || 0) - (a.id || 0); // Most recent id first for same date
+                }) : [];
                 const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
 
                 let pesoDisplay, pesoStyle;
@@ -8879,7 +8884,12 @@
             const pesoEstimadoDefault = animal.peso + (days * gdp);
 
             // Check for manual weight updates from Progreso
-            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+            // Sort by date descending, then by id descending (for same-day updates)
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => {
+                const dateCompare = new Date(b.fecha) - new Date(a.fecha);
+                if (dateCompare !== 0) return dateCompare;
+                return (b.id || 0) - (a.id || 0); // Most recent id first for same date
+            }) : [];
             const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
 
             // Use manual weight if available, otherwise use estimate
@@ -9118,8 +9128,12 @@
             const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
             const pesoEstimado = animal.peso + (diasEnFinca * (data.config.gdp || 0.31));
 
-            // Check for last manual update
-            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+            // Check for last manual update - sort by date then by id for same-day updates
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => {
+                const dateCompare = new Date(b.fecha) - new Date(a.fecha);
+                if (dateCompare !== 0) return dateCompare;
+                return (b.id || 0) - (a.id || 0);
+            }) : [];
             const lastUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
             const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
 
@@ -9202,7 +9216,7 @@
 
             const update = {
                 id: Date.now(),
-                numero: numero,
+                numero: String(animal.numero), // Ensure consistent format with animal data
                 fecha: fecha,
                 pesoAnterior: pesoAnterior,
                 pesoNuevo: pesoNuevo,
@@ -9214,11 +9228,18 @@
 
             if (!data.pesoUpdates) data.pesoUpdates = [];
             data.pesoUpdates.push(update);
+
+            // Close modal first
+            const modal = document.getElementById('quickWeightModal');
+            if (modal) modal.remove();
+
+            // Save data and update views
             saveData();
 
-            document.getElementById('quickWeightModal').remove();
-            updateAllViews();
-            showToast(`✅ Peso actualizado: #${numero} - ${pesoNuevo} kg`, 'success');
+            console.log('Weight update saved:', update);
+            console.log('All peso updates:', data.pesoUpdates);
+
+            showToast(`✅ Peso actualizado: #${animal.numero} - ${pesoNuevo} kg`, 'success');
         }
 
         // Change potrero from animal profile
