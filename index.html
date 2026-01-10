@@ -5380,26 +5380,50 @@
         function updateInventarioTable() {
             let inventario = getInventario();
             const tbody = document.getElementById('inventarioTable');
-            
+
             if (inventario.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="11" class="text-center">No hay animales en inventario</td></tr>';
                 return;
             }
-            
+
             // Apply sorting if active
             if (sortState.inventario.column) {
                 const th = document.querySelector(`#inventarioTableContainer th[data-sort="${sortState.inventario.column}"]`);
                 const type = th ? th.dataset.type : 'text';
                 inventario = sortData(inventario, sortState.inventario.column, sortState.inventario.direction, type, 'inventario');
             }
-            
+
             tbody.innerHTML = inventario.map(animal => {
                 const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
-                const pesoEstimado = animal.peso + (diasEnFinca * data.config.gdp);
+                const pesoEstimadoDefault = animal.peso + (diasEnFinca * data.config.gdp);
                 const inRetiro = isAnimalInRetiro(animal.numero);
                 const potrero = data.animalPotreros[animal.numero] ? data.potreros.find(p => p.id === data.animalPotreros[animal.numero]) : null;
                 const hasPhoto = !!animalPhotos[animal.numero]?.photo;
-                
+
+                // Check for manual weight updates from Progreso
+                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => u.numero == animal.numero).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+                const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
+
+                let pesoDisplay, pesoStyle;
+                if (lastManualUpdate) {
+                    // Has manual weight update - compare to default estimate
+                    const pesoReal = lastManualUpdate.pesoNuevo;
+                    if (pesoReal > pesoEstimadoDefault) {
+                        // Above estimate - green and bold
+                        pesoStyle = 'color: #16a34a; font-weight: bold;';
+                    } else if (pesoReal < pesoEstimadoDefault) {
+                        // Below estimate - red and bold
+                        pesoStyle = 'color: #dc2626; font-weight: bold;';
+                    } else {
+                        // Equal to estimate - bold only
+                        pesoStyle = 'font-weight: bold;';
+                    }
+                    pesoDisplay = `<span style="${pesoStyle}">${pesoReal.toFixed(0)} kg</span>`;
+                } else {
+                    // No manual update - default black
+                    pesoDisplay = `<strong>${pesoEstimadoDefault.toFixed(0)} kg</strong>`;
+                }
+
                 return `
                     <tr class="clickable-row" onclick="showAnimalProfile('${animal.numero}')" title="Ver perfil del animal">
                         <td><strong>${animal.numero}</strong>${inRetiro ? ' 🚫' : ''}${hasPhoto ? ' 📸' : ''}</td>
@@ -5411,7 +5435,7 @@
                         <td class="text-right">${formatCurrency(animal.precioKilo)}</td>
                         <td>${formatDate(animal.fechaEntrada)}</td>
                         <td class="text-right">${diasEnFinca}</td>
-                        <td class="text-right"><strong>${pesoEstimado.toFixed(0)} kg</strong></td>
+                        <td class="text-right">${pesoDisplay}</td>
                         <td class="text-center">
                             <button class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="event.stopPropagation(); quickSale('${animal.numero}')">💵</button>
                         </td>

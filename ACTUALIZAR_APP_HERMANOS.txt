@@ -1,0 +1,129 @@
+🔄 Cómo Actualizar la App - Para Hermanos
+
+═══════════════════════════════════════════════
+
+📱 ACTUALIZACIÓN DISPONIBLE
+
+He agregado nuevas funciones a la app:
+✨ Sincronización automática en tiempo real
+📸 Subir fotos desde galería/WhatsApp/computadora
+
+═══════════════════════════════════════════════
+
+🖥️ EN CHROME (COMPUTADORA)
+
+1️⃣ Abre Chrome
+
+2️⃣ Ve a la app (una de estas opciones):
+
+   🌐 OPCIÓN A - GitHub Pages (si está disponible):
+   https://luisangel-wq.github.io/Ganado-Venecia/index.html
+
+   🏠 OPCIÓN B - Servidor local:
+   http://192.168.1.57:8000/index.html
+   (o la URL que usas normalmente)
+
+3️⃣ Actualizar la página:
+
+   💻 Windows: Presiona Ctrl + Shift + R
+   🍎 Mac: Presiona Cmd + Shift + R
+
+   (Esto hace una "recarga completa" y descarga la versión nueva)
+
+4️⃣ ✅ ¡Listo! Las nuevas funciones están disponibles
+
+═══════════════════════════════════════════════
+
+📱 EN SAFARI (iPHONE)
+
+1️⃣ Abre Safari en tu iPhone
+
+2️⃣ Ve a la app (una de estas opciones):
+
+   🌐 OPCIÓN A - GitHub Pages:
+   https://luisangel-wq.github.io/Ganado-Venecia/index.html
+
+   🏠 OPCIÓN B - Servidor local:
+   http://192.168.1.57:8000/index.html
+
+3️⃣ Actualizar la página:
+
+   📲 Desliza hacia ABAJO desde la parte superior
+   (Como cuando actualizas tu feed de Instagram)
+
+   O
+
+   🔄 Toca el botón de refrescar (↻) en la barra de arriba
+
+4️⃣ ✅ ¡Listo! La app está actualizada
+
+═══════════════════════════════════════════════
+
+🎯 ¿CÓMO SÉ QUE FUNCIONÓ?
+
+Después de actualizar, verás:
+
+✅ La página se recarga (parpadea)
+✅ En la pestaña "Fotos":
+   - Dice: "Puede tomar foto con la cámara o seleccionar desde galería/computadora"
+✅ Los datos se sincronizan automáticamente sin preguntar
+
+═══════════════════════════════════════════════
+
+⚠️ IMPORTANTE
+
+✅ NO perderás tus datos al actualizar
+✅ Tus animales y fotos están seguros
+✅ Solo se actualiza el código, no los datos
+✅ Es 100% seguro
+
+═══════════════════════════════════════════════
+
+🔧 SI LA APP GUARDADA EN LA PANTALLA DE INICIO
+
+Si tienes la app guardada en la pantalla de inicio del iPhone:
+
+1️⃣ NO abras desde el icono de la pantalla de inicio
+
+2️⃣ En su lugar:
+   - Abre Safari
+   - Ve a la URL (opción A o B de arriba)
+   - Actualiza deslizando hacia abajo
+
+3️⃣ Opcional: Borra el icono viejo y crea uno nuevo
+   - Mantén presionado el icono → "Eliminar"
+   - Abre la URL nueva en Safari
+   - Toca "Compartir" → "Agregar a pantalla de inicio"
+
+═══════════════════════════════════════════════
+
+❓ SOLUCIÓN DE PROBLEMAS
+
+❌ "No veo las nuevas funciones"
+   → Cierra completamente el navegador
+   → Vuelve a abrirlo
+   → Intenta de nuevo
+
+❌ "La URL no funciona (OPCIÓN A)"
+   → Usa OPCIÓN B (servidor local)
+   → O pregúntame cuál URL usar
+
+❌ "No puedo acceder (OPCIÓN B)"
+   → Verifica que estés en la misma WiFi
+   → Pregúntame si mi computadora está encendida
+   → Intenta OPCIÓN A si está disponible
+
+═══════════════════════════════════════════════
+
+📞 CONTACTO
+
+Si tienes problemas, llámame o mándame WhatsApp.
+
+═══════════════════════════════════════════════
+
+🎉 DESPUÉS DE ACTUALIZAR
+
+Una vez actualizada la app, sigue los pasos en el otro
+mensaje para configurar el User ID y sincronizar los datos.
+
+═══════════════════════════════════════════════
