@@ -2324,19 +2324,65 @@
 
                     <hr style="border: none; border-top: 2px dashed #e5e7eb; margin: 2rem 0;">
 
-                    <!-- Original Photo Buttons -->
-                    <div style="text-align: center; padding: 1rem;">
-                        <h3 style="margin-bottom: 1rem; color: #666;">O agregue fotos manualmente:</h3>
-                        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1rem; padding: 0.75rem 1.5rem;">
-                                📸 Agregar Foto de Animal
-                            </button>
-                            <button class="btn" onclick="openMultiplePhotosPicker()" style="font-size: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
-                                🖼️ Subir Múltiples Fotos
+                    <!-- Photo Options Grid -->
+                    <h3 style="margin-bottom: 1rem; color: #333; text-align: center;">📷 Opciones de Captura de Fotos</h3>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+
+                        <!-- Option 1: Single Photo with Manual Entry -->
+                        <div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 12px; padding: 1.25rem; border: 2px solid #0ea5e9;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">📸</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #0369a1;">Foto Individual</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #0c4a6e;">Una foto + número manual</p>
+                                </div>
+                            </div>
+                            <button onclick="showAddAnimalPhoto()" class="btn btn-primary" style="width: 100%; background: #0ea5e9;">
+                                📸 Tomar Foto
                             </button>
                         </div>
-                        <div style="margin-top: 0.5rem; color: #999; font-size: 0.85rem;">
-                            Seleccione fotos de su computadora y asígnelas a los animales
+
+                        <!-- Option 2: Quick Capture Mode (Multiple photos, assign later) -->
+                        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 1.25rem; border: 2px solid #f59e0b;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">⚡</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #92400e;">Captura Rápida</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #78350f;">Muchas fotos, asignar después</p>
+                                </div>
+                            </div>
+                            <button onclick="startQuickCaptureMode()" class="btn" style="width: 100%; background: #f59e0b; color: white;">
+                                ⚡ Modo Rápido
+                            </button>
+                        </div>
+
+                        <!-- Option 3: Upload from Files -->
+                        <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 12px; padding: 1.25rem; border: 2px solid #10b981;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">📁</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #065f46;">Subir Archivos</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #064e3b;">Desde computador o teléfono</p>
+                                </div>
+                            </div>
+                            <button onclick="openMultiplePhotosPicker()" class="btn" style="width: 100%; background: #10b981; color: white;">
+                                📁 Subir Fotos
+                            </button>
+                        </div>
+
+                        <!-- Option 4: Voice Recording Fallback -->
+                        <div style="background: linear-gradient(135deg, #fce7f3, #fbcfe8); border-radius: 12px; padding: 1.25rem; border: 2px solid #ec4899;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">🎙️</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #9d174d;">Nota de Voz + Foto</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #831843;">Sin internet/IA - grabe audio</p>
+                                </div>
+                            </div>
+                            <button onclick="startVoiceNoteMode()" class="btn" style="width: 100%; background: #ec4899; color: white;">
+                                🎙️ Grabar Nota
+                            </button>
                         </div>
                     </div>
 
@@ -12461,6 +12507,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                                   style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px; min-height: 60px; resize: vertical;">${d.observaciones}</textarea>
                     </div>
 
+                    ${d.audioUrl ? `
+                        <div style="margin-bottom: 0.75rem; background: #fce7f3; padding: 0.75rem; border-radius: 8px;">
+                            <label style="font-size: 0.8rem; color: #9d174d; font-weight: bold;">🎙️ Nota de Voz:</label>
+                            <audio src="${d.audioUrl}" controls style="width: 100%; height: 32px; margin-top: 0.25rem;"></audio>
+                        </div>
+                    ` : ''}
+
                     ${d.hasPhoto ? `
                         <div style="text-align: center; margin-bottom: 0.5rem;">
                             <img src="${d.photoData}" style="max-width: 150px; max-height: 100px; border-radius: 8px; border: 2px solid #10b981;">
@@ -12805,6 +12858,430 @@ document.addEventListener('DOMContentLoaded', async function() {
                 console.warn('🎤 Speech recognition not available');
             }
         });
+
+        // ==================== QUICK CAPTURE MODE ====================
+
+        let quickCapturePhotos = []; // Array of photos taken in quick mode
+
+        function startQuickCaptureMode() {
+            quickCapturePhotos = [];
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'quickCaptureModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <span>⚡ Modo Captura Rápida</span>
+                        <button class="modal-close" onclick="closeQuickCaptureMode()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <div style="background: #fef3c7; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #f59e0b;">
+                            <strong>📷 Instrucciones:</strong>
+                            <ol style="margin: 0.5rem 0 0 1.25rem; font-size: 0.9rem;">
+                                <li>Tome fotos rápidamente de varios animales</li>
+                                <li>Las fotos se guardan temporalmente</li>
+                                <li>Después asigne cada foto a un animal</li>
+                            </ol>
+                        </div>
+
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <button onclick="takeQuickPhoto()" class="btn" style="background: #f59e0b; color: white; font-size: 1.5rem; padding: 1.5rem 3rem; border-radius: 16px;">
+                                📸 Tomar Foto
+                            </button>
+                            <div style="margin-top: 0.5rem; color: #666; font-size: 0.85rem;">
+                                Fotos capturadas: <strong id="quickPhotoCount">0</strong>
+                            </div>
+                        </div>
+
+                        <div id="quickCapturePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-bottom: 1rem;">
+                            <!-- Photos will appear here -->
+                        </div>
+
+                        <div id="quickCaptureActions" style="display: none;">
+                            <button onclick="assignQuickPhotos()" class="btn btn-primary" style="width: 100%; margin-bottom: 0.5rem;">
+                                ✅ Asignar Fotos a Animales
+                            </button>
+                            <button onclick="downloadQuickPhotos()" class="btn btn-secondary" style="width: 100%;">
+                                💾 Guardar en Dispositivo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function closeQuickCaptureMode() {
+            if (quickCapturePhotos.length > 0) {
+                if (!confirm('¿Cerrar sin guardar las fotos?')) return;
+            }
+            document.getElementById('quickCaptureModal')?.remove();
+            quickCapturePhotos = [];
+        }
+
+        function takeQuickPhoto() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                compressImage(file, function(dataUrl) {
+                    quickCapturePhotos.push({
+                        id: Date.now(),
+                        dataUrl: dataUrl,
+                        timestamp: new Date().toISOString(),
+                        chapeta: null
+                    });
+
+                    updateQuickCaptureUI();
+                    showToast(`📸 Foto ${quickCapturePhotos.length} capturada`, 'success');
+                });
+            };
+
+            input.click();
+        }
+
+        function updateQuickCaptureUI() {
+            const countEl = document.getElementById('quickPhotoCount');
+            const previewEl = document.getElementById('quickCapturePreview');
+            const actionsEl = document.getElementById('quickCaptureActions');
+
+            if (countEl) countEl.textContent = quickCapturePhotos.length;
+
+            if (previewEl) {
+                previewEl.innerHTML = quickCapturePhotos.map((p, i) => `
+                    <div style="position: relative;">
+                        <img src="${p.dataUrl}" style="width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+                        <button onclick="removeQuickPhoto(${p.id})" style="position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">×</button>
+                        <div style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">${i + 1}</div>
+                    </div>
+                `).join('');
+            }
+
+            if (actionsEl) {
+                actionsEl.style.display = quickCapturePhotos.length > 0 ? 'block' : 'none';
+            }
+        }
+
+        function removeQuickPhoto(id) {
+            quickCapturePhotos = quickCapturePhotos.filter(p => p.id !== id);
+            updateQuickCaptureUI();
+        }
+
+        function assignQuickPhotos() {
+            document.getElementById('quickCaptureModal')?.remove();
+
+            // Convert to pending dictations for assignment
+            quickCapturePhotos.forEach(photo => {
+                pendingDictations.push({
+                    id: photo.id,
+                    chapeta: '',
+                    peso: '',
+                    condicion: '',
+                    observaciones: 'Foto capturada en modo rápido',
+                    hasPhoto: true,
+                    photoData: photo.dataUrl,
+                    timestamp: photo.timestamp
+                });
+            });
+
+            quickCapturePhotos = [];
+            updatePendingDictationsUI();
+
+            showToast(`📸 ${pendingDictations.length} fotos listas para asignar`, 'success');
+
+            // Scroll to pending dictations section
+            document.getElementById('pendingDictationsSection')?.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function downloadQuickPhotos() {
+            quickCapturePhotos.forEach((photo, i) => {
+                const link = document.createElement('a');
+                link.href = photo.dataUrl;
+                link.download = `animal_foto_${i + 1}_${new Date().toISOString().split('T')[0]}.jpg`;
+                link.click();
+            });
+            showToast(`💾 ${quickCapturePhotos.length} fotos descargadas`, 'success');
+        }
+
+        // ==================== VOICE NOTE MODE (Audio Recording Fallback) ====================
+
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let voiceNotePhotos = []; // Photos with associated voice notes
+        let isRecordingAudio = false;
+
+        function startVoiceNoteMode() {
+            voiceNotePhotos = [];
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'voiceNoteModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                        <span>🎙️ Nota de Voz + Foto</span>
+                        <button class="modal-close" onclick="closeVoiceNoteMode()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <div style="background: #fce7f3; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #ec4899;">
+                            <strong>🎙️ Modo Sin Internet:</strong>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                                Grabe un mensaje de voz con la información del animal, tome la foto, y después en casa transcriba la información.
+                            </p>
+                        </div>
+
+                        <!-- Current Recording -->
+                        <div id="voiceNoteRecorder" style="text-align: center; padding: 1.5rem; background: #f9fafb; border-radius: 12px; margin-bottom: 1.5rem;">
+                            <div style="font-size: 4rem; margin-bottom: 1rem;" id="voiceNoteIcon">🎙️</div>
+
+                            <button id="recordAudioBtn" onclick="toggleAudioRecording()" class="btn" style="background: #ec4899; color: white; font-size: 1.2rem; padding: 1rem 2rem; border-radius: 30px;">
+                                🎙️ Iniciar Grabación
+                            </button>
+
+                            <div id="recordingStatus" style="margin-top: 1rem; display: none;">
+                                <div style="color: #dc2626; font-weight: bold; font-size: 1.1rem;">
+                                    <span class="pulse-mic">🔴</span> Grabando...
+                                </div>
+                                <div id="recordingTime" style="font-family: monospace; font-size: 1.5rem; margin-top: 0.5rem;">00:00</div>
+                            </div>
+
+                            <audio id="audioPreview" controls style="display: none; width: 100%; margin-top: 1rem;"></audio>
+                        </div>
+
+                        <!-- Take Photo Button (appears after recording) -->
+                        <div id="takePhotoSection" style="display: none; text-align: center; margin-bottom: 1.5rem;">
+                            <button onclick="takeVoiceNotePhoto()" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                                📸 Tomar Foto del Animal
+                            </button>
+                        </div>
+
+                        <!-- Saved Notes -->
+                        <div id="voiceNotesContainer">
+                            <h4 style="margin-bottom: 1rem;">📝 Notas Guardadas (<span id="voiceNoteCount">0</span>)</h4>
+                            <div id="voiceNotesList" style="max-height: 300px; overflow-y: auto;">
+                                <div style="text-align: center; color: #666; padding: 1rem;">
+                                    Grabe su primera nota de voz
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="voiceNotesActions" style="display: none; margin-top: 1rem;">
+                            <button onclick="processVoiceNotes()" class="btn btn-success" style="width: 100%;">
+                                ✅ Procesar Notas (Agregar a Pendientes)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function closeVoiceNoteMode() {
+            if (voiceNotePhotos.length > 0) {
+                if (!confirm('¿Cerrar sin procesar las notas?')) return;
+            }
+            stopAudioRecording();
+            document.getElementById('voiceNoteModal')?.remove();
+            voiceNotePhotos = [];
+        }
+
+        let recordingStartTime = null;
+        let recordingTimer = null;
+
+        async function toggleAudioRecording() {
+            if (isRecordingAudio) {
+                stopAudioRecording();
+            } else {
+                await startAudioRecording();
+            }
+        }
+
+        async function startAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const audioPreview = document.getElementById('audioPreview');
+                    if (audioPreview) {
+                        audioPreview.src = audioUrl;
+                        audioPreview.style.display = 'block';
+                    }
+
+                    // Store the current recording temporarily
+                    window.currentAudioBlob = audioBlob;
+                    window.currentAudioUrl = audioUrl;
+
+                    // Show take photo section
+                    document.getElementById('takePhotoSection').style.display = 'block';
+
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecordingAudio = true;
+
+                // Update UI
+                const btn = document.getElementById('recordAudioBtn');
+                btn.innerHTML = '⏹️ Detener Grabación';
+                btn.style.background = '#dc2626';
+
+                document.getElementById('recordingStatus').style.display = 'block';
+                document.getElementById('voiceNoteIcon').innerHTML = '<span class="pulse-mic">🔴</span>';
+
+                // Start timer
+                recordingStartTime = Date.now();
+                recordingTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                    const secs = (elapsed % 60).toString().padStart(2, '0');
+                    document.getElementById('recordingTime').textContent = `${mins}:${secs}`;
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                showToast('⚠️ No se pudo acceder al micrófono. Verifique permisos.', 'error');
+            }
+        }
+
+        function stopAudioRecording() {
+            if (mediaRecorder && isRecordingAudio) {
+                mediaRecorder.stop();
+                isRecordingAudio = false;
+
+                // Update UI
+                const btn = document.getElementById('recordAudioBtn');
+                if (btn) {
+                    btn.innerHTML = '🎙️ Nueva Grabación';
+                    btn.style.background = '#ec4899';
+                }
+
+                document.getElementById('recordingStatus').style.display = 'none';
+                document.getElementById('voiceNoteIcon').innerHTML = '🎙️';
+
+                // Stop timer
+                if (recordingTimer) {
+                    clearInterval(recordingTimer);
+                    recordingTimer = null;
+                }
+            }
+        }
+
+        function takeVoiceNotePhoto() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                compressImage(file, function(dataUrl) {
+                    // Save the note with photo
+                    voiceNotePhotos.push({
+                        id: Date.now(),
+                        audioBlob: window.currentAudioBlob,
+                        audioUrl: window.currentAudioUrl,
+                        photoData: dataUrl,
+                        timestamp: new Date().toISOString(),
+                        transcription: '' // To be filled later
+                    });
+
+                    // Reset for next recording
+                    window.currentAudioBlob = null;
+                    window.currentAudioUrl = null;
+                    document.getElementById('audioPreview').style.display = 'none';
+                    document.getElementById('takePhotoSection').style.display = 'none';
+
+                    updateVoiceNotesUI();
+                    showToast('✅ Nota de voz + foto guardada', 'success');
+                });
+            };
+
+            input.click();
+        }
+
+        function updateVoiceNotesUI() {
+            const countEl = document.getElementById('voiceNoteCount');
+            const listEl = document.getElementById('voiceNotesList');
+            const actionsEl = document.getElementById('voiceNotesActions');
+
+            if (countEl) countEl.textContent = voiceNotePhotos.length;
+
+            if (listEl) {
+                if (voiceNotePhotos.length === 0) {
+                    listEl.innerHTML = '<div style="text-align: center; color: #666; padding: 1rem;">Grabe su primera nota de voz</div>';
+                } else {
+                    listEl.innerHTML = voiceNotePhotos.map((note, i) => `
+                        <div style="background: white; border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="display: flex; gap: 1rem; align-items: start;">
+                                <img src="${note.photoData}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold; margin-bottom: 0.5rem;">Nota #${i + 1}</div>
+                                    <audio src="${note.audioUrl}" controls style="width: 100%; height: 32px;"></audio>
+                                    <input type="text" placeholder="# Chapeta (completar después)"
+                                           value="${note.transcription}"
+                                           onchange="voiceNotePhotos[${i}].transcription = this.value"
+                                           style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                                <button onclick="removeVoiceNote(${note.id})" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem;">×</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            if (actionsEl) {
+                actionsEl.style.display = voiceNotePhotos.length > 0 ? 'block' : 'none';
+            }
+        }
+
+        function removeVoiceNote(id) {
+            voiceNotePhotos = voiceNotePhotos.filter(n => n.id !== id);
+            updateVoiceNotesUI();
+        }
+
+        function processVoiceNotes() {
+            document.getElementById('voiceNoteModal')?.remove();
+
+            // Add to pending dictations
+            voiceNotePhotos.forEach(note => {
+                pendingDictations.push({
+                    id: note.id,
+                    chapeta: note.transcription || '',
+                    peso: '',
+                    condicion: '',
+                    observaciones: 'Nota de voz grabada - escuchar audio para completar',
+                    hasPhoto: true,
+                    photoData: note.photoData,
+                    audioUrl: note.audioUrl,
+                    timestamp: note.timestamp
+                });
+            });
+
+            voiceNotePhotos = [];
+            updatePendingDictationsUI();
+
+            showToast(`📝 ${pendingDictations.length} notas agregadas a pendientes`, 'success');
+            document.getElementById('pendingDictationsSection')?.scrollIntoView({ behavior: 'smooth' });
+        }
 
         // ==================== END VOICE DICTATION MODULE ====================
 
