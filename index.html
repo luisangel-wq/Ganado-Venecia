@@ -1200,22 +1200,22 @@
             font-size: 1.2rem;
         }
         
-        /* La Coruña - Yellow Theme */
+        /* La Coruña - Pure Yellow Theme */
         .ranch-coruna {
-            background: linear-gradient(135deg, #FFC107, #F9A825);
+            background: linear-gradient(135deg, #FFEB3B, #FDD835);
             color: #000;
-            border-color: #FFC107;
+            border-color: #FFEB3B;
         }
 
         .ranch-coruna.active {
             border-color: #fff;
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5);
+            box-shadow: 0 4px 12px rgba(255, 235, 59, 0.5);
         }
 
         /* Santa Catalina - Orange Theme */
         .ranch-catalina {
             background: linear-gradient(135deg, #ff9800, #f57c00);
-            color: white;
+            color: #000;
             border-color: #ff9800;
         }
 
@@ -1238,7 +1238,7 @@
         
         /* Dynamic header themes */
         .header.theme-coruna {
-            background: linear-gradient(135deg, #FFC107, #F9A825) !important;
+            background: linear-gradient(135deg, #FFEB3B, #FDD835) !important;
             color: #000 !important;
         }
 
@@ -1248,6 +1248,11 @@
 
         .header.theme-catalina {
             background: linear-gradient(135deg, #ff9800, #e65100) !important;
+            color: #000 !important;
+        }
+
+        .header.theme-catalina * {
+            color: #000 !important;
         }
         
         .header.theme-vega {
@@ -1256,13 +1261,13 @@
         
         /* Active tab indicator color change */
         .theme-coruna-active .nav-tab.active {
-            border-bottom-color: #F9A825 !important;
-            color: #F9A825 !important;
+            border-bottom-color: #FDD835 !important;
+            color: #FDD835 !important;
         }
 
         .theme-catalina-active .nav-tab.active {
-            border-bottom-color: #ff9800 !important;
-            color: #ff9800 !important;
+            border-bottom-color: #e65100 !important;
+            color: #e65100 !important;
         }
         
         /* Animal Selector Styles */
@@ -9822,15 +9827,14 @@
                 // Group by ranch
                 Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
                     const ranch = RANCHES[ranchId];
-                    const ranchColor = ranchId === 'la_coruna' ? '#F9A825' : '#ff9800'; // Yellow for Coruña, Orange for Catalina
+                    const ranchColor = ranchId === 'la_coruna' ? '#FFEB3B' : '#ff9800'; // Pure Yellow for Coruña, Orange for Catalina
 
-                    const badgeTextColor = ranchId === 'la_coruna' ? '#000' : 'white'; // Black text for yellow, white for orange
                     animalesHtml += `
                         <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${ranchColor}15; border-left: 4px solid ${ranchColor}; border-radius: 0 8px 8px 0; margin-bottom: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: ${ranchColor}25; border-left: 4px solid ${ranchColor}; border-radius: 0 8px 8px 0; margin-bottom: 0.75rem;">
                                 <span style="font-size: 1.2rem;">${ranch.icon}</span>
-                                <span style="font-weight: 600; color: ${ranchId === 'la_coruna' ? '#b7791f' : ranchColor};">${info.ranchName}</span>
-                                <span style="background: ${ranchColor}; color: ${badgeTextColor}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; margin-left: auto;">
+                                <span style="font-weight: 600; color: ${ranchId === 'la_coruna' ? '#9a7b00' : '#c45000'};">${info.ranchName}</span>
+                                <span style="background: ${ranchColor}; color: #000; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem; margin-left: auto;">
                                     ${info.count} animal${info.count > 1 ? 'es' : ''}
                                 </span>
                             </div>
