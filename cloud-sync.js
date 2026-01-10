@@ -86,9 +86,19 @@ class CloudSync {
                 // Force download from cloud for new devices
                 await this.forceDownloadFromCloud();
             } else {
-                // Normal sync - first upload local, then setup listeners
-                await this.syncToCloud();
-                await this.syncFromCloud();
+                // Check cloud first to see if it has more data
+                const cloudAnimalCount = await this.getCloudAnimalCount();
+                console.log(`📊 Local: ${localAnimalCount} animals, Cloud: ${cloudAnimalCount} animals`);
+
+                if (cloudAnimalCount > localAnimalCount) {
+                    // Cloud has more data - download it
+                    console.log('☁️ Cloud has more data - downloading...');
+                    await this.syncFromCloud();
+                } else if (localAnimalCount > 0) {
+                    // Local has data - upload to cloud
+                    console.log('📤 Uploading local data to cloud...');
+                    await this.syncToCloud();
+                }
             }
 
             // Setup real-time listeners
@@ -379,6 +389,22 @@ class CloudSync {
             if (showNotification && typeof showToast === 'function') {
                 showToast(`☁️ ${changesCount} cambio(s) sincronizado(s) automáticamente`, 'success');
             }
+        }
+    }
+
+    /**
+     * Get animal count from cloud (without downloading all data)
+     */
+    async getCloudAnimalCount() {
+        if (!this.enabled || !this.db) return 0;
+
+        try {
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            const cloudData = snapshot.val();
+            return this.countAnimalsInData(cloudData);
+        } catch (error) {
+            console.error('Error getting cloud animal count:', error);
+            return 0;
         }
     }
 
