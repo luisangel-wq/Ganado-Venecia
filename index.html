@@ -1673,64 +1673,7 @@
                     <div class="summary-box-label">Kg Promedio</div>
                 </div>
             </div>
-            
-            <!-- Backup Section (Simplified) -->
-            <div class="card">
-                <div class="card-header">
-                    <span>💾 Respaldo de Datos</span>
-                </div>
-                <div class="card-body">
-                    <div class="btn-group">
-                        <button class="btn btn-warning" onclick="backupAllData()">
-                            <span>💾</span> Respaldar Datos
-                        </button>
-                        <button class="btn btn-success" onclick="restoreFromBackup()">
-                            <span>📥</span> Restaurar Respaldo
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <span>📂 Importar/Exportar Datos</span>
-                </div>
-                <div class="card-body">
-                    <!-- Quick Import Buttons -->
-                    <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border-left: 4px solid #4caf50;">
-                        <h4 style="margin: 0 0 1rem 0; color: #2e7d32;">⚡ Importación Rápida de Datos</h4>
-                        <p style="margin-bottom: 1rem; color: #555;">Importa los datos predefinidos de cada finca con un solo clic:</p>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">
-                            <button class="btn btn-primary" onclick="importLaCorunaData()" style="width: 100%; padding: 1rem;">
-                                🏔️ Importar La Coruña<br><span style="font-size: 0.8rem; opacity: 0.9;">(Desde Excel)</span>
-                            </button>
-                            <button class="btn btn-primary" onclick="importLaVegaData()" style="width: 100%; padding: 1rem;">
-                                🌾 Importar La Vega<br><span style="font-size: 0.8rem; opacity: 0.9;">(113 animales)</span>
-                            </button>
-                            <button class="btn btn-primary" onclick="importSantaCatalinaData()" style="width: 100%; padding: 1rem;">
-                                ⛪ Importar Santa Catalina<br><span style="font-size: 0.8rem; opacity: 0.9;">(103 animales)</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <label class="btn btn-primary">
-                            <span>📥</span> Importar Excel
-                            <input type="file" id="importExcel" accept=".xlsx,.xlsm,.xls" style="display:none">
-                        </label>
-                        <button class="btn btn-success" onclick="exportToExcel()">
-                            <span>📤</span> Exportar a Excel
-                        </button>
-                        <button class="btn btn-outline" onclick="exportToCSV()">
-                            <span>📄</span> Exportar CSV
-                        </button>
-                    </div>
-                    <p class="form-hint" style="margin-top: 1rem;">
-                        Importa tu archivo Excel con las hojas: Entradas, Salidas, Inventario
-                    </p>
-                </div>
-            </div>
-            
+
             <div class="card">
                 <div class="card-header">
                     <span>📅 Actividad Reciente</span>
