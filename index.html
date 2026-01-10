@@ -9722,8 +9722,10 @@
             const today = new Date();
 
             html += potreros.map(p => {
-                // Count animals in this potrero
-                const animalesCount = Object.values(data.animalPotreros).filter(pId => pId === p.id).length;
+                // Count animals in this potrero (supports both old and new ID formats)
+                const animalesCount = Object.entries(data.animalPotreros).filter(([num, pId]) =>
+                    potreroIdMatches(pId, p)
+                ).length;
                 
                 // Calculate days resting or occupied
                 let diasEstado = null;
@@ -9835,6 +9837,41 @@
             }
 
             return potrero;
+        }
+
+        // Find potrero by the ID stored in animalPotreros (handles both formats)
+        function findPotreroByAssignedId(potreros, assignedId) {
+            if (!assignedId) return null;
+
+            // Check if it's the new format "ranchId_potreroId"
+            if (typeof assignedId === 'string' && assignedId.includes('_')) {
+                const parts = assignedId.split('_');
+                const ranchId = parts[0];
+                const potreroId = parseInt(parts.slice(1).join('_'));
+                return potreros.find(p => p.sourceRanch === ranchId && p.id === potreroId);
+            }
+
+            // Old format - just numeric ID
+            const numericId = typeof assignedId === 'number' ? assignedId : parseInt(assignedId);
+            if (!isNaN(numericId)) {
+                return potreros.find(p => p.id === numericId);
+            }
+
+            return null;
+        }
+
+        // Check if an assigned potrero ID matches a potrero (handles both formats)
+        function potreroIdMatches(assignedId, potrero) {
+            if (!assignedId || !potrero) return false;
+
+            // New format: "ranchId_potreroId"
+            if (typeof assignedId === 'string' && assignedId.includes('_')) {
+                return assignedId === `${potrero.sourceRanch}_${potrero.id}`;
+            }
+
+            // Old format: just numeric ID
+            const numericId = typeof assignedId === 'number' ? assignedId : parseInt(assignedId);
+            return !isNaN(numericId) && numericId === potrero.id;
         }
         
         // ==================== ANIMAL PROFILE MODULE ====================
@@ -10000,11 +10037,10 @@
 
             const gananciaTotal = pesoActual - animal.peso;
             
-            // Get potrero
+            // Get potrero (supports both old numeric ID and new "ranch_id" format)
             const potreroId = data.animalPotreros[numero];
-            // Use shared potreros for La Coruña and Santa Catalina
-            const allPotreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
-            const potrero = potreroId ? allPotreros.find(p => p.id === potreroId) : null;
+            const allPotreros = getAllSharedPotreros();
+            const potrero = potreroId ? findPotreroByAssignedId(allPotreros, potreroId) : null;
             
             // Get health history
             const saludHistorial = data.saludEventos
@@ -10371,13 +10407,16 @@
         // Change potrero from animal profile
         function showChangePotreroModal(numero) {
             const currentPotreroId = data.animalPotreros[numero];
-            // Use shared potreros for La Coruña and Santa Catalina
-            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+            // Use ALL shared potreros from La Coruña and Santa Catalina
+            const potreros = getAllSharedPotreros();
 
             if (potreros.length === 0) {
                 showToast('No hay potreros definidos. Créelos en la pestaña Potreros.', 'warning');
                 return;
             }
+
+            // Find current potrero for display
+            const currentPotrero = currentPotreroId ? findPotreroByAssignedId(potreros, currentPotreroId) : null;
 
             const modal = document.createElement('div');
             modal.className = 'modal active';
@@ -10389,16 +10428,23 @@
                         <button class="modal-close" onclick="document.getElementById('changePotreroModal').remove()">×</button>
                     </div>
                     <div class="modal-body" style="padding: 1.5rem;">
-                        ${usesSharedPotreros() ? '<div style="background: #dbeafe; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #1e40af;">ℹ️ Potreros compartidos entre La Coruña y Santa Catalina</div>' : ''}
+                        <div style="background: #dbeafe; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #1e40af;">
+                            ℹ️ Potreros de La Coruña y Santa Catalina<br>
+                            <small>El animal permanece en su finca original</small>
+                        </div>
                         <div class="form-group">
                             <label class="form-label">Seleccionar Potrero</label>
                             <select class="form-select" id="newPotreroSelect" style="font-size: 1.1rem;">
                                 <option value="">❓ Sin asignar</option>
-                                ${potreros.map(p => `
-                                    <option value="${p.sourceRanch ? p.sourceRanch + '_' + p.id : p.id}" ${p.id === currentPotreroId ? 'selected' : ''}>
-                                        🌿 ${p.displayName || p.nombre} ${p.id === currentPotreroId ? '(actual)' : ''}
-                                    </option>
-                                `).join('')}
+                                ${potreros.map(p => {
+                                    const valueId = `${p.sourceRanch}_${p.id}`;
+                                    const isCurrentPotrero = currentPotrero && p.sourceRanch === currentPotrero.sourceRanch && p.id === currentPotrero.id;
+                                    return `
+                                        <option value="${valueId}" ${isCurrentPotrero ? 'selected' : ''}>
+                                            🌿 ${p.displayName} ${isCurrentPotrero ? '(actual)' : ''}
+                                        </option>
+                                    `;
+                                }).join('')}
                             </select>
                         </div>
 
