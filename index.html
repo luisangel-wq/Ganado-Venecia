@@ -23,8 +23,8 @@
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
     
-    <!-- Cloud Sync Module (v3 = no auto-download, no realtime) -->
-    <script src="cloud-sync.js?v=3"></script>
+    <!-- Cloud Sync Module (v5 = removed API key UI) -->
+    <script src="cloud-sync.js?v=5"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3122,7 +3122,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Google Gemini API Key Section -->
+
             <div class="card">
                 <div class="card-header">
                     <span>📊 Análisis de Rentabilidad por Peso de Compra</span>
@@ -3133,78 +3133,6 @@
                     </button>
                     <div id="pesoRentabilidadReport" style="display: none;">
                         <!-- Report will be generated here -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <span>🤝 Resumen por Comprador</span>
-                </div>
-                <div class="card-body">
-                    <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border-left: 4px solid #2196f3;">
-                        <h4 style="margin: 0 0 0.5rem 0; color: #1565c0;">✨ Configure su API Key de Google Gemini</h4>
-                        <p style="margin: 0; color: #555; font-size: 0.95rem;">
-                            Para usar el análisis de IA, necesita una API Key de Google Gemini. Es GRATIS y fácil de obtener.
-                        </p>
-                    </div>
-                    
-                    <!-- How to get API Key -->
-                    <div style="background: #fff3e0; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #ff9800;">
-                        <strong>📝 ¿Cómo obtener tu API Key?</strong>
-                        <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
-                            <li>Ve a <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #1565c0; font-weight: bold;">Google AI Studio</a></li>
-                            <li>Inicia sesión con tu cuenta de Google</li>
-                            <li>Haz clic en "Create API Key"</li>
-                            <li>Selecciona tu proyecto (o crea uno nuevo)</li>
-                            <li>Copia la API Key generada</li>
-                            <li>Pégala en el campo de abajo</li>
-                        </ol>
-                    </div>
-                    
-                    <!-- API Key Input -->
-                    <div class="form-group">
-                        <label class="form-label" style="font-size: 1.1rem; font-weight: 600;">
-                            🔑 Tu API Key de Google Gemini <span class="required">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            class="form-input" 
-                            id="googleApiKey" 
-                            placeholder="AIzaSy..." 
-                            style="font-family: monospace; font-size: 0.9rem; padding: 0.75rem;"
-                        >
-                        <div class="form-hint" style="margin-top: 0.5rem;">
-                            La API Key es confidencial. No la compartas públicamente.
-                        </div>
-                        <div id="googleApiKeyStatus" style="margin-top: 0.75rem; padding: 0.75rem; border-radius: 8px; display: none;"></div>
-                    </div>
-                    
-                    <!-- Save Button -->
-                    <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="flex: 1; font-size: 1.1rem; padding: 1rem;">
-                            💾 Guardar API Key
-                        </button>
-                        <button class="btn btn-secondary" onclick="testGoogleApiKey()" style="padding: 1rem;">
-                            🧪 Probar
-                        </button>
-                    </div>
-                    
-                    <!-- Features Info -->
-                    <div style="margin-top: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
-                        <strong>✨ Con la API Key podrás:</strong>
-                        <ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
-                            <li>Hacer preguntas personalizadas sobre tu finca</li>
-                            <li>Obtener análisis y recomendaciones inteligentes</li>
-                            <li>Identificar oportunidades de mejora</li>
-                            <li>Analizar rentabilidad y proyecciones</li>
-                            <li>Evaluación de vendedores y compradores</li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Security Notice -->
-                    <div style="margin-top: 1rem; padding: 0.75rem; background: #ffebee; border-radius: 8px; border-left: 4px solid #f44336; font-size: 0.85rem;">
-                        <strong>🔒 Seguridad:</strong> Tu API Key se guarda solo en tu navegador. No se comparte con nadie.
                     </div>
                 </div>
             </div>
@@ -3327,14 +3255,23 @@
                         </label>
                     </div>
                     
-                    <!-- Manual Sync Button -->
+                    <!-- Manual Sync Buttons -->
                     <div class="btn-group" style="margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                         <button class="btn btn-primary" onclick="manualSync()" id="manualSyncBtn">
                             ☁️ Sincronizar Ahora
                         </button>
+                        <button class="btn btn-success" onclick="forceUploadToCloud()" id="forceUploadBtn" style="background: #059669;">
+                            📤 Subir a la Nube
+                        </button>
                         <button class="btn btn-warning" onclick="forceDownloadFromCloud()" id="forceDownloadBtn" style="background: #d97706;">
                             📥 Descargar de la Nube
                         </button>
+                    </div>
+
+                    <!-- Sync Status Display -->
+                    <div id="syncStatusPanel" style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd; font-size: 0.85rem;">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: #0369a1;">Estado de Sincronización:</div>
+                        <div id="syncStatusText" style="color: #0c4a6e;">Verificando...</div>
                     </div>
 
                     <!-- Backup to Cloud Section -->
@@ -3588,7 +3525,7 @@
         }
 
         // App version info (update when publishing)
-        const APP_VERSION = '2';
+        const APP_VERSION = '2.1';
         const APP_BUILD_DATE = '2025-01-09';
         
         // ==================== DATA STORAGE ====================
@@ -7165,6 +7102,40 @@
 
             if (pendingEl) {
                 pendingEl.textContent = '0'; // Cloud sync handles this automatically
+            }
+
+            // Update the new sync status panel
+            const syncStatusText = document.getElementById('syncStatusText');
+            if (syncStatusText) {
+                const lastSync = cloudSync ? (cloudSync.lastSync || localStorage.getItem('cloudSync_lastSync')) : null;
+                const localCount = typeof cloudSync !== 'undefined' ? cloudSync.countLocalAnimals() : 0;
+                const deviceId = localStorage.getItem('cloudSync_deviceId') || 'no generado';
+
+                let statusHtml = '';
+                if (isConnected) {
+                    statusHtml += `<div style="color: #059669; font-weight: 600;">🟢 Conectado a Firebase</div>`;
+                } else {
+                    statusHtml += `<div style="color: #dc2626; font-weight: 600;">⚫ No conectado</div>`;
+                }
+
+                statusHtml += `<div style="margin-top: 0.5rem;">📊 Animales locales: <b>${localCount}</b></div>`;
+
+                if (lastSync) {
+                    const date = new Date(lastSync);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000);
+                    let timeStr;
+                    if (diff < 60) timeStr = 'hace unos segundos';
+                    else if (diff < 3600) timeStr = `hace ${Math.floor(diff / 60)} min`;
+                    else if (diff < 86400) timeStr = `hace ${Math.floor(diff / 3600)} horas`;
+                    else timeStr = `hace ${Math.floor(diff / 86400)} días`;
+                    statusHtml += `<div>🕐 Última sync: <b>${timeStr}</b></div>`;
+                } else {
+                    statusHtml += `<div>🕐 Última sync: <b>Nunca</b></div>`;
+                }
+
+                statusHtml += `<div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">ID: ${deviceId.substring(0, 15)}...</div>`;
+                syncStatusText.innerHTML = statusHtml;
             }
         }
         
@@ -10824,7 +10795,7 @@ INSTRUCCIONES:
             const apiKey = localStorage.getItem('googleApiKey');
             
             if (!apiKey) {
-                showToast('⚠️ Configure su API Key de Google en la sección de Configuración', 'error');
+                showToast('⚠️ API Key de Google no configurada', 'error');
                 return null;
             }
             

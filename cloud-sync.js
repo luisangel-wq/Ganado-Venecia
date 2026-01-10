@@ -69,7 +69,7 @@ class CloudSync {
             // Get or create user ID (use family ID if set)
             this.userId = localStorage.getItem('cloudSync_userId');
             if (!this.userId) {
-                this.userId = 'familia_ganado_venecia'; // Default family ID
+                this.userId = 'user_1767286295709_gwj75h9dp'; // Default family ID
                 localStorage.setItem('cloudSync_userId', this.userId);
             }
 
@@ -103,7 +103,15 @@ class CloudSync {
             // this.setupListeners();
 
             // Auto-sync every 60 seconds (upload only)
-            this.syncInterval = setInterval(() => this.syncToCloud(), 60000);
+            console.log('⏰ Starting auto-sync interval (every 60 seconds)');
+            this.syncInterval = setInterval(() => {
+                console.log('⏰ Auto-sync timer triggered - uploading to cloud...');
+                this.syncToCloud().then(() => {
+                    console.log('⏰ Auto-sync upload complete');
+                }).catch(err => {
+                    console.error('⏰ Auto-sync error:', err);
+                });
+            }, 60000);
 
             return true;
         } catch (error) {
@@ -276,8 +284,14 @@ class CloudSync {
             
             this.lastSync = allData.lastModified;
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
-            
-            console.log('Data synced to cloud successfully');
+
+            console.log('✅ Data synced to cloud successfully at', this.lastSync);
+
+            // Update UI status if available
+            if (typeof updateSyncStatus === 'function') {
+                updateSyncStatus();
+            }
+
             return true;
         } catch (error) {
             console.error('Error syncing to cloud:', error);
@@ -574,7 +588,7 @@ class CloudSync {
 window.cloudSync = new CloudSync();
 
 // FAMILY SYNC CODE - Shared user ID for all family members
-const FAMILY_SYNC_ID = 'familia_ganado_venecia';
+const FAMILY_SYNC_ID = 'user_1767286295709_gwj75h9dp';
 
 // Auto-initialize with family sync
 document.addEventListener('DOMContentLoaded', async function() {
