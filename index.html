@@ -2260,46 +2260,6 @@
                     <span>📸 Gestión de Fotos del Ganado</span>
                 </div>
                 <div class="card-body">
-                    <div style="background: #f3e5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #9c27b0;">
-                        <strong>📷 Sistema de Fotografía del Ganado</strong>
-                        <p style="margin: 0.5rem 0 0 0; color: #666;">
-                            Capture fotos de sus animales para seguimiento visual del crecimiento y condición corporal.
-                        </p>
-                    </div>
-                    
-                    <!-- Voice Dictation Section for Field Work -->
-                    <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 2px solid #8b5cf6;">
-                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                            <span style="font-size: 2rem;">🎤</span>
-                            <div>
-                                <h4 style="margin: 0; color: #6d28d9;">Modo Dictado por Voz</h4>
-                                <p style="margin: 0.25rem 0 0 0; color: #7c3aed; font-size: 0.9rem;">
-                                    Ideal para trabajar en el potrero - dicte la información y tome fotos
-                                </p>
-                            </div>
-                        </div>
-
-                        <div style="text-align: center; margin-bottom: 1rem;">
-                            <button id="voiceDictationBtn" class="btn-voice" onclick="startVoiceDictation('photos')">
-                                🎤 Dictar Animal
-                            </button>
-                        </div>
-
-                        <div id="voiceStatus" style="display: none; text-align: center; margin-bottom: 1rem;">
-                            <div style="background: white; border-radius: 8px; padding: 1rem; border: 2px solid #f59e0b;">
-                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Transcripción:</div>
-                                <div id="voiceTranscriptPreview" style="font-size: 1.1rem; color: #333; min-height: 40px;">
-                                    Escuchando...
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="background: rgba(255,255,255,0.7); border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: #5b21b6;">
-                            <strong>Ejemplo de dictado:</strong><br>
-                            "Este es el animal 1207, tiene un peso aproximado de 300 kilos, se ve en buenas condiciones y ha tenido buen progreso"
-                        </div>
-                    </div>
-
                     <!-- Pending Dictations Panel -->
                     <div id="pendingDictationsSection" style="margin-bottom: 1.5rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -2329,7 +2289,26 @@
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
 
-                        <!-- Option 1: Single Photo with Manual Entry -->
+                        <!-- Option 1: AI Photo Voice (Dictation) -->
+                        <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 12px; padding: 1.25rem; border: 2px solid #8b5cf6;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                                <span style="font-size: 1.5rem;">🎤</span>
+                                <div>
+                                    <h4 style="margin: 0; color: #6d28d9;">AI Photo Voice</h4>
+                                    <p style="margin: 0; font-size: 0.8rem; color: #7c3aed;">Dicte info + tome foto</p>
+                                </div>
+                            </div>
+                            <button id="voiceDictationBtn" class="btn-voice" onclick="startVoiceDictation('photos')" style="width: 100%;">
+                                🎤 Dictar Animal
+                            </button>
+                            <div id="voiceStatus" style="display: none; margin-top: 0.5rem;">
+                                <div style="background: white; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.85rem;">
+                                    <div id="voiceTranscriptPreview" style="color: #333; min-height: 24px;">Escuchando...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Option 2: Single Photo with Manual Entry -->
                         <div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 12px; padding: 1.25rem; border: 2px solid #0ea5e9;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <span style="font-size: 1.5rem;">📸</span>
@@ -2343,7 +2322,7 @@
                             </button>
                         </div>
 
-                        <!-- Option 2: Quick Capture Mode (Multiple photos, assign later) -->
+                        <!-- Option 3: Quick Capture Mode (Multiple photos, assign later) -->
                         <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; padding: 1.25rem; border: 2px solid #f59e0b;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <span style="font-size: 1.5rem;">⚡</span>
@@ -2357,7 +2336,7 @@
                             </button>
                         </div>
 
-                        <!-- Option 3: Upload from Files -->
+                        <!-- Option 4: Upload from Files -->
                         <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 12px; padding: 1.25rem; border: 2px solid #10b981;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <span style="font-size: 1.5rem;">📁</span>
@@ -2371,7 +2350,7 @@
                             </button>
                         </div>
 
-                        <!-- Option 4: Voice Recording Fallback -->
+                        <!-- Option 5: Voice Recording Fallback -->
                         <div style="background: linear-gradient(135deg, #fce7f3, #fbcfe8); border-radius: 12px; padding: 1.25rem; border: 2px solid #ec4899;">
                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
                                 <span style="font-size: 1.5rem;">🎙️</span>
@@ -12374,25 +12353,41 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Extract condition keywords
             const conditionKeywords = {
                 'buenas condiciones': 'Buenas condiciones',
+                'buena condición': 'Buenas condiciones',
                 'buen estado': 'Buen estado',
                 'excelente': 'Excelente',
                 'muy bien': 'Muy bien',
                 'bien': 'Bien',
+                'normal': 'Normal',
                 'regular': 'Regular',
                 'mal estado': 'Mal estado',
                 'malas condiciones': 'Malas condiciones',
+                'mala condición': 'Malas condiciones',
                 'flaco': 'Flaco',
+                'flaca': 'Flaco',
                 'delgado': 'Delgado',
+                'delgada': 'Delgado',
                 'gordo': 'Gordo',
+                'gorda': 'Gordo',
+                'lleno': 'Gordo',
+                'llena': 'Gordo',
                 'enfermo': 'Enfermo',
+                'enferma': 'Enfermo',
                 'sano': 'Sano',
+                'sana': 'Sano',
                 'saludable': 'Saludable',
                 'cojo': 'Cojo',
+                'coja': 'Cojo',
                 'rengo': 'Rengo',
+                'renga': 'Rengo',
                 'buen progreso': 'Buen progreso',
                 'mal progreso': 'Mal progreso',
                 'recuperándose': 'Recuperándose',
-                'mejorando': 'Mejorando'
+                'mejorando': 'Mejorando',
+                'preñada': 'Preñada',
+                'parida': 'Parida',
+                'lactando': 'Lactando',
+                'en celo': 'En celo'
             };
 
             for (const [keyword, value] of Object.entries(conditionKeywords)) {
