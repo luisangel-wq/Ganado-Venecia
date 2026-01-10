@@ -8880,7 +8880,12 @@
                 
                 <!-- Weight Section -->
                 <div class="profile-section" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
-                    <div class="profile-section-title">⚖️ Peso y Crecimiento</div>
+                    <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>⚖️ Peso y Crecimiento</span>
+                        <button onclick="closeAnimalProfile(); showQuickWeightUpdate('${numero}')" style="background: #16a34a; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                            ⚖️ Actualizar Peso
+                        </button>
+                    </div>
                     <div class="profile-grid">
                         <div class="profile-item">
                             <span class="profile-item-label">Peso Entrada</span>
@@ -8927,7 +8932,12 @@
                 
                 <!-- Location Section -->
                 <div class="profile-section">
-                    <div class="profile-section-title">📍 Ubicación</div>
+                    <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📍 Ubicación</span>
+                        <button onclick="showChangePotreroModal('${numero}')" style="background: #8b5cf6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                            🌿 Cambiar Potrero
+                        </button>
+                    </div>
                     <div class="profile-grid">
                         <div class="profile-item" style="grid-column: 1/-1;">
                             <span class="profile-item-label">Potrero Actual</span>
@@ -8963,10 +8973,15 @@
                 
                 <!-- Photo History -->
                 <div class="profile-section">
-                    <div class="profile-section-title">📸 Historial Fotográfico</div>
+                    <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📸 Historial Fotográfico</span>
+                        <button onclick="closeAnimalProfile(); showPhotoSourceSelection('${numero}', ${JSON.stringify(animal).replace(/"/g, '&quot;')})" style="background: #3b82f6; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                            📷 ${mainPhoto ? 'Cambiar' : 'Agregar'} Foto
+                        </button>
+                    </div>
                     ${mainPhoto ? `
                         <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-                            <img src="${mainPhoto}" alt="Foto animal ${numero}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 2px solid #e5e7eb;">
+                            <img src="${mainPhoto}" alt="Foto animal ${numero}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 2px solid #e5e7eb; cursor: pointer;" onclick="viewAnimalPhotoLarge('${numero}')">
                             <div style="font-size: 0.9rem; color: #666;">
                                 <div style="font-weight: 700; color: #111;">Foto principal</div>
                                 <div>${mainPhotoDate ? formatDate(mainPhotoDate) : ''}</div>
@@ -8999,7 +9014,186 @@
         function closeAnimalProfile() {
             document.getElementById('animalProfileModal').style.display = 'none';
         }
-        
+
+        // Quick weight update from animal profile
+        function showQuickWeightUpdate(numero) {
+            const animal = data.entradas.find(a => String(a.numero) === String(numero));
+            if (!animal) {
+                showToast('Animal no encontrado', 'error');
+                return;
+            }
+
+            const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+            const pesoEstimado = animal.peso + (diasEnFinca * (data.config.gdp || 0.31));
+
+            // Check for last manual update
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+            const lastUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
+            const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'quickWeightModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 450px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #16a34a, #15803d);">
+                        <span>⚖️ Actualizar Peso - #${numero}</span>
+                        <button class="modal-close" onclick="document.getElementById('quickWeightModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Peso entrada:</span>
+                                <strong>${animal.peso} kg</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span>Peso anterior:</span>
+                                <strong>${pesoAnterior} kg</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Peso estimado:</span>
+                                <strong>${Math.round(pesoEstimado)} kg</strong>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Nuevo Peso (kg)</label>
+                            <input type="number" class="form-input" id="quickPesoNuevo" value="${Math.round(pesoEstimado)}" min="1" step="1" style="font-size: 1.2rem; text-align: center;">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-input" id="quickPesoFecha" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Observaciones (opcional)</label>
+                            <input type="text" class="form-input" id="quickPesoObs" placeholder="Notas...">
+                        </div>
+
+                        <button onclick="saveQuickWeightUpdate('${numero}')" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+                            💾 Guardar Peso
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('quickPesoNuevo').focus();
+            document.getElementById('quickPesoNuevo').select();
+        }
+
+        function saveQuickWeightUpdate(numero) {
+            const pesoNuevo = parseFloat(document.getElementById('quickPesoNuevo').value);
+            const fecha = document.getElementById('quickPesoFecha').value;
+            const observaciones = document.getElementById('quickPesoObs').value.trim();
+
+            if (!pesoNuevo || pesoNuevo <= 0) {
+                showToast('Ingrese un peso válido', 'error');
+                return;
+            }
+
+            const animal = data.entradas.find(a => String(a.numero) === String(numero));
+            if (!animal) {
+                showToast('Animal no encontrado', 'error');
+                return;
+            }
+
+            // Get previous weight
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => new Date(a.fecha) - new Date(b.fecha)) : [];
+            const lastUpdate = animalUpdates[animalUpdates.length - 1];
+            const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
+            const fechaAnterior = lastUpdate ? lastUpdate.fecha : animal.fechaEntrada;
+
+            const diasTranscurridos = Math.floor((new Date(fecha) - new Date(fechaAnterior)) / (1000 * 60 * 60 * 24));
+            const ganancia = pesoNuevo - pesoAnterior;
+            const gdpReal = diasTranscurridos > 0 ? ganancia / diasTranscurridos : 0;
+
+            const update = {
+                id: Date.now(),
+                numero: numero,
+                fecha: fecha,
+                pesoAnterior: pesoAnterior,
+                pesoNuevo: pesoNuevo,
+                ganancia: ganancia,
+                dias: diasTranscurridos,
+                gdpReal: gdpReal,
+                observaciones: observaciones
+            };
+
+            if (!data.pesoUpdates) data.pesoUpdates = [];
+            data.pesoUpdates.push(update);
+            saveData();
+
+            document.getElementById('quickWeightModal').remove();
+            updateAllViews();
+            showToast(`✅ Peso actualizado: #${numero} - ${pesoNuevo} kg`, 'success');
+        }
+
+        // Change potrero from animal profile
+        function showChangePotreroModal(numero) {
+            const currentPotreroId = data.animalPotreros[numero];
+            const potreros = data.potreros || [];
+
+            if (potreros.length === 0) {
+                showToast('No hay potreros definidos. Créelos en la pestaña Potreros.', 'warning');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'changePotreroModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                        <span>🌿 Cambiar Potrero - #${numero}</span>
+                        <button class="modal-close" onclick="document.getElementById('changePotreroModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <div class="form-group">
+                            <label class="form-label">Seleccionar Potrero</label>
+                            <select class="form-select" id="newPotreroSelect" style="font-size: 1.1rem;">
+                                <option value="">❓ Sin asignar</option>
+                                ${potreros.map(p => `
+                                    <option value="${p.id}" ${p.id === currentPotreroId ? 'selected' : ''}>
+                                        🌿 ${p.nombre} ${p.id === currentPotreroId ? '(actual)' : ''}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <button onclick="savePotreroChange('${numero}')" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; background: #8b5cf6;">
+                            💾 Guardar Ubicación
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function savePotreroChange(numero) {
+            const newPotreroId = document.getElementById('newPotreroSelect').value;
+
+            if (newPotreroId) {
+                data.animalPotreros[numero] = newPotreroId;
+            } else {
+                delete data.animalPotreros[numero];
+            }
+
+            saveData();
+            document.getElementById('changePotreroModal').remove();
+
+            // Refresh the animal profile if it's open
+            const profileModal = document.getElementById('animalProfileModal');
+            if (profileModal && profileModal.style.display !== 'none') {
+                showAnimalProfile(numero);
+            }
+
+            updateAllViews();
+
+            const potrero = data.potreros.find(p => p.id === newPotreroId);
+            showToast(`✅ Animal #${numero} ${potrero ? 'movido a ' + potrero.nombre : 'sin potrero asignado'}`, 'success');
+        }
+
         // Close modal when clicking outside
         document.addEventListener('click', function(e) {
             const modal = document.getElementById('animalProfileModal');
@@ -9007,7 +9201,7 @@
                 closeAnimalProfile();
             }
         });
-        
+
         // ==================== PESO PROGRESS TRACKING MODULE ====================
         
         function showRegistrarPesoForm() {
