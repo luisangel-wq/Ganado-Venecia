@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reparar Datos - Ganado Finca</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1, h2, h3 { color: #2e7d32; }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error { color: #c62828; background: #ffebee; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .warning { color: #f57c00; background: #fff3e0; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .success { color: #2e7d32; background: #e8f5e9; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .info { color: #1565c0; background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #1b5e20; }
+        button.secondary { background: #1565c0; }
+        button.secondary:hover { background: #0d47a1; }
+        button.danger { background: #c62828; }
+        button.danger:hover { background: #b71c1c; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #e8f5e9; }
+        .fixed { background: #c8e6c9; }
+        .bad { background: #ffcdd2; }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        .step-number {
+            background: #2e7d32;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .hidden { display: none; }
+        .origin-warning {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reparar Datos de Respaldo</h1>
+
+    <div class="origin-warning">
+        <h3>IMPORTANTE: Origen del Navegador</h3>
+        <p><strong>URL actual:</strong> <span id="currentOrigin"></span></p>
+        <p>Para que la reparacion funcione, debes abrir este archivo desde el <strong>mismo origen</strong> que la aplicacion principal.</p>
+        <p>Si la app corre en <code>localhost:XXXX</code>, abre este archivo tambien desde ese servidor.</p>
+    </div>
+
+    <div class="card">
+        <h2>Paso 1: Ver Datos Actuales en localStorage</h2>
+        <button onclick="showCurrentData()">Ver Datos Actuales</button>
+        <div id="currentDataResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Paso 2: Cargar Archivo de Respaldo</h2>
+        <button class="secondary" onclick="loadBackupFile()">Seleccionar Archivo de Respaldo (.json)</button>
+        <div id="backupResult"></div>
+    </div>
+
+    <div id="step3" class="card hidden">
+        <h2>Paso 3: Reparar Datos</h2>
+        <div id="comparisonResult"></div>
+        <div id="repairButtons"></div>
+    </div>
+
+    <div class="card">
+        <h2>Debug: Ver todas las claves en localStorage</h2>
+        <button onclick="showAllKeys()">Mostrar Claves</button>
+        <div id="allKeysResult"></div>
+    </div>
+
+    <script>
+        // Show current origin
+        document.getElementById('currentOrigin').textContent = window.location.origin + ' (' + window.location.href + ')';
+
+        // CORRECT storage keys that match the app
+        const RANCHES = {
+            la_coruna: {
+                name: 'La Coruña',
+                storageKey: 'ganadoFinca_LaCoruna',
+                backupKeys: ['la_coruna', 'LaCoruna', 'la-coruna']  // possible keys in backup
+            },
+            santa_catalina: {
+                name: 'Santa Catalina',
+                storageKey: 'ganadoFinca_SantaCatalina',
+                backupKeys: ['catalina', 'santa_catalina', 'SantaCatalina', 'Catalina']
+            },
+            la_vega: {
+                name: 'La Vega',
+                storageKey: 'ganadoFinca_LaVega',
+                backupKeys: ['la_vega', 'LaVega', 'la-vega']
+            }
+        };
+
+        let backupData = null;
+
+        function showAllKeys() {
+            let html = '<h4>Todas las claves en localStorage:</h4><ul>';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                const size = value ? value.length : 0;
+                html += `<li><strong>${key}</strong> (${size} caracteres)</li>`;
+            }
+            html += '</ul>';
+            document.getElementById('allKeysResult').innerHTML = html;
+        }
+
+        function showCurrentData() {
+            let html = '';
+
+            // Also check old keys that might exist
+            const oldKeys = ['ganadoFinca_data', 'ganadoFinca_catalina', 'ganadoFinca_lavega'];
+            oldKeys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    html += `<div class="warning">Encontrada clave antigua: <strong>${key}</strong> (${data.length} caracteres)</div>`;
+                }
+            });
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const rawData = localStorage.getItem(ranch.storageKey);
+
+                html += `<h3>${ranch.name} (${ranch.storageKey})</h3>`;
+
+                if (!rawData) {
+                    html += '<div class="warning">No hay datos guardados para esta finca</div>';
+                    return;
+                }
+
+                try {
+                    const data = JSON.parse(rawData);
+                    const entradas = data.entradas || [];
+                    const salidas = data.salidas || [];
+
+                    html += `<div class="info">`;
+                    html += `<strong>Entradas:</strong> ${entradas.length} animales<br>`;
+                    html += `<strong>Salidas:</strong> ${salidas.length} registros`;
+                    html += `</div>`;
+
+                    // Show sample of first 3 animals
+                    if (entradas.length > 0) {
+                        html += '<p><strong>Muestra de datos (primeros 3 animales):</strong></p>';
+                        html += '<table><tr><th>#</th><th>Fecha Entrada</th><th>Peso</th><th>Precio/Kg</th><th>Costo Total</th></tr>';
+                        entradas.slice(0, 3).forEach(animal => {
+                            const fechaBad = !animal.fechaEntrada ||
+                                           typeof animal.fechaEntrada === 'number' ||
+                                           (typeof animal.fechaEntrada === 'string' && animal.fechaEntrada.includes('/'));
+                            const costoBad = animal.costoTotal === 0 || animal.costoTotal === undefined || isNaN(animal.costoTotal);
+                            const precioBad = animal.precioKilo === 0 || animal.precioKilo === undefined || isNaN(animal.precioKilo);
+
+                            html += `<tr class="${fechaBad || costoBad || precioBad ? 'bad' : ''}">`;
+                            html += `<td>${animal.numero}</td>`;
+                            html += `<td>${animal.fechaEntrada || 'FALTA'}</td>`;
+                            html += `<td>${animal.peso || 0} kg</td>`;
+                            html += `<td>$${(animal.precioKilo || 0).toLocaleString()}</td>`;
+                            html += `<td>$${(animal.costoTotal || 0).toLocaleString()}</td>`;
+                            html += `</tr>`;
+                        });
+                        html += '</table>';
+                    }
+                } catch (e) {
+                    html += `<div class="error">Error al leer datos: ${e.message}</div>`;
+                }
+            });
+
+            document.getElementById('currentDataResult').innerHTML = html;
+        }
+
+        function findBackupRanch(backup, ranchId) {
+            const ranch = RANCHES[ranchId];
+            if (!ranch || !backup.ranches) return null;
+
+            // Try all possible backup keys
+            for (const key of ranch.backupKeys) {
+                if (backup.ranches[key]) {
+                    return backup.ranches[key];
+                }
+            }
+            return null;
+        }
+
+        function loadBackupFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        backupData = JSON.parse(event.target.result);
+
+                        let html = '<div class="success">Archivo cargado correctamente</div>';
+                        html += `<p><strong>Fecha del respaldo:</strong> ${new Date(backupData.backupDate).toLocaleString('es-CO')}</p>`;
+
+                        if (backupData.ranches) {
+                            html += '<h4>Fincas encontradas en el respaldo:</h4>';
+                            html += '<table><tr><th>Clave en Backup</th><th>Nombre</th><th>Entradas</th><th>Salidas</th></tr>';
+                            Object.keys(backupData.ranches).forEach(key => {
+                                const ranchBackup = backupData.ranches[key];
+                                const entradas = ranchBackup.data?.entradas?.length || 0;
+                                const salidas = ranchBackup.data?.salidas?.length || 0;
+                                html += `<tr>`;
+                                html += `<td><code>${key}</code></td>`;
+                                html += `<td>${ranchBackup.name}</td>`;
+                                html += `<td>${entradas}</td>`;
+                                html += `<td>${salidas}</td>`;
+                                html += `</tr>`;
+                            });
+                            html += '</table>';
+
+                            // Show sample from first ranch
+                            const firstKey = Object.keys(backupData.ranches)[0];
+                            const sample = backupData.ranches[firstKey].data?.entradas?.slice(0, 3) || [];
+                            if (sample.length > 0) {
+                                html += `<p><strong>Muestra del respaldo (primeros 3 de ${backupData.ranches[firstKey].name}):</strong></p>`;
+                                html += '<table><tr><th>#</th><th>Fecha Entrada</th><th>Peso</th><th>Precio/Kg</th><th>Costo Total</th></tr>';
+                                sample.forEach(animal => {
+                                    html += `<tr class="fixed">`;
+                                    html += `<td>${animal.numero}</td>`;
+                                    html += `<td>${animal.fechaEntrada}</td>`;
+                                    html += `<td>${animal.peso} kg</td>`;
+                                    html += `<td>$${(animal.precioKilo || 0).toLocaleString()}</td>`;
+                                    html += `<td>$${(animal.costoTotal || 0).toLocaleString()}</td>`;
+                                    html += `</tr>`;
+                                });
+                                html += '</table>';
+                            }
+                        }
+
+                        document.getElementById('backupResult').innerHTML = html;
+
+                        // Show step 3
+                        document.getElementById('step3').classList.remove('hidden');
+                        showComparison();
+
+                    } catch (e) {
+                        document.getElementById('backupResult').innerHTML =
+                            `<div class="error">Error al leer el archivo: ${e.message}</div>`;
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            input.click();
+        }
+
+        function showComparison() {
+            if (!backupData || !backupData.ranches) return;
+
+            let html = '<h3>Mapeo de Datos</h3>';
+            html += '<table><tr><th>Finca</th><th>Clave Backup</th><th>Clave App</th><th>Estado</th></tr>';
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const backupRanch = findBackupRanch(backupData, ranchId);
+                const backupKey = backupRanch ? Object.keys(backupData.ranches).find(k => backupData.ranches[k] === backupRanch) : 'NO ENCONTRADO';
+
+                html += '<tr>';
+                html += `<td>${ranch.name}</td>`;
+                html += `<td><code>${backupKey}</code></td>`;
+                html += `<td><code>${ranch.storageKey}</code></td>`;
+                html += `<td>${backupRanch ? '<span style="color:green">OK</span>' : '<span style="color:red">NO MATCH</span>'}</td>`;
+                html += '</tr>';
+            });
+            html += '</table>';
+
+            document.getElementById('comparisonResult').innerHTML = html;
+
+            // Show repair buttons
+            let buttons = '<div class="warning" style="margin-bottom: 15px;">';
+            buttons += '<strong>IMPORTANTE:</strong> Al reparar, se reemplazaran todos los datos actuales con los del respaldo.';
+            buttons += '</div>';
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const backupRanch = findBackupRanch(backupData, ranchId);
+                if (backupRanch) {
+                    buttons += `<button onclick="repairRanch('${ranchId}')" class="danger">Reparar ${ranch.name}</button>`;
+                }
+            });
+
+            buttons += `<br><br><button onclick="repairAllRanches()" class="danger" style="font-size: 18px; padding: 20px 40px;">REPARAR TODAS LAS FINCAS</button>`;
+
+            document.getElementById('repairButtons').innerHTML = buttons;
+        }
+
+        function repairRanch(ranchId) {
+            const ranch = RANCHES[ranchId];
+            const backupRanch = findBackupRanch(backupData, ranchId);
+
+            if (!backupRanch) {
+                alert('No se encontraron datos para ' + ranch.name + ' en el respaldo');
+                return;
+            }
+
+            if (!confirm(`¿Reparar ${ranch.name}?\n\nSe guardara en: ${ranch.storageKey}\nEntradas: ${backupRanch.data?.entradas?.length || 0}\nSalidas: ${backupRanch.data?.salidas?.length || 0}`)) {
+                return;
+            }
+
+            try {
+                // Store the backup data with the CORRECT key
+                localStorage.setItem(ranch.storageKey, JSON.stringify(backupRanch.data));
+
+                // Find backup key for photos
+                const backupKey = Object.keys(backupData.ranches).find(k => backupData.ranches[k] === backupRanch);
+                if (backupRanch.animalPhotos) {
+                    localStorage.setItem('animalPhotos_' + ranchId, JSON.stringify(backupRanch.animalPhotos));
+                }
+
+                alert(`${ranch.name} reparada!\n\nGuardado en: ${ranch.storageKey}\n\nRecarga la aplicacion principal.`);
+                showCurrentData();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function repairAllRanches() {
+            if (!confirm('¿Reparar TODAS las fincas?\n\nEsto reemplazara todos los datos actuales.')) {
+                return;
+            }
+
+            let repaired = [];
+            let errors = [];
+
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const backupRanch = findBackupRanch(backupData, ranchId);
+
+                if (backupRanch) {
+                    try {
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(backupRanch.data));
+
+                        if (backupRanch.animalPhotos) {
+                            localStorage.setItem('animalPhotos_' + ranchId, JSON.stringify(backupRanch.animalPhotos));
+                        }
+
+                        repaired.push(ranch.name);
+                    } catch (e) {
+                        errors.push(ranch.name + ': ' + e.message);
+                    }
+                }
+            });
+
+            // Restore API keys if present
+            if (backupData.apiKeys) {
+                if (backupData.apiKeys.google) localStorage.setItem('googleApiKey', backupData.apiKeys.google);
+                if (backupData.apiKeys.anthropic) localStorage.setItem('anthropicApiKey', backupData.apiKeys.anthropic);
+                if (backupData.apiKeys.provider) localStorage.setItem('aiProvider', backupData.apiKeys.provider);
+            }
+
+            let msg = 'Reparacion completada!\n\n';
+            msg += 'Reparadas: ' + repaired.join(', ') + '\n';
+            if (errors.length > 0) {
+                msg += 'Errores: ' + errors.join(', ') + '\n';
+            }
+            msg += '\nRECARGA la aplicacion principal para ver los cambios.';
+
+            alert(msg);
+            showCurrentData();
+        }
+
+        // Auto-show current data on load
+        showCurrentData();
+        showAllKeys();
+    </script>
+</body>
+</html>

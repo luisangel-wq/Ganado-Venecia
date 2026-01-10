@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico de Datos - Ganado Finca</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1, h2, h3 { color: #2e7d32; }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error { color: #c62828; background: #ffebee; padding: 10px; border-radius: 4px; }
+        .warning { color: #f57c00; background: #fff3e0; padding: 10px; border-radius: 4px; }
+        .success { color: #2e7d32; background: #e8f5e9; padding: 10px; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f5f5f5; }
+        .bad { background: #ffebee; }
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1b5e20; }
+        button.danger { background: #c62828; }
+        button.danger:hover { background: #b71c1c; }
+        pre { background: #263238; color: #aed581; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .sample { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Diagnóstico de Datos - Ganado Finca</h1>
+
+    <div class="card">
+        <h2>Seleccionar Finca</h2>
+        <select id="ranchSelect" onchange="analyzeRanch()">
+            <option value="">-- Seleccionar --</option>
+            <option value="la_coruna">La Coruña</option>
+            <option value="catalina">Catalina</option>
+            <option value="la_vega">La Vega</option>
+        </select>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const RANCHES = {
+            la_coruna: { name: 'La Coruña', storageKey: 'ganadoFinca_data' },
+            catalina: { name: 'Catalina', storageKey: 'ganadoFinca_catalina' },
+            la_vega: { name: 'La Vega', storageKey: 'ganadoFinca_lavega' }
+        };
+
+        function analyzeRanch() {
+            const ranchId = document.getElementById('ranchSelect').value;
+            if (!ranchId) return;
+
+            const ranch = RANCHES[ranchId];
+            const rawData = localStorage.getItem(ranch.storageKey);
+
+            if (!rawData) {
+                document.getElementById('results').innerHTML = '<div class="card error">No hay datos para esta finca</div>';
+                return;
+            }
+
+            const data = JSON.parse(rawData);
+            let html = '';
+
+            // Analyze entradas
+            html += '<div class="card">';
+            html += '<h2>Análisis de Entradas (' + (data.entradas?.length || 0) + ' animales)</h2>';
+
+            if (data.entradas && data.entradas.length > 0) {
+                const issues = [];
+                const samples = [];
+
+                data.entradas.forEach((animal, idx) => {
+                    const animalIssues = [];
+
+                    // Check fechaEntrada
+                    if (animal.fechaEntrada) {
+                        const fecha = animal.fechaEntrada;
+                        if (typeof fecha === 'number') {
+                            animalIssues.push(`fechaEntrada es número: ${fecha}`);
+                        } else if (typeof fecha === 'string') {
+                            const parsed = new Date(fecha);
+                            if (isNaN(parsed.getTime())) {
+                                animalIssues.push(`fechaEntrada inválida: "${fecha}"`);
+                            } else if (parsed.getFullYear() < 2000 || parsed.getFullYear() > 2030) {
+                                animalIssues.push(`fechaEntrada año sospechoso: ${fecha} (año ${parsed.getFullYear()})`);
+                            }
+                        }
+                    } else {
+                        animalIssues.push('fechaEntrada faltante');
+                    }
+
+                    // Check costoTotal
+                    if (animal.costoTotal === undefined || animal.costoTotal === null) {
+                        animalIssues.push('costoTotal faltante');
+                    } else if (animal.costoTotal === 0 && animal.tipo !== 'nacimiento') {
+                        animalIssues.push('costoTotal es 0');
+                    }
+
+                    // Check precioKilo
+                    if (animal.precioKilo === undefined || animal.precioKilo === null) {
+                        animalIssues.push('precioKilo faltante');
+                    } else if (animal.precioKilo === 0 && animal.tipo !== 'nacimiento') {
+                        animalIssues.push('precioKilo es 0');
+                    }
+
+                    if (animalIssues.length > 0) {
+                        issues.push({
+                            numero: animal.numero,
+                            issues: animalIssues,
+                            animal: animal
+                        });
+                    }
+
+                    if (idx < 5) {
+                        samples.push(animal);
+                    }
+                });
+
+                if (issues.length === 0) {
+                    html += '<div class="success">No se encontraron problemas en las entradas</div>';
+                } else {
+                    html += '<div class="error">Se encontraron ' + issues.length + ' animales con problemas</div>';
+                    html += '<h3>Primeros 20 animales con problemas:</h3>';
+                    html += '<table><tr><th>#</th><th>Número</th><th>Problemas</th><th>Datos Actuales</th></tr>';
+                    issues.slice(0, 20).forEach((issue, idx) => {
+                        html += '<tr class="bad">';
+                        html += '<td>' + (idx + 1) + '</td>';
+                        html += '<td>' + issue.numero + '</td>';
+                        html += '<td>' + issue.issues.join('<br>') + '</td>';
+                        html += '<td><small>fecha: ' + issue.animal.fechaEntrada +
+                                ', costo: ' + issue.animal.costoTotal +
+                                ', precioKilo: ' + issue.animal.precioKilo + '</small></td>';
+                        html += '</tr>';
+                    });
+                    html += '</table>';
+                }
+
+                html += '<h3>Muestra de primeros 5 animales (datos crudos):</h3>';
+                html += '<div class="sample"><pre>' + JSON.stringify(samples, null, 2) + '</pre></div>';
+            }
+            html += '</div>';
+
+            // Show raw data option
+            html += '<div class="card">';
+            html += '<h2>Acciones</h2>';
+            html += '<button onclick="showRawData(\'' + ranchId + '\')">Ver Datos Crudos Completos</button>';
+            html += '<button onclick="exportCurrentData(\'' + ranchId + '\')">Exportar Datos Actuales</button>';
+            html += '<button onclick="loadBackupAndCompare(\'' + ranchId + '\')">Cargar Backup y Comparar</button>';
+            html += '</div>';
+
+            html += '<div id="rawData"></div>';
+            html += '<div id="comparison"></div>';
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        function showRawData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            const rawData = localStorage.getItem(ranch.storageKey);
+            const data = JSON.parse(rawData);
+
+            document.getElementById('rawData').innerHTML =
+                '<div class="card"><h3>Datos Crudos en localStorage</h3>' +
+                '<div class="sample" style="max-height: 500px;"><pre>' +
+                JSON.stringify(data, null, 2) + '</pre></div></div>';
+        }
+
+        function exportCurrentData(ranchId) {
+            const ranch = RANCHES[ranchId];
+            const rawData = localStorage.getItem(ranch.storageKey);
+            const blob = new Blob([rawData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `current_data_${ranchId}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function loadBackupAndCompare(ranchId) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const backup = JSON.parse(event.target.result);
+
+                        // Get current data
+                        const ranch = RANCHES[ranchId];
+                        const currentData = JSON.parse(localStorage.getItem(ranch.storageKey) || '{}');
+
+                        // Get backup data for this ranch
+                        let backupData;
+                        if (backup.ranches && backup.ranches[ranchId]) {
+                            backupData = backup.ranches[ranchId].data;
+                        } else if (backup.entradas) {
+                            backupData = backup;
+                        }
+
+                        if (!backupData) {
+                            document.getElementById('comparison').innerHTML =
+                                '<div class="card error">No se encontraron datos para ' + ranchId + ' en el backup</div>';
+                            return;
+                        }
+
+                        let html = '<div class="card"><h2>Comparación: Backup vs Actual</h2>';
+
+                        // Compare first few animals
+                        html += '<h3>Comparación de primeros 10 animales:</h3>';
+                        html += '<table><tr><th>Número</th><th>Campo</th><th>Backup</th><th>Actual</th><th>Estado</th></tr>';
+
+                        const backupEntradas = backupData.entradas || [];
+                        const currentEntradas = currentData.entradas || [];
+
+                        backupEntradas.slice(0, 10).forEach(backupAnimal => {
+                            const currentAnimal = currentEntradas.find(a => a.numero === backupAnimal.numero);
+
+                            ['fechaEntrada', 'costoTotal', 'precioKilo', 'peso'].forEach(field => {
+                                const backupVal = backupAnimal[field];
+                                const currentVal = currentAnimal ? currentAnimal[field] : 'NO ENCONTRADO';
+                                const match = backupVal == currentVal;
+
+                                html += '<tr class="' + (match ? '' : 'bad') + '">';
+                                html += '<td>' + backupAnimal.numero + '</td>';
+                                html += '<td>' + field + '</td>';
+                                html += '<td>' + backupVal + '</td>';
+                                html += '<td>' + currentVal + '</td>';
+                                html += '<td>' + (match ? '✓' : '✗ DIFERENTE') + '</td>';
+                                html += '</tr>';
+                            });
+                        });
+
+                        html += '</table>';
+
+                        // Add restore button
+                        html += '<h3>¿Restaurar datos del backup?</h3>';
+                        html += '<p>Esto reemplazará los datos actuales con los del backup.</p>';
+                        html += '<button onclick="restoreFromBackupData(\'' + ranchId + '\', ' +
+                                JSON.stringify(JSON.stringify(backupData)) + ')">Restaurar Datos del Backup</button>';
+
+                        html += '</div>';
+
+                        document.getElementById('comparison').innerHTML = html;
+
+                    } catch (error) {
+                        document.getElementById('comparison').innerHTML =
+                            '<div class="card error">Error al leer backup: ' + error.message + '</div>';
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function restoreFromBackupData(ranchId, dataStr) {
+            if (!confirm('¿Está seguro de restaurar los datos? Esto reemplazará los datos actuales.')) {
+                return;
+            }
+
+            const ranch = RANCHES[ranchId];
+            const data = JSON.parse(dataStr);
+
+            localStorage.setItem(ranch.storageKey, JSON.stringify(data));
+
+            alert('Datos restaurados. Por favor recargue la aplicación principal.');
+            analyzeRanch();
+        }
+    </script>
+</body>
+</html>

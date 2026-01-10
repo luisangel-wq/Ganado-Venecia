@@ -2268,11 +2268,16 @@
                     </div>
                     
                     <div style="text-align: center; padding: 2rem;">
-                        <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1.1rem; padding: 1rem 2rem;">
-                            📸 Agregar Foto de Animal
-                        </button>
+                        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="showAddAnimalPhoto()" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                                📸 Agregar Foto de Animal
+                            </button>
+                            <button class="btn" onclick="openMultiplePhotosPicker()" style="font-size: 1.1rem; padding: 1rem 2rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                                🖼️ Subir Múltiples Fotos
+                            </button>
+                        </div>
                         <div style="margin-top: 0.75rem; color: #666; font-size: 0.9rem;">
-                            Puede tomar foto con la cámara o seleccionar desde galería/computadora
+                            Seleccione una o varias fotos de su computadora (Descargas, etc.) y asígnelas a los animales
                         </div>
                     </div>
                     
@@ -9576,24 +9581,225 @@
 
         function showPhotoSourceSelection(chapetaNum, animal) {
             const animalInfo = animal ?
-                `${animal.sexo === 'MACHO' ? 'macho' : 'hembra'} #${chapetaNum} (${animal.raza || 'Cebú'})` :
-                `animal #${chapetaNum}`;
+                `${animal.sexo === 'MACHO' ? '♂️' : '♀️'} #${chapetaNum} - ${animal.raza || 'Cebú'}` :
+                `Animal #${chapetaNum}`;
 
-            const message = `📸 Seleccione el origen de la foto para ${animalInfo}:\n\n` +
-                `1 - Tomar foto con la cámara\n` +
-                `2 - Seleccionar archivo de galería/computadora\n\n` +
-                `Ingrese 1 o 2:`;
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'photoSourceModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <span>📸 Agregar Foto - ${animalInfo}</span>
+                        <button class="modal-close" onclick="document.getElementById('photoSourceModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <p style="text-align: center; margin-bottom: 1.5rem; color: #666;">
+                            Seleccione cómo desea agregar la foto:
+                        </p>
 
-            const choice = prompt(message);
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Camera option (mainly for mobile) -->
+                            <button onclick="document.getElementById('photoSourceModal').remove(); captureAnimalPhoto('${chapetaNum}', true);"
+                                    style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: transform 0.2s;">
+                                <span style="font-size: 2rem;">📷</span>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600;">Tomar Foto</div>
+                                    <div style="font-size: 0.85rem; opacity: 0.9;">Usar la cámara del dispositivo</div>
+                                </div>
+                            </button>
 
-            if (choice === '1') {
-                showToast(`📸 Preparando cámara para ${animalInfo}...`, 'info');
-                captureAnimalPhoto(chapetaNum, true);
-            } else if (choice === '2') {
-                showToast(`📁 Seleccione una foto de su dispositivo para ${animalInfo}...`, 'info');
-                captureAnimalPhoto(chapetaNum, false);
-            } else if (choice !== null) {
-                showToast('❌ Opción inválida. Use 1 o 2', 'error');
+                            <!-- File picker option -->
+                            <button onclick="document.getElementById('photoSourceModal').remove(); openPhotoFilePicker('${chapetaNum}');"
+                                    style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: transform 0.2s;">
+                                <span style="font-size: 2rem;">📁</span>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600;">Seleccionar Archivo</div>
+                                    <div style="font-size: 0.85rem; opacity: 0.9;">Buscar en Descargas u otra carpeta</div>
+                                </div>
+                            </button>
+
+                            <!-- Multiple files option -->
+                            <button onclick="document.getElementById('photoSourceModal').remove(); openMultiplePhotosPicker();"
+                                    style="display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: transform 0.2s;">
+                                <span style="font-size: 2rem;">🖼️</span>
+                                <div style="text-align: left;">
+                                    <div style="font-weight: 600;">Subir Múltiples Fotos</div>
+                                    <div style="font-size: 0.85rem; opacity: 0.9;">Seleccionar varias fotos y asignarlas</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; font-size: 0.85rem; color: #166534;">
+                            <strong>💡 Tip:</strong> Para acceder rápidamente a Descargas, en el selector de archivos navega a tu carpeta de Descargas o usa el acceso directo.
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Open file picker for single photo (opens to file browser)
+        function openPhotoFilePicker(chapetaNum) {
+            showToast('📁 Seleccione una foto...', 'info');
+            captureAnimalPhoto(chapetaNum, false);
+        }
+
+        // Open picker for multiple photos with preview and assignment
+        function openMultiplePhotosPicker() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+
+            input.onchange = function(e) {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+
+                showPhotoAssignmentModal(files);
+            };
+
+            input.click();
+        }
+
+        // Show modal to preview and assign multiple photos to animals
+        function showPhotoAssignmentModal(files) {
+            const activeAnimals = data.entradas.filter(e => !data.salidas.some(s => s.numero === e.numero));
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'photoAssignModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <span>🖼️ Asignar ${files.length} Foto(s) a Animales</span>
+                        <button class="modal-close" onclick="document.getElementById('photoAssignModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1rem; overflow-y: auto; flex: 1;">
+                        <p style="margin-bottom: 1rem; color: #666;">
+                            Seleccione a qué animal corresponde cada foto:
+                        </p>
+                        <div id="photoAssignList" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <!-- Photos will be loaded here -->
+                        </div>
+                    </div>
+                    <div style="padding: 1rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                        <span id="assignProgress" style="color: #666;">0 de ${files.length} asignadas</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="document.getElementById('photoAssignModal').remove()" class="btn" style="background: #6b7280;">
+                                Cancelar
+                            </button>
+                            <button onclick="saveAssignedPhotos()" class="btn btn-primary" style="background: #10b981;">
+                                💾 Guardar Todas
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Load previews
+            const listContainer = document.getElementById('photoAssignList');
+            window.pendingPhotoAssignments = [];
+
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const photoItem = document.createElement('div');
+                    photoItem.style.cssText = 'display: flex; gap: 1rem; padding: 1rem; background: #f9fafb; border-radius: 12px; align-items: center;';
+                    photoItem.innerHTML = `
+                        <div style="flex-shrink: 0;">
+                            <img src="${e.target.result}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; cursor: pointer;"
+                                 onclick="viewPhotoPreview('${e.target.result.substring(0, 100)}...')"
+                                 data-full-src="${e.target.result}">
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem;">📷 ${file.name}</div>
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">
+                                ${(file.size / 1024).toFixed(1)} KB
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <label style="font-weight: 500;">Asignar a:</label>
+                                <select id="photoAssign_${index}" style="flex: 1; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;" onchange="updateAssignProgress()">
+                                    <option value="">-- Seleccionar animal --</option>
+                                    ${activeAnimals.map(a => `
+                                        <option value="${a.numero}">#${a.numero} - ${a.sexo === 'MACHO' ? '♂️' : '♀️'} ${a.raza || 'Cebú'} (Lote ${a.lote})</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(photoItem);
+
+                    // Store the file data for later saving
+                    window.pendingPhotoAssignments[index] = {
+                        dataUrl: e.target.result,
+                        file: file
+                    };
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateAssignProgress() {
+            const total = window.pendingPhotoAssignments?.length || 0;
+            let assigned = 0;
+            for (let i = 0; i < total; i++) {
+                const select = document.getElementById(`photoAssign_${i}`);
+                if (select && select.value) assigned++;
+            }
+            const progressEl = document.getElementById('assignProgress');
+            if (progressEl) {
+                progressEl.textContent = `${assigned} de ${total} asignadas`;
+                progressEl.style.color = assigned === total ? '#10b981' : '#666';
+            }
+        }
+
+        function saveAssignedPhotos() {
+            const assignments = window.pendingPhotoAssignments || [];
+            let saved = 0;
+            let errors = [];
+
+            assignments.forEach((photo, index) => {
+                const select = document.getElementById(`photoAssign_${index}`);
+                if (select && select.value && photo) {
+                    const chapetaNum = select.value;
+
+                    try {
+                        // Compress and save
+                        compressImage(photo.file, (compressedDataUrl) => {
+                            const timestamp = new Date().toISOString();
+                            animalPhotos[chapetaNum] = {
+                                photo: compressedDataUrl,
+                                breed: null,
+                                dateAdded: timestamp
+                            };
+
+                            try {
+                                saveAnimalPhotos();
+                                saved++;
+
+                                if (saved === assignments.filter((_, i) => document.getElementById(`photoAssign_${i}`)?.value).length) {
+                                    updateAllViews();
+                                    showToast(`✅ ${saved} foto(s) guardadas exitosamente`, 'success');
+                                    document.getElementById('photoAssignModal')?.remove();
+                                }
+                            } catch (saveError) {
+                                errors.push(`#${chapetaNum}: ${saveError.message}`);
+                            }
+                        });
+                    } catch (error) {
+                        errors.push(`#${chapetaNum}: ${error.message}`);
+                    }
+                }
+            });
+
+            if (assignments.every((_, i) => !document.getElementById(`photoAssign_${i}`)?.value)) {
+                showToast('⚠️ No hay fotos asignadas para guardar', 'warning');
+            }
+
+            if (errors.length > 0) {
+                showToast(`❌ Errores: ${errors.join(', ')}`, 'error');
             }
         }
         
@@ -10980,27 +11186,39 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (!confirm('⚠️ ADVERTENCIA: Restaurar un respaldo reemplazará TODOS los datos actuales.\n\n¿Está seguro de continuar?')) {
                 return;
             }
-            
+
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
-            
+
             input.onchange = function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 showToast('📥 Restaurando respaldo...', 'info');
-                
+
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     try {
                         const backup = JSON.parse(event.target.result);
-                        
+
                         // Validate backup structure
                         if (!backup.version || !backup.ranches) {
                             throw new Error('Archivo de respaldo inválido o corrupto');
                         }
-                        
+
+                        // Map backup keys to app keys (handles different naming conventions)
+                        const backupKeyMapping = {
+                            'la_coruna': 'la_coruna',
+                            'LaCoruna': 'la_coruna',
+                            'catalina': 'santa_catalina',
+                            'santa_catalina': 'santa_catalina',
+                            'Catalina': 'santa_catalina',
+                            'SantaCatalina': 'santa_catalina',
+                            'la_vega': 'la_vega',
+                            'LaVega': 'la_vega'
+                        };
+
                         // Confirm restoration with details
                         const ranchCount = Object.keys(backup.ranches).length;
                         let totalEntradas = 0;
@@ -11009,7 +11227,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             if (ranch.data.entradas) totalEntradas += ranch.data.entradas.length;
                             if (ranch.data.salidas) totalSalidas += ranch.data.salidas.length;
                         });
-                        
+
                         if (!confirm(`📊 RESUMEN DEL RESPALDO:\n\n` +
                             `Fecha: ${formatDate(backup.backupDate)}\n` +
                             `Fincas: ${ranchCount}\n` +
@@ -11018,19 +11236,24 @@ document.addEventListener('DOMContentLoaded', async function() {
                             `¿Confirmar restauración?`)) {
                             return;
                         }
-                        
+
                         // Restore ranch data
-                        Object.keys(backup.ranches).forEach(ranchId => {
-                            const ranch = RANCHES[ranchId];
+                        Object.keys(backup.ranches).forEach(backupRanchId => {
+                            // Map backup key to app key
+                            const appRanchId = backupKeyMapping[backupRanchId] || backupRanchId;
+                            const ranch = RANCHES[appRanchId];
                             if (ranch) {
-                                const ranchBackup = backup.ranches[ranchId];
+                                const ranchBackup = backup.ranches[backupRanchId];
                                 localStorage.setItem(ranch.storageKey, JSON.stringify(ranchBackup.data));
-                                
+                                console.log(`Restored ${backupRanchId} -> ${ranch.storageKey}`);
+
                                 // Restore animal photos if present
                                 if (ranchBackup.animalPhotos) {
-                                    const photosKey = 'animalPhotos_' + ranchId;
+                                    const photosKey = 'animalPhotos_' + appRanchId;
                                     localStorage.setItem(photosKey, JSON.stringify(ranchBackup.animalPhotos));
                                 }
+                            } else {
+                                console.warn(`Ranch not found for backup key: ${backupRanchId}, mapped to: ${appRanchId}`);
                             }
                         });
                         
