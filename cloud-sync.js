@@ -86,17 +86,38 @@ class CloudSync {
                 // Force download from cloud for new devices
                 await this.forceDownloadFromCloud();
             } else {
-                // Check cloud first to see if it has more data
-                const cloudAnimalCount = await this.getCloudAnimalCount();
+                // Always check if cloud has newer data (by timestamp, not just count)
+                const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+                const cloudData = snapshot.val();
+                const cloudAnimalCount = this.countAnimalsInData(cloudData);
+
                 console.log(`📊 Local: ${localAnimalCount} animals, Cloud: ${cloudAnimalCount} animals`);
 
-                if (cloudAnimalCount > localAnimalCount) {
-                    // Cloud has more data - download it
-                    console.log('☁️ Cloud has more data - downloading...');
-                    await this.syncFromCloud();
-                } else if (localAnimalCount > 0) {
-                    // Local has data - upload to cloud
-                    console.log('📤 Uploading local data to cloud...');
+                if (cloudData && cloudData.lastModified) {
+                    const cloudTime = new Date(cloudData.lastModified).getTime();
+                    const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
+
+                    console.log(`📅 Cloud time: ${cloudData.lastModified}, Local sync: ${this.lastSync || 'never'}`);
+
+                    if (cloudTime > localTime) {
+                        // Cloud has newer data - download it
+                        console.log('☁️ Cloud has newer data - downloading...');
+                        this.applySyncData(cloudData, false);
+
+                        // Reload page to show updated data
+                        if (typeof showToast === 'function') {
+                            showToast('☁️ Datos actualizados desde la nube', 'success');
+                        }
+                        setTimeout(() => window.location.reload(), 1000);
+                        return true;
+                    } else {
+                        console.log('✅ Local data is up to date');
+                    }
+                }
+
+                // Upload local data if we have it
+                if (localAnimalCount > 0) {
+                    console.log('📤 Syncing local data to cloud...');
                     await this.syncToCloud();
                 }
             }
@@ -185,19 +206,37 @@ class CloudSync {
         if (!this.enabled || !this.db) return;
 
         const userRef = this.db.ref(`users/${this.userId}`);
-        
+        let lastProcessedTime = 0; // Debounce to prevent rapid re-syncs
+
         userRef.on('value', (snapshot) => {
             if (this.syncInProgress) return; // Avoid infinite loops
-            
+
             const cloudData = snapshot.val();
             if (cloudData && cloudData.lastModified) {
-                const cloudTime = new Date(cloudData.lastModified);
-                const localTime = this.lastSync ? new Date(this.lastSync) : new Date(0);
-                
-                // If cloud data is newer, sync from cloud
-                if (cloudTime > localTime) {
-                    console.log('Cloud data is newer, syncing from cloud...');
+                const cloudTime = new Date(cloudData.lastModified).getTime();
+                const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
+
+                // Debounce: don't process same timestamp twice
+                if (cloudTime === lastProcessedTime) {
+                    return;
+                }
+
+                // Check if the change came from a different device
+                const cloudDeviceId = cloudData.deviceId;
+                const myDeviceId = this.getDeviceId();
+                const isFromOtherDevice = cloudDeviceId && cloudDeviceId !== myDeviceId;
+
+                console.log(`📡 Cloud update: time=${cloudTime}, local=${localTime}, device=${cloudDeviceId}, myDevice=${myDeviceId}`);
+
+                // If cloud data is newer AND from another device, sync from cloud
+                if (cloudTime > localTime && isFromOtherDevice) {
+                    lastProcessedTime = cloudTime; // Mark as processed
+                    console.log(`☁️ Syncing changes from device ${cloudDeviceId}...`);
                     this.syncFromCloudSilent(cloudData);
+                } else if (cloudTime > localTime && !isFromOtherDevice) {
+                    // Update our lastSync to match cloud time to prevent re-triggering
+                    this.lastSync = cloudData.lastModified;
+                    localStorage.setItem('cloudSync_lastSync', this.lastSync);
                 }
             }
         });
@@ -292,7 +331,20 @@ class CloudSync {
      * Silent sync from cloud (triggered by listeners)
      */
     syncFromCloudSilent(cloudData) {
+        // Show a brief notification that sync is happening from another device
+        if (typeof showToast === 'function') {
+            showToast('☁️ Recibiendo cambios de otro dispositivo...', 'info');
+        }
+
+        // Apply data to localStorage first
         this.applySyncData(cloudData, false);
+
+        // Force page reload to ensure UI is updated with new data
+        // This is the most reliable way to ensure all views are refreshed
+        console.log('🔄 Reloading page to show changes from other device...');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     }
 
     /**
@@ -377,9 +429,16 @@ class CloudSync {
         localStorage.setItem('cloudSync_lastSync', this.lastSync);
 
         if (changesCount > 0) {
-            console.log(`✅ Synced ${changesCount} changes from cloud - UI will update automatically`);
+            console.log(`✅ Synced ${changesCount} changes from cloud`);
 
-            // AUTOMATIC UI REFRESH - No user confirmation needed
+            // CRITICAL: Reload the data variable from localStorage before updating views
+            // The 'data' variable in index.html needs to be refreshed with the new localStorage data
+            if (typeof loadData === 'function') {
+                console.log('🔄 Reloading data from localStorage...');
+                loadData(); // This reloads the in-memory 'data' variable
+            }
+
+            // Now update the UI with the fresh data
             if (typeof updateAllViews === 'function') {
                 console.log('🔄 Updating UI with new data...');
                 updateAllViews();
@@ -387,7 +446,7 @@ class CloudSync {
 
             // Show subtle notification (only if not silent sync)
             if (showNotification && typeof showToast === 'function') {
-                showToast(`☁️ ${changesCount} cambio(s) sincronizado(s) automáticamente`, 'success');
+                showToast(`☁️ ${changesCount} cambio(s) sincronizado(s)`, 'success');
             }
         }
     }

@@ -3304,6 +3304,17 @@
                             <div id="pendingChanges" style="font-size: 1.1rem; font-weight: 600; color: #333;">0</div>
                         </div>
                     </div>
+
+                    <!-- Debug Info Panel -->
+                    <div style="background: #1e293b; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #94a3b8; font-family: monospace; font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <span style="color: #10b981; font-weight: 600;">📊 Diagnóstico de Sincronización</span>
+                            <button onclick="refreshSyncDebugInfo()" style="background: #334155; border: none; color: #94a3b8; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🔄 Actualizar</button>
+                        </div>
+                        <div id="syncDebugInfo" style="line-height: 1.6;">
+                            <div>Cargando...</div>
+                        </div>
+                    </div>
                     
                     <!-- Sync Controls -->
                     <div class="form-group">
@@ -3577,8 +3588,8 @@
         }
 
         // App version info (update when publishing)
-        const APP_VERSION = '1';
-        const APP_BUILD_DATE = 'auto';
+        const APP_VERSION = '2';
+        const APP_BUILD_DATE = '2025-01-09';
         
         // ==================== DATA STORAGE ====================
         let data = {
@@ -3638,7 +3649,11 @@
             loadApiKeys();
             updateAppVersionLabels();
             
-            document.getElementById('importExcel').addEventListener('change', handleExcelImport);
+            // Excel import listener (if element exists)
+            const importExcelEl = document.getElementById('importExcel');
+            if (importExcelEl) {
+                importExcelEl.addEventListener('change', handleExcelImport);
+            }
             
             // Set today's date as default
             const today = new Date().toISOString().split('T')[0];
@@ -7155,13 +7170,80 @@
         
         // Update sync status every 30 seconds
         setInterval(updateSyncStatus, 30000);
-        
+
         // Update status on page load and when cloud sync is ready
         document.addEventListener('DOMContentLoaded', function() {
             // Wait a bit for cloud-sync.js to initialize
             setTimeout(updateSyncStatus, 1000);
             setTimeout(updateSyncStatus, 3000);
+            setTimeout(refreshSyncDebugInfo, 2000);
         });
+
+        async function refreshSyncDebugInfo() {
+            const debugEl = document.getElementById('syncDebugInfo');
+            if (!debugEl) return;
+
+            let html = '';
+
+            // Local data info
+            const localCount = typeof cloudSync !== 'undefined' ? cloudSync.countLocalAnimals() : 0;
+            const localSyncTime = localStorage.getItem('cloudSync_lastSync') || 'nunca';
+            const deviceId = localStorage.getItem('cloudSync_deviceId') || 'no generado';
+            const userId = localStorage.getItem('cloudSync_userId') || 'no configurado';
+
+            html += `<div style="color: #60a5fa;">📱 <b>Este Dispositivo:</b></div>`;
+            html += `<div style="margin-left: 1rem;">ID: ${deviceId.substring(0, 12)}...</div>`;
+            html += `<div style="margin-left: 1rem;">Animales locales: <span style="color: #fbbf24;">${localCount}</span></div>`;
+            html += `<div style="margin-left: 1rem;">Última sync local: ${localSyncTime === 'nunca' ? 'nunca' : new Date(localSyncTime).toLocaleString()}</div>`;
+            html += `<div style="margin-left: 1rem;">User ID: ${userId}</div>`;
+
+            // Cloud data info
+            if (typeof cloudSync !== 'undefined' && cloudSync.enabled && cloudSync.db) {
+                try {
+                    html += `<div style="color: #60a5fa; margin-top: 0.75rem;">☁️ <b>Nube (Firebase):</b></div>`;
+
+                    const snapshot = await cloudSync.db.ref(`users/${cloudSync.userId}`).once('value');
+                    const cloudData = snapshot.val();
+
+                    if (cloudData) {
+                        const cloudCount = cloudSync.countAnimalsInData(cloudData);
+                        const cloudTime = cloudData.lastModified || 'desconocido';
+                        const cloudDevice = cloudData.deviceId || 'desconocido';
+
+                        html += `<div style="margin-left: 1rem;">Animales en nube: <span style="color: #fbbf24;">${cloudCount}</span></div>`;
+                        html += `<div style="margin-left: 1rem;">Última modificación: ${new Date(cloudTime).toLocaleString()}</div>`;
+                        html += `<div style="margin-left: 1rem;">Último dispositivo: ${cloudDevice.substring(0, 12)}...</div>`;
+
+                        // Comparison
+                        const localTimeMs = localSyncTime !== 'nunca' ? new Date(localSyncTime).getTime() : 0;
+                        const cloudTimeMs = new Date(cloudTime).getTime();
+
+                        html += `<div style="color: #60a5fa; margin-top: 0.75rem;">📊 <b>Comparación:</b></div>`;
+                        if (cloudTimeMs > localTimeMs) {
+                            html += `<div style="margin-left: 1rem; color: #f87171;">⚠️ La nube tiene datos más recientes</div>`;
+                        } else if (cloudTimeMs < localTimeMs) {
+                            html += `<div style="margin-left: 1rem; color: #fbbf24;">📤 Tus datos locales son más recientes</div>`;
+                        } else {
+                            html += `<div style="margin-left: 1rem; color: #4ade80;">✅ Datos sincronizados</div>`;
+                        }
+
+                        if (cloudDevice === deviceId) {
+                            html += `<div style="margin-left: 1rem; color: #4ade80;">✓ Última actualización fue de este dispositivo</div>`;
+                        } else {
+                            html += `<div style="margin-left: 1rem; color: #fbbf24;">→ Última actualización fue de otro dispositivo</div>`;
+                        }
+                    } else {
+                        html += `<div style="margin-left: 1rem; color: #f87171;">No hay datos en la nube</div>`;
+                    }
+                } catch (error) {
+                    html += `<div style="margin-left: 1rem; color: #f87171;">Error: ${error.message}</div>`;
+                }
+            } else {
+                html += `<div style="color: #f87171; margin-top: 0.75rem;">☁️ Cloud sync no está inicializado</div>`;
+            }
+
+            debugEl.innerHTML = html;
+        }
         
         function clearAllData() {
             if (confirm('¿Está seguro de borrar TODOS los datos? Esta acción no se puede deshacer.')) {
