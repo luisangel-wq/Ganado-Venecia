@@ -5401,7 +5401,7 @@
                 const hasPhoto = !!animalPhotos[animal.numero]?.photo;
 
                 // Check for manual weight updates from Progreso
-                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => u.numero == animal.numero).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(animal.numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
                 const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
 
                 let pesoDisplay, pesoStyle;
@@ -8774,19 +8774,42 @@
                 showToast('Animal no encontrado', 'error');
                 return;
             }
-            
+
             const modal = document.getElementById('animalProfileModal');
             const body = document.getElementById('animalProfileBody');
             const title = document.getElementById('animalProfileTitle');
-            
+
             title.textContent = `🐂 Animal #${numero}`;
-            
+
             // Calculate current estimated weight
             const today = new Date();
             const entryDate = new Date(animal.fechaEntrada);
             const days = Math.floor((today - entryDate) / (1000 * 60 * 60 * 24));
             const gdp = data.config.gdp || 0.31;
-            const pesoActual = animal.peso + (days * gdp);
+            const pesoEstimadoDefault = animal.peso + (days * gdp);
+
+            // Check for manual weight updates from Progreso
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)).sort((a, b) => new Date(b.fecha) - new Date(a.fecha)) : [];
+            const lastManualUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
+
+            // Use manual weight if available, otherwise use estimate
+            let pesoActual, pesoStyle, hasManualWeight;
+            if (lastManualUpdate) {
+                pesoActual = lastManualUpdate.pesoNuevo;
+                hasManualWeight = true;
+                if (pesoActual > pesoEstimadoDefault) {
+                    pesoStyle = 'color: #16a34a;'; // Green - above estimate
+                } else if (pesoActual < pesoEstimadoDefault) {
+                    pesoStyle = 'color: #dc2626;'; // Red - below estimate
+                } else {
+                    pesoStyle = '';
+                }
+            } else {
+                pesoActual = pesoEstimadoDefault;
+                hasManualWeight = false;
+                pesoStyle = '';
+            }
+
             const gananciaTotal = pesoActual - animal.peso;
             
             // Get potrero
@@ -8864,8 +8887,9 @@
                             <span class="profile-item-value">${animal.peso} kg</span>
                         </div>
                         <div class="profile-item">
-                            <span class="profile-item-label">Peso Actual (Est.)</span>
-                            <span class="profile-item-value large">${Math.round(pesoActual)} kg</span>
+                            <span class="profile-item-label">${hasManualWeight ? 'Peso Actual (Registrado)' : 'Peso Actual (Est.)'}</span>
+                            <span class="profile-item-value large" style="${pesoStyle}">${Math.round(pesoActual)} kg</span>
+                            ${hasManualWeight ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">Est. por defecto: ${Math.round(pesoEstimadoDefault)} kg</div>` : ''}
                         </div>
                         <div class="profile-item">
                             <span class="profile-item-label">Ganancia Total</span>
