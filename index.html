@@ -9418,22 +9418,57 @@
             document.getElementById('moverAnimalesFormContainer').style.display = 'block';
             document.getElementById('moverFecha').value = new Date().toISOString().split('T')[0];
 
-            // Use shared potreros from all connected ranches (La Coruña + Santa Catalina)
-            const allPotreros = getSharedPotreros();
+            // Get ALL potreros from ALL shared ranches (always combine La Coruña + Santa Catalina)
+            const allPotreros = getAllSharedPotreros();
 
             // Populate potrero selectors with ALL potreros from shared ranches
             const desdeSelect = document.getElementById('moverDesde');
             const haciaSelect = document.getElementById('moverHacia');
 
             desdeSelect.innerHTML = '<option value="">-- Sin potrero asignado --</option>' +
-                allPotreros.map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName || p.nombre}</option>`).join('');
+                allPotreros.map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName}</option>`).join('');
 
             haciaSelect.innerHTML = '<option value="">-- Seleccionar destino --</option>' +
                 allPotreros.filter(p => p.estado !== 'mantenimiento')
-                    .map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName || p.nombre} (${p.estado})</option>`).join('');
+                    .map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName} (${p.estado})</option>`).join('');
 
             selectedMoverAnimals.clear();
             updateAnimalesEnPotrero();
+        }
+
+        // Get ALL potreros from all shared ranches (always includes ranch name in display)
+        function getAllSharedPotreros() {
+            const combinedPotreros = [];
+            const seenIds = new Set();
+
+            // Always combine from La Coruña and Santa Catalina
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const ranchData = localStorage.getItem(ranch.storageKey);
+                if (ranchData) {
+                    try {
+                        const parsed = JSON.parse(ranchData);
+                        if (parsed.potreros && Array.isArray(parsed.potreros)) {
+                            parsed.potreros.forEach(p => {
+                                const uniqueId = `${ranchId}_${p.id}`;
+                                if (!seenIds.has(uniqueId)) {
+                                    seenIds.add(uniqueId);
+                                    combinedPotreros.push({
+                                        ...p,
+                                        sourceRanch: ranchId,
+                                        displayName: `${p.nombre} (${ranch.name})`
+                                    });
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error loading potreros from', ranchId, e);
+                    }
+                }
+            });
+
+            console.log('All shared potreros:', combinedPotreros.length, combinedPotreros.map(p => p.displayName));
+            return combinedPotreros;
         }
         
         function hideMoverAnimalesForm() {
@@ -9533,7 +9568,7 @@
             const fecha = document.getElementById('moverFecha').value;
 
             // Parse the combined IDs (format: "ranchId_potreroId")
-            const allPotreros = getSharedPotreros();
+            const allPotreros = getAllSharedPotreros();
 
             // Find destination potrero info
             let haciaRanch, haciaPotreroId, haciaPotreroInfo;
@@ -9751,7 +9786,7 @@
             }
 
             // Use shared potreros for name lookup
-            const allPotreros = getSharedPotreros();
+            const allPotreros = getAllSharedPotreros();
 
             const sorted = [...data.rotaciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 20);
 
