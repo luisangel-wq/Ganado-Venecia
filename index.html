@@ -3559,6 +3559,54 @@
         // Current active ranch
         let currentRanch = 'la_coruna'; // Default to La Coruña
 
+        // Ranches that share potreros (cattle moves between them)
+        const SHARED_POTRERO_RANCHES = ['la_coruna', 'santa_catalina'];
+
+        // Get combined potreros for ranches that share them
+        function getSharedPotreros() {
+            // Only La Coruña and Santa Catalina share potreros
+            if (!SHARED_POTRERO_RANCHES.includes(currentRanch)) {
+                return data.potreros || [];
+            }
+
+            // Combine potreros from both ranches
+            const combinedPotreros = [];
+            const seenIds = new Set();
+
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const ranchData = localStorage.getItem(ranch.storageKey);
+                if (ranchData) {
+                    try {
+                        const parsed = JSON.parse(ranchData);
+                        if (parsed.potreros && Array.isArray(parsed.potreros)) {
+                            parsed.potreros.forEach(p => {
+                                // Add ranch identifier to avoid ID conflicts
+                                const uniqueId = `${ranchId}_${p.id}`;
+                                if (!seenIds.has(uniqueId)) {
+                                    seenIds.add(uniqueId);
+                                    combinedPotreros.push({
+                                        ...p,
+                                        sourceRanch: ranchId,
+                                        displayName: `${p.nombre} (${ranch.name})`
+                                    });
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error loading potreros from', ranchId, e);
+                    }
+                }
+            });
+
+            return combinedPotreros;
+        }
+
+        // Check if current ranch shares potreros
+        function usesSharedPotreros() {
+            return SHARED_POTRERO_RANCHES.includes(currentRanch);
+        }
+
         // App version info (update when publishing)
         const APP_VERSION = '1';
         const APP_BUILD_DATE = 'auto';
@@ -5397,7 +5445,9 @@
                 const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
                 const pesoEstimadoDefault = animal.peso + (diasEnFinca * data.config.gdp);
                 const inRetiro = isAnimalInRetiro(animal.numero);
-                const potrero = data.animalPotreros[animal.numero] ? data.potreros.find(p => p.id === data.animalPotreros[animal.numero]) : null;
+                // Use shared potreros for La Coruña and Santa Catalina
+                const allPotreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+                const potrero = data.animalPotreros[animal.numero] ? allPotreros.find(p => p.id === data.animalPotreros[animal.numero]) : null;
                 const hasPhoto = !!animalPhotos[animal.numero]?.photo;
 
                 // Check for manual weight updates from Progreso
@@ -8663,37 +8713,47 @@
         }
         
         function updatePotrerosStats() {
-            const total = data.potreros.length;
-            const ocupados = data.potreros.filter(p => p.estado === 'ocupado').length;
-            const descansando = data.potreros.filter(p => p.estado === 'descanso').length;
-            
+            // Use shared potreros for La Coruña and Santa Catalina
+            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+            const total = potreros.length;
+            const ocupados = potreros.filter(p => p.estado === 'ocupado').length;
+            const descansando = potreros.filter(p => p.estado === 'descanso').length;
+
             // Count potreros that have been resting for 30+ days
             const today = new Date();
-            const listos = data.potreros.filter(p => {
+            const listos = potreros.filter(p => {
                 if (p.estado !== 'descanso') return false;
                 if (!p.ultimaSalida) return true; // Never used = ready
                 const salida = new Date(p.ultimaSalida);
                 const dias = Math.floor((today - salida) / (1000 * 60 * 60 * 24));
                 return dias >= 30;
             }).length;
-            
+
             document.getElementById('potrerosTotal').textContent = total;
             document.getElementById('potrerosOcupados').textContent = ocupados;
             document.getElementById('potrerosDescansando').textContent = descansando;
             document.getElementById('potrerosListos').textContent = listos;
         }
-        
+
         function updatePotrerosGrid() {
             const container = document.getElementById('potrerosGrid');
-            
-            if (data.potreros.length === 0) {
+            // Use shared potreros for La Coruña and Santa Catalina
+            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+
+            if (potreros.length === 0) {
                 container.innerHTML = '<div class="text-center" style="grid-column: 1/-1; padding: 2rem; color: var(--gray);">No hay potreros registrados. Haga clic en "Agregar Potrero" para comenzar.</div>';
                 return;
             }
-            
+
+            // Show info banner if using shared potreros
+            let html = '';
+            if (usesSharedPotreros()) {
+                html += '<div style="grid-column: 1/-1; background: #dbeafe; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;"><span style="font-size: 1.2rem;">🔄</span> <span>Potreros compartidos entre <strong>La Coruña</strong> y <strong>Santa Catalina</strong> - El ganado se mueve entre ambas fincas</span></div>';
+            }
+
             const today = new Date();
-            
-            container.innerHTML = data.potreros.map(p => {
+
+            html += potreros.map(p => {
                 // Count animals in this potrero
                 const animalesCount = Object.values(data.animalPotreros).filter(pId => pId === p.id).length;
                 
@@ -8720,12 +8780,16 @@
                     'ninguna': '❌ Sin agua'
                 };
                 
+                // Show which ranch this potrero belongs to (for shared potreros)
+                const ranchLabel = p.sourceRanch ? RANCHES[p.sourceRanch]?.name : null;
+
                 return `
                     <div class="potrero-card ${p.estado}">
                         <div class="potrero-card-header">
                             <div class="potrero-card-title">🌿 ${p.nombre}</div>
                             <span class="potrero-card-status ${p.estado}">${statusLabels[p.estado]}</span>
                         </div>
+                        ${ranchLabel ? `<div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.5rem;">📍 ${ranchLabel}</div>` : ''}
                         <div class="potrero-card-stats">
                             <div class="potrero-stat">📏 ${p.area ? p.area + ' ha' : 'Sin área'}</div>
                             <div class="potrero-stat">🌾 ${p.tipoPasto}</div>
@@ -8735,28 +8799,35 @@
                         </div>
                         ${p.notas ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">📝 ${p.notas}</div>` : ''}
                         <div class="potrero-card-footer">
-                            <button class="btn btn-secondary" onclick="showPotreroForm(${p.id})">✏️ Editar</button>
-                            <button class="btn btn-danger" onclick="deletePotrero(${p.id})">🗑️</button>
+                            <button class="btn btn-secondary" onclick="showPotreroForm(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">✏️ Editar</button>
+                            <button class="btn btn-danger" onclick="deletePotrero(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">🗑️</button>
                         </div>
                     </div>
                 `;
             }).join('');
+
+            container.innerHTML = html;
         }
         
         function updateRotacionHistorial() {
             const tbody = document.getElementById('rotacionHistorialBody');
-            
+
             if (data.rotaciones.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center">No hay movimientos registrados</td></tr>';
                 return;
             }
-            
+
+            // Use shared potreros for name lookup
+            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+
             const sorted = [...data.rotaciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 20);
-            
+
             tbody.innerHTML = sorted.map(r => {
-                const desde = r.desdeId ? (data.potreros.find(p => p.id === r.desdeId)?.nombre || 'Desconocido') : 'Sin asignar';
-                const hacia = data.potreros.find(p => p.id === r.haciaId)?.nombre || 'Desconocido';
-                
+                const desdePotrero = r.desdeId ? potreros.find(p => p.id === r.desdeId) : null;
+                const haciaPotrero = potreros.find(p => p.id === r.haciaId);
+                const desde = desdePotrero ? desdePotrero.nombre : (r.desdeId ? 'Desconocido' : 'Sin asignar');
+                const hacia = haciaPotrero ? haciaPotrero.nombre : 'Desconocido';
+
                 return `<tr>
                     <td>${formatDate(r.fecha)}</td>
                     <td>${desde}</td>
@@ -8814,7 +8885,9 @@
             
             // Get potrero
             const potreroId = data.animalPotreros[numero];
-            const potrero = potreroId ? data.potreros.find(p => p.id === potreroId) : null;
+            // Use shared potreros for La Coruña and Santa Catalina
+            const allPotreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+            const potrero = potreroId ? allPotreros.find(p => p.id === potreroId) : null;
             
             // Get health history
             const saludHistorial = data.saludEventos
@@ -9132,7 +9205,8 @@
         // Change potrero from animal profile
         function showChangePotreroModal(numero) {
             const currentPotreroId = data.animalPotreros[numero];
-            const potreros = data.potreros || [];
+            // Use shared potreros for La Coruña and Santa Catalina
+            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
 
             if (potreros.length === 0) {
                 showToast('No hay potreros definidos. Créelos en la pestaña Potreros.', 'warning');
@@ -9149,13 +9223,14 @@
                         <button class="modal-close" onclick="document.getElementById('changePotreroModal').remove()">×</button>
                     </div>
                     <div class="modal-body" style="padding: 1.5rem;">
+                        ${usesSharedPotreros() ? '<div style="background: #dbeafe; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #1e40af;">ℹ️ Potreros compartidos entre La Coruña y Santa Catalina</div>' : ''}
                         <div class="form-group">
                             <label class="form-label">Seleccionar Potrero</label>
                             <select class="form-select" id="newPotreroSelect" style="font-size: 1.1rem;">
                                 <option value="">❓ Sin asignar</option>
                                 ${potreros.map(p => `
-                                    <option value="${p.id}" ${p.id === currentPotreroId ? 'selected' : ''}>
-                                        🌿 ${p.nombre} ${p.id === currentPotreroId ? '(actual)' : ''}
+                                    <option value="${p.sourceRanch ? p.sourceRanch + '_' + p.id : p.id}" ${p.id === currentPotreroId ? 'selected' : ''}>
+                                        🌿 ${p.displayName || p.nombre} ${p.id === currentPotreroId ? '(actual)' : ''}
                                     </option>
                                 `).join('')}
                             </select>
