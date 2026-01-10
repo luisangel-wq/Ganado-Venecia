@@ -2260,54 +2260,100 @@
                     <span>📸 Gestión de Fotos del Ganado</span>
                 </div>
                 <div class="card-body">
-                    <!-- Compact Photo Options Grid - 5 buttons in a row on desktop, 2-3 on mobile -->
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
-                        <!-- AI Photo Voice -->
-                        <button id="voiceDictationBtn" onclick="startVoiceDictation('photos')" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
-                            <span style="font-size: 1.2rem;">🎤</span>
-                            <span style="font-weight: 600;">AI Voice</span>
-                        </button>
-                        <!-- Foto Individual -->
-                        <button onclick="showAddAnimalPhoto()" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
-                            <span style="font-size: 1.2rem;">📸</span>
-                            <span style="font-weight: 600;">Foto</span>
-                        </button>
-                        <!-- Captura Rápida -->
-                        <button onclick="startQuickCaptureMode()" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
-                            <span style="font-size: 1.2rem;">⚡</span>
-                            <span style="font-weight: 600;">Rápido</span>
-                        </button>
-                        <!-- Subir Archivos -->
-                        <button onclick="openMultiplePhotosPicker()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
-                            <span style="font-size: 1.2rem;">📁</span>
-                            <span style="font-weight: 600;">Subir</span>
-                        </button>
-                        <!-- Nota de Voz -->
-                        <button onclick="startVoiceNoteMode()" style="background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 8px; padding: 0.6rem 0.4rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font-size: 0.7rem; min-height: 60px;">
-                            <span style="font-size: 1.2rem;">🎙️</span>
-                            <span style="font-weight: 600;">Audio</span>
-                        </button>
-                    </div>
+                    <!-- Photo Options Grid - 2 rows of beautiful boxes -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                        <!-- Row 1: AI Voice, Foto Individual, Captura Rápida -->
 
-                    <!-- Voice Status (shown when recording) -->
-                    <div id="voiceStatus" style="display: none; margin-bottom: 0.75rem;">
-                        <div style="background: #fef3c7; border-radius: 6px; padding: 0.5rem; border: 1px solid #f59e0b; font-size: 0.8rem;">
-                            <div id="voiceTranscriptPreview" style="color: #92400e;">🎤 Escuchando...</div>
+                        <!-- AI Photo Voice -->
+                        <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); border-radius: 10px; padding: 1rem; border: 2px solid #8b5cf6;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.3rem;">🎤</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem; color: #6d28d9;">AI Photo Voice</h4>
+                                    <p style="margin: 0; font-size: 0.7rem; color: #7c3aed;">Dicte + foto</p>
+                                </div>
+                            </div>
+                            <button id="voiceDictationBtn" onclick="startVoiceDictation('photos')" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">
+                                🎤 Dictar
+                            </button>
+                            <div id="voiceStatus" style="display: none; margin-top: 0.4rem;">
+                                <div style="background: white; border-radius: 4px; padding: 0.3rem; border: 1px solid #f59e0b; font-size: 0.7rem;">
+                                    <div id="voiceTranscriptPreview" style="color: #92400e;">Escuchando...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Foto Individual -->
+                        <div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 10px; padding: 1rem; border: 2px solid #0ea5e9;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.3rem;">📸</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem; color: #0369a1;">Foto Individual</h4>
+                                    <p style="margin: 0; font-size: 0.7rem; color: #0c4a6e;">Una foto + #</p>
+                                </div>
+                            </div>
+                            <button onclick="showAddAnimalPhoto()" style="width: 100%; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">
+                                📸 Tomar
+                            </button>
+                        </div>
+
+                        <!-- Captura Rápida -->
+                        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.3rem;">⚡</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem; color: #92400e;">Captura Rápida</h4>
+                                    <p style="margin: 0; font-size: 0.7rem; color: #78350f;">Muchas fotos</p>
+                                </div>
+                            </div>
+                            <button onclick="startQuickCaptureMode()" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">
+                                ⚡ Rápido
+                            </button>
+                        </div>
+
+                        <!-- Row 2: Subir Archivos, Nota de Voz -->
+
+                        <!-- Subir Archivos -->
+                        <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; padding: 1rem; border: 2px solid #10b981;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.3rem;">📁</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem; color: #065f46;">Subir Archivos</h4>
+                                    <p style="margin: 0; font-size: 0.7rem; color: #064e3b;">Desde galería</p>
+                                </div>
+                            </div>
+                            <button onclick="openMultiplePhotosPicker()" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">
+                                📁 Subir
+                            </button>
+                        </div>
+
+                        <!-- Nota de Voz + Foto -->
+                        <div style="background: linear-gradient(135deg, #fce7f3, #fbcfe8); border-radius: 10px; padding: 1rem; border: 2px solid #ec4899;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.3rem;">🎙️</span>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 0.9rem; color: #9d174d;">Nota de Voz</h4>
+                                    <p style="margin: 0; font-size: 0.7rem; color: #831843;">Audio + foto</p>
+                                </div>
+                            </div>
+                            <button onclick="startVoiceNoteMode()" style="width: 100%; background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: none; border-radius: 6px; padding: 0.5rem; font-size: 0.8rem; cursor: pointer;">
+                                🎙️ Grabar
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Pending Dictations Panel - Compact for mobile -->
+                    <!-- Pending Dictations Panel -->
                     <div id="pendingDictationsSection" style="margin-bottom: 1rem;">
                         <div id="pendingDictationsContainer" style="background: #f9fafb; border-radius: 8px; padding: 0.75rem; min-height: auto;">
-                            <div style="text-align: center; color: #999; padding: 0.5rem; font-size: 0.8rem;">
+                            <div style="text-align: center; color: #999; padding: 0.5rem; font-size: 0.85rem;">
                                 🎤 Use AI Voice para dictar información del animal
                             </div>
                         </div>
                         <div id="dictationActions" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                            <button onclick="clearAllPendingDictations()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.75rem;">
+                            <button onclick="clearAllPendingDictations()" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
                                 🗑️ Limpiar
                             </button>
-                            <button id="saveAllDictationsBtn" onclick="saveAllPendingDictations()" class="btn btn-success" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; background: #10b981;">
+                            <button id="saveAllDictationsBtn" onclick="saveAllPendingDictations()" class="btn btn-success" style="font-size: 0.8rem; padding: 0.4rem 0.75rem; background: #10b981;">
                                 💾 Guardar
                             </button>
                         </div>
