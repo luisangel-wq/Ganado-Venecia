@@ -14174,8 +14174,8 @@
             statusDiv.innerHTML = '<span style="color: #ff9800;">🔄 Probando conexión con Google Gemini...</span>';
             
             try {
-                // Test with a simple prompt
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                // Test with a simple prompt using stable model
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -14560,10 +14560,11 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
         }
         
         // ========== GOOGLE GEMINI API WITH RETRY ==========
-        // UPDATED TO LATEST STABLE MODELS (Jan 2026)
+        // Use stable Gemini models
         const GEMINI_MODEL_FALLBACKS = [
-            { name: 'gemini-2.5-flash', label: 'Flash 2.5 (recomendado)', endpoint: 'v1' },
-            { name: 'gemini-2.5-pro', label: 'Pro 2.5 (mejor calidad)', endpoint: 'v1' }
+            { name: 'gemini-1.5-flash', label: 'Flash 1.5 (rápido)', endpoint: 'v1beta' },
+            { name: 'gemini-1.5-pro', label: 'Pro 1.5 (mejor calidad)', endpoint: 'v1beta' },
+            { name: 'gemini-pro', label: 'Pro (legacy)', endpoint: 'v1beta' }
         ];
 
         async function callGoogleGeminiAPI(prompt) {
