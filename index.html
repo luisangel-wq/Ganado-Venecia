@@ -1135,6 +1135,62 @@
             }
         }
 
+        /* Photos tab mobile fixes */
+        @media (max-width: 500px) {
+            /* Photo options grid: 2 columns on mobile */
+            #tab-fotos .card-body > div:first-child {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+
+            /* Make photo option boxes more compact */
+            #tab-fotos .card-body > div:first-child > div {
+                padding: 0.6rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div h4 {
+                font-size: 0.75rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div p {
+                font-size: 0.6rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div span:first-child {
+                font-size: 1rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div button {
+                padding: 0.4rem !important;
+                font-size: 0.7rem !important;
+            }
+
+            /* Animal photos grid: single column on very small screens */
+            #animalPhotosGrid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+            }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 380px) {
+            #tab-fotos .card-body > div:first-child {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div {
+                padding: 0.5rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div h4 {
+                font-size: 0.65rem !important;
+            }
+
+            #tab-fotos .card-body > div:first-child > div button {
+                padding: 0.3rem !important;
+                font-size: 0.65rem !important;
+            }
+        }
+
         /* PWA Standalone mode tweaks */
         @media (display-mode: standalone) {
             .header {
