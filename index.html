@@ -10258,7 +10258,12 @@
 
                 <!-- Financial Section -->
                 <div class="profile-section" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
-                    <div class="profile-section-title">💰 Información Financiera</div>
+                    <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>💰 Información Financiera</span>
+                        <button onclick="showEditFinancialModal('${numero}')" style="background: #f59e0b; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                            ✏️ Editar
+                        </button>
+                    </div>
                     <div class="profile-grid">
                         <div class="profile-item">
                             <span class="profile-item-label">Costo Compra</span>
@@ -10599,6 +10604,265 @@
 
             const potrero = data.potreros.find(p => p.id === newPotreroId);
             showToast(`✅ Animal #${numero} ${potrero ? 'movido a ' + potrero.nombre : 'sin potrero asignado'}`, 'success');
+        }
+
+        // Edit financial information modal
+        function showEditFinancialModal(numero) {
+            const animal = data.entradas.find(e => String(e.numero) === String(numero));
+            if (!animal) {
+                showToast('Animal no encontrado', 'error');
+                return;
+            }
+
+            // Check if animal is sold
+            const salida = data.salidas ? data.salidas.find(s => String(s.numero) === String(numero)) : null;
+            const isSold = !!salida;
+
+            const costoTotal = animal.costoTotal || (animal.peso * animal.precioKilo) || 0;
+            const precioKilo = animal.precioKilo || 0;
+            const pesoEntrada = animal.peso || 0;
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'editFinancialModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 450px;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <span>✏️ Editar Información Financiera - #${numero}</span>
+                        <button class="modal-close" onclick="document.getElementById('editFinancialModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1.5rem;">
+                        <div style="background: #fef3c7; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: #92400e;">
+                            ⚠️ <strong>Atención:</strong> Los cambios aquí afectarán los registros permanentes del animal.
+                        </div>
+
+                        <h4 style="color: #065f46; margin-bottom: 0.75rem; border-bottom: 2px solid #10b981; padding-bottom: 0.5rem;">
+                            📥 Datos de Compra/Entrada
+                        </h4>
+
+                        <div class="form-group">
+                            <label class="form-label">Peso de Entrada (kg)</label>
+                            <input type="number" class="form-input" id="editPesoEntrada" value="${pesoEntrada}" step="0.1" min="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Precio por Kg de Compra ($)</label>
+                            <input type="number" class="form-input" id="editPrecioKilo" value="${precioKilo}" step="100" min="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Costo Total de Compra ($)</label>
+                            <input type="number" class="form-input" id="editCostoTotal" value="${costoTotal}" step="1000" min="0">
+                            <small style="color: #666;">Se recalcula automáticamente: Peso × Precio/kg</small>
+                        </div>
+
+                        ${isSold ? `
+                        <h4 style="color: #065f46; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 2px solid #10b981; padding-bottom: 0.5rem;">
+                            📤 Datos de Venta/Salida
+                        </h4>
+
+                        <div class="form-group">
+                            <label class="form-label">Peso de Salida (kg)</label>
+                            <input type="number" class="form-input" id="editPesoSalida" value="${salida.peso || 0}" step="0.1" min="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Precio por Kg de Venta ($)</label>
+                            <input type="number" class="form-input" id="editPrecioVenta" value="${salida.precioKilo || 0}" step="100" min="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Total de Venta ($)</label>
+                            <input type="number" class="form-input" id="editTotalVenta" value="${salida.total || 0}" step="1000" min="0">
+                        </div>
+                        ` : ''}
+
+                        <button onclick="prepareFinancialUpdate('${numero}', ${isSold})" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; background: #f59e0b; margin-top: 1rem;">
+                            💾 Revisar Cambios
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Auto-calculate costo total when peso or precio changes
+            const pesoInput = document.getElementById('editPesoEntrada');
+            const precioInput = document.getElementById('editPrecioKilo');
+            const costoInput = document.getElementById('editCostoTotal');
+
+            const recalculate = () => {
+                const peso = parseFloat(pesoInput.value) || 0;
+                const precio = parseFloat(precioInput.value) || 0;
+                costoInput.value = Math.round(peso * precio);
+            };
+
+            pesoInput.addEventListener('input', recalculate);
+            precioInput.addEventListener('input', recalculate);
+
+            // Same for sale if sold
+            if (isSold) {
+                const pesoSalidaInput = document.getElementById('editPesoSalida');
+                const precioVentaInput = document.getElementById('editPrecioVenta');
+                const totalVentaInput = document.getElementById('editTotalVenta');
+
+                const recalculateSale = () => {
+                    const peso = parseFloat(pesoSalidaInput.value) || 0;
+                    const precio = parseFloat(precioVentaInput.value) || 0;
+                    totalVentaInput.value = Math.round(peso * precio);
+                };
+
+                pesoSalidaInput.addEventListener('input', recalculateSale);
+                precioVentaInput.addEventListener('input', recalculateSale);
+            }
+        }
+
+        function prepareFinancialUpdate(numero, isSold) {
+            const animal = data.entradas.find(e => String(e.numero) === String(numero));
+            if (!animal) return;
+
+            const salida = isSold ? data.salidas.find(s => String(s.numero) === String(numero)) : null;
+
+            // Get new values
+            const newPesoEntrada = parseFloat(document.getElementById('editPesoEntrada').value) || 0;
+            const newPrecioKilo = parseFloat(document.getElementById('editPrecioKilo').value) || 0;
+            const newCostoTotal = parseFloat(document.getElementById('editCostoTotal').value) || 0;
+
+            // Build change summary
+            let changes = [];
+            if (animal.peso !== newPesoEntrada) {
+                changes.push(`Peso Entrada: ${animal.peso || 0} kg → ${newPesoEntrada} kg`);
+            }
+            if (animal.precioKilo !== newPrecioKilo) {
+                changes.push(`Precio/Kg Compra: ${formatCurrency(animal.precioKilo || 0)} → ${formatCurrency(newPrecioKilo)}`);
+            }
+            if ((animal.costoTotal || (animal.peso * animal.precioKilo) || 0) !== newCostoTotal) {
+                changes.push(`Costo Total: ${formatCurrency(animal.costoTotal || (animal.peso * animal.precioKilo) || 0)} → ${formatCurrency(newCostoTotal)}`);
+            }
+
+            let saleChanges = [];
+            if (isSold && salida) {
+                const newPesoSalida = parseFloat(document.getElementById('editPesoSalida').value) || 0;
+                const newPrecioVenta = parseFloat(document.getElementById('editPrecioVenta').value) || 0;
+                const newTotalVenta = parseFloat(document.getElementById('editTotalVenta').value) || 0;
+
+                if (salida.peso !== newPesoSalida) {
+                    saleChanges.push(`Peso Salida: ${salida.peso || 0} kg → ${newPesoSalida} kg`);
+                }
+                if (salida.precioKilo !== newPrecioVenta) {
+                    saleChanges.push(`Precio/Kg Venta: ${formatCurrency(salida.precioKilo || 0)} → ${formatCurrency(newPrecioVenta)}`);
+                }
+                if (salida.total !== newTotalVenta) {
+                    saleChanges.push(`Total Venta: ${formatCurrency(salida.total || 0)} → ${formatCurrency(newTotalVenta)}`);
+                }
+            }
+
+            if (changes.length === 0 && saleChanges.length === 0) {
+                showToast('No hay cambios para guardar', 'info');
+                return;
+            }
+
+            // First confirmation with summary
+            let confirmMsg = `¿Desea realizar los siguientes cambios para el animal #${numero}?\n\n`;
+            if (changes.length > 0) {
+                confirmMsg += `📥 DATOS DE COMPRA:\n${changes.map(c => '  • ' + c).join('\n')}\n\n`;
+            }
+            if (saleChanges.length > 0) {
+                confirmMsg += `📤 DATOS DE VENTA:\n${saleChanges.map(c => '  • ' + c).join('\n')}\n\n`;
+            }
+            confirmMsg += `\n¿Continuar?`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            // Second confirmation
+            if (!confirm('⚠️ CONFIRMACIÓN FINAL\n\nEste cambio afectará los registros permanentes y se sincronizará con la nube.\n\n¿Está completamente seguro?')) {
+                return;
+            }
+
+            // Apply changes
+            applyFinancialChanges(numero, isSold);
+        }
+
+        function applyFinancialChanges(numero, isSold) {
+            const animal = data.entradas.find(e => String(e.numero) === String(numero));
+            if (!animal) return;
+
+            // Store old values for log
+            const oldValues = {
+                peso: animal.peso,
+                precioKilo: animal.precioKilo,
+                costoTotal: animal.costoTotal
+            };
+
+            // Update entrada
+            animal.peso = parseFloat(document.getElementById('editPesoEntrada').value) || 0;
+            animal.precioKilo = parseFloat(document.getElementById('editPrecioKilo').value) || 0;
+            animal.costoTotal = parseFloat(document.getElementById('editCostoTotal').value) || 0;
+
+            // Add edit log to animal
+            if (!animal.editLog) animal.editLog = [];
+            animal.editLog.push({
+                fecha: new Date().toISOString(),
+                tipo: 'financial_edit',
+                oldValues: oldValues,
+                newValues: {
+                    peso: animal.peso,
+                    precioKilo: animal.precioKilo,
+                    costoTotal: animal.costoTotal
+                }
+            });
+
+            // Update salida if sold
+            if (isSold) {
+                const salida = data.salidas.find(s => String(s.numero) === String(numero));
+                if (salida) {
+                    const oldSaleValues = {
+                        peso: salida.peso,
+                        precioKilo: salida.precioKilo,
+                        total: salida.total
+                    };
+
+                    salida.peso = parseFloat(document.getElementById('editPesoSalida').value) || 0;
+                    salida.precioKilo = parseFloat(document.getElementById('editPrecioVenta').value) || 0;
+                    salida.total = parseFloat(document.getElementById('editTotalVenta').value) || 0;
+
+                    // Recalculate GDP for sold animal
+                    const diasEnFinca = salida.fechaSalida && animal.fechaEntrada
+                        ? Math.floor((new Date(salida.fechaSalida) - new Date(animal.fechaEntrada)) / (1000 * 60 * 60 * 24))
+                        : 0;
+                    if (diasEnFinca > 0) {
+                        salida.gananciaDay = (salida.peso - animal.peso) / diasEnFinca;
+                    }
+
+                    // Add edit log to salida
+                    if (!salida.editLog) salida.editLog = [];
+                    salida.editLog.push({
+                        fecha: new Date().toISOString(),
+                        tipo: 'financial_edit',
+                        oldValues: oldSaleValues,
+                        newValues: {
+                            peso: salida.peso,
+                            precioKilo: salida.precioKilo,
+                            total: salida.total
+                        }
+                    });
+                }
+            }
+
+            // Save data
+            saveData();
+
+            // Close modal
+            document.getElementById('editFinancialModal').remove();
+
+            // Refresh the animal profile
+            showAnimalProfile(numero);
+
+            // Update all views
+            updateAllViews();
+
+            showToast(`✅ Información financiera del animal #${numero} actualizada`, 'success');
         }
 
         // Close modal when clicking outside
