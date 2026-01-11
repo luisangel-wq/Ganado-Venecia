@@ -14433,18 +14433,75 @@ ${ranchList || '(No hay fincas con datos)'}
 📋 DATOS DETALLADOS POR FINCA:
 ${JSON.stringify(dataSummary.fincas, null, 2)}
 
-INSTRUCCIONES:
+INSTRUCCIONES DE CONTENIDO:
 - Responde en español
 - SIEMPRE considera los datos de TODAS las fincas en tu análisis
 - Cuando te pregunten sobre una finca específica, da el análisis de esa finca Y compárala con las otras
 - Si preguntan en general, da un resumen consolidado de todas las fincas
-- Usa formato claro con secciones cuando sea apropiado
 - Incluye números específicos de los datos
 - Da recomendaciones prácticas y accionables
 - Considera el contexto de ganadería colombiana (clima tropical, pastos, mercado local)
-- Usa emojis para hacer el análisis más visual
-- Cuando menciones valores monetarios, usa formato colombiano ($ con separador de miles)
-- Si hay datos de cría (San Fernando), incluye análisis reproductivo`;
+- Si hay datos de cría (San Fernando), incluye análisis reproductivo
+
+🎨 INSTRUCCIONES DE FORMATO VISUAL (MUY IMPORTANTE):
+Tus respuestas deben ser VISUALES y bien organizadas. USA SIEMPRE:
+
+1. **TABLAS MARKDOWN** para comparaciones y datos:
+   | Finca | Animales | Inversión | Ganancia |
+   |-------|----------|-----------|----------|
+   | La Coruña | 45 | $50M | $15M |
+
+2. **EMOJIS** para categorías y estados:
+   - 🟢 Excelente/Positivo
+   - 🟡 Regular/Atención
+   - 🔴 Crítico/Negativo
+   - 📊 Datos/Estadísticas
+   - 💰 Dinero/Inversión
+   - 🐄 Animales
+   - ⚖️ Peso
+   - 📈 Crecimiento
+   - ⚠️ Alertas
+
+3. **SECCIONES CLARAS** con headers:
+   ## 📊 Resumen Ejecutivo
+   ## 🏆 Top Performers
+   ## ⚠️ Alertas y Recomendaciones
+
+4. **INDICADORES VISUALES** para métricas:
+   - GDP: 🟢 0.45 kg/día (Excelente)
+   - Margen: 🟡 15% (Aceptable)
+   - Mortalidad: 🔴 5% (Alto)
+
+5. **LISTAS CON ICONOS** para recomendaciones:
+   - ✅ Acción recomendada
+   - ⏰ Urgente
+   - 💡 Sugerencia
+
+6. **BARRAS DE PROGRESO ASCII** cuando aplique:
+   Ocupación: [████████░░] 80%
+
+7. **COMPARATIVAS LADO A LADO**:
+   📍 La Coruña vs Santa Catalina
+
+Ejemplo de respuesta bien formateada:
+
+## 📊 Análisis Global de Fincas
+
+| Métrica | La Coruña | Santa Catalina | La Vega |
+|---------|-----------|----------------|---------|
+| 🐄 Animales | 45 | 32 | 28 |
+| 💰 Inversión | $50M | $35M | $30M |
+| 📈 Ganancia | 🟢 $15M | 🟡 $8M | 🔴 $2M |
+
+### 🏆 Mejor Rendimiento: La Coruña
+- GDP Promedio: **0.42 kg/día** 🟢
+- Margen: **30%** 🟢
+
+### ⚠️ Requiere Atención: La Vega
+- ⏰ 5 animales listos para venta
+- 💡 Considerar rotación de potreros
+
+NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y secciones.`;
         }
         
         // ========== API RATE LIMITING & RETRY LOGIC ==========
@@ -14759,24 +14816,104 @@ INSTRUCCIONES:
         function formatAIResponse(text) {
             // Clean up any artifacts
             text = text.trim();
-            
+
+            // First, handle markdown tables
+            const tableRegex = /\|(.+)\|\n\|[-:\s|]+\|\n((?:\|.+\|\n?)+)/g;
+            text = text.replace(tableRegex, function(match) {
+                const lines = match.trim().split('\n');
+                if (lines.length < 3) return match;
+
+                // Parse header row
+                const headers = lines[0].split('|').filter(h => h.trim()).map(h => h.trim());
+
+                // Parse data rows (skip separator line at index 1)
+                const rows = [];
+                for (let i = 2; i < lines.length; i++) {
+                    const cells = lines[i].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+                    if (cells.length > 0) rows.push(cells);
+                }
+
+                // Build HTML table
+                let tableHtml = `<div style="overflow-x: auto; margin: 1rem 0;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">`;
+
+                headers.forEach(h => {
+                    tableHtml += `<th style="padding: 0.75rem; color: white; text-align: left; font-weight: 600; white-space: nowrap;">${h}</th>`;
+                });
+
+                tableHtml += `</tr></thead><tbody>`;
+
+                rows.forEach((row, idx) => {
+                    const bgColor = idx % 2 === 0 ? '#fafafa' : '#ffffff';
+                    tableHtml += `<tr style="background: ${bgColor}; border-bottom: 1px solid #eee;">`;
+                    row.forEach((cell, cellIdx) => {
+                        const isFirst = cellIdx === 0;
+                        const fontWeight = isFirst ? '600' : 'normal';
+                        // Color cells based on emoji indicators
+                        let cellBg = 'transparent';
+                        if (cell.includes('🟢')) cellBg = 'rgba(16, 185, 129, 0.1)';
+                        else if (cell.includes('🟡')) cellBg = 'rgba(245, 158, 11, 0.1)';
+                        else if (cell.includes('🔴')) cellBg = 'rgba(239, 68, 68, 0.1)';
+                        tableHtml += `<td style="padding: 0.6rem 0.75rem; font-weight: ${fontWeight}; background: ${cellBg};">${cell}</td>`;
+                    });
+                    tableHtml += `</tr>`;
+                });
+
+                tableHtml += `</tbody></table></div>`;
+                return tableHtml;
+            });
+
+            // Handle progress bars [████████░░] 80%
+            text = text.replace(/\[([█░]+)\]\s*(\d+%?)/g, function(match, bars, percent) {
+                const filled = (bars.match(/█/g) || []).length;
+                const total = bars.length;
+                const percentage = (filled / total) * 100;
+                let color = '#10b981';
+                if (percentage < 50) color = '#ef4444';
+                else if (percentage < 75) color = '#f59e0b';
+
+                return `<div style="display: inline-flex; align-items: center; gap: 0.5rem; background: #f3f4f6; border-radius: 4px; padding: 0.25rem 0.5rem;">
+                    <div style="width: 100px; height: 12px; background: #e5e7eb; border-radius: 6px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background: ${color}; border-radius: 6px;"></div>
+                    </div>
+                    <span style="font-weight: 600; font-size: 0.85rem;">${percent}</span>
+                </div>`;
+            });
+
             let html = text
-                // Headers - improved detection
-                .replace(/^###\s+(.*$)/gim, '<h4 style="color: #9c27b0; margin-top: 1rem; margin-bottom: 0.5rem;">$1</h4>')
-                .replace(/^##\s+(.*$)/gim, '<h3 style="color: #9c27b0; margin-top: 1.2rem; margin-bottom: 0.5rem;">$1</h3>')
-                .replace(/^#\s+(.*$)/gim, '<h2 style="color: #9c27b0; margin-top: 1.5rem; margin-bottom: 0.5rem;">$1</h2>')
-                // Bold text
-                .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #2e7d32;">$1</strong>')
-                // Lists - improved with proper line breaks
-                .replace(/^\s*[-*]\s+(.*$)/gim, '<div style="margin-left: 1rem;">• $1</div>')
+                // Headers - improved detection with colors
+                .replace(/^####\s+(.*$)/gim, '<h5 style="color: #7c3aed; margin-top: 0.75rem; margin-bottom: 0.25rem; font-size: 0.95rem;">$1</h5>')
+                .replace(/^###\s+(.*$)/gim, '<h4 style="color: #9c27b0; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.05rem; border-bottom: 2px solid #f3e8ff; padding-bottom: 0.25rem;">$1</h4>')
+                .replace(/^##\s+(.*$)/gim, '<h3 style="color: #7b1fa2; margin-top: 1.25rem; margin-bottom: 0.5rem; font-size: 1.15rem; border-bottom: 3px solid #9c27b0; padding-bottom: 0.35rem;">$1</h3>')
+                .replace(/^#\s+(.*$)/gim, '<h2 style="color: #6d28d9; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.3rem; border-bottom: 4px solid #7c3aed; padding-bottom: 0.5rem;">$1</h2>')
+                // Bold text with color
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #1e40af; background: linear-gradient(to bottom, transparent 60%, rgba(99, 102, 241, 0.2) 60%);">$1</strong>')
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code style="background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em;">$1</code>')
+                // Status indicators with backgrounds
+                .replace(/🟢\s*([^🟡🔴\n<]+)/g, '<span style="background: #d1fae5; color: #065f46; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 500;">🟢 $1</span>')
+                .replace(/🟡\s*([^🟢🔴\n<]+)/g, '<span style="background: #fef3c7; color: #92400e; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 500;">🟡 $1</span>')
+                .replace(/🔴\s*([^🟢🟡\n<]+)/g, '<span style="background: #fee2e2; color: #991b1b; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 500;">🔴 $1</span>')
+                // Action items with icons
+                .replace(/✅\s+(.+?)(?=\n|$|<)/g, '<div style="background: #ecfdf5; border-left: 4px solid #10b981; padding: 0.5rem; margin: 0.25rem 0; border-radius: 0 4px 4px 0;">✅ $1</div>')
+                .replace(/⏰\s+(.+?)(?=\n|$|<)/g, '<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.5rem; margin: 0.25rem 0; border-radius: 0 4px 4px 0;">⏰ $1</div>')
+                .replace(/💡\s+(.+?)(?=\n|$|<)/g, '<div style="background: #ede9fe; border-left: 4px solid #8b5cf6; padding: 0.5rem; margin: 0.25rem 0; border-radius: 0 4px 4px 0;">💡 $1</div>')
+                .replace(/⚠️\s+(.+?)(?=\n|$|<)/g, '<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 0.5rem; margin: 0.25rem 0; border-radius: 0 4px 4px 0;">⚠️ $1</div>')
+                // Lists - improved with proper styling
+                .replace(/^\s*[-*]\s+(.*$)/gim, '<div style="display: flex; align-items: flex-start; margin: 0.35rem 0; padding-left: 0.5rem;"><span style="color: #9c27b0; margin-right: 0.5rem;">•</span><span>$1</span></div>')
                 // Numbered lists
-                .replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="margin-left: 1rem;">$1. $2</div>')
-                // Preserve paragraph breaks but avoid too many
+                .replace(/^\s*(\d+)\.\s+(.*$)/gim, '<div style="display: flex; align-items: flex-start; margin: 0.35rem 0; padding-left: 0.5rem;"><span style="color: #7c3aed; font-weight: 600; margin-right: 0.5rem; min-width: 1.5rem;">$1.</span><span>$2</span></div>')
+                // Horizontal rules
+                .replace(/^---+$/gim, '<hr style="border: none; border-top: 2px solid #e5e7eb; margin: 1rem 0;">')
+                // Preserve paragraph breaks
                 .replace(/\n{3,}/g, '\n\n')
-                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n\n/g, '</p><p style="margin: 0.75rem 0;">')
                 .replace(/\n/g, '<br>');
-            
-            return html;
+
+            // Wrap in container with nice styling
+            return `<div style="font-size: 0.95rem; line-height: 1.6; color: #374151;"><p style="margin: 0.75rem 0;">${html}</p></div>`;
         }
         
         // Add function to generate peso rentabilidad report
