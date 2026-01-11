@@ -774,27 +774,371 @@
             min-width: 150px;
         }
         
-        /* Responsive */
+        /* Responsive - Tablet */
         @media (max-width: 768px) {
             .header-stats {
                 display: none;
             }
-            
+
             .nav-tabs {
                 justify-content: center;
             }
-            
+
             .nav-tab {
                 padding: 0.5rem 0.75rem;
                 font-size: 0.85rem;
             }
-            
+
             .nav-tab span:not(.nav-tab-icon) {
                 display: none;
             }
-            
+
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        /* ========== MOBILE OPTIMIZATIONS ========== */
+        @media (max-width: 480px) {
+            /* Safe area for notched phones */
+            body {
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+
+            /* Container padding */
+            .container {
+                padding: 0.75rem;
+                padding-bottom: 5.5rem; /* Space for bottom nav */
+            }
+
+            /* Header - More compact */
+            .header {
+                padding: 0.75rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.1rem;
+            }
+
+            .ranch-selector {
+                gap: 0.25rem;
+            }
+
+            .ranch-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            .ranch-icon {
+                font-size: 1rem;
+            }
+
+            .ranch-name {
+                display: none;
+            }
+
+            /* Bottom Navigation for Mobile */
+            .nav-tabs {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
+                border-radius: 0;
+                padding: 0.5rem;
+                padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0));
+                background: var(--white);
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+                z-index: 100;
+                justify-content: space-around;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                gap: 0.25rem;
+            }
+
+            .nav-tab {
+                flex-direction: column;
+                padding: 0.5rem 0.4rem;
+                font-size: 0.65rem;
+                min-width: 52px;
+                flex-shrink: 0;
+                gap: 0.2rem;
+                border-radius: 8px;
+            }
+
+            .nav-tab-icon {
+                font-size: 1.3rem;
+            }
+
+            .nav-tab span:not(.nav-tab-icon) {
+                display: block;
+                font-size: 0.6rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 50px;
+            }
+
+            /* Larger touch targets for buttons */
+            .btn {
+                min-height: 44px;
+                padding: 0.75rem 1rem;
+                font-size: 0.95rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+            }
+
+            /* Form inputs - Larger for touch */
+            .form-input, .form-select, select, input[type="text"], input[type="number"], input[type="date"], textarea {
+                min-height: 48px;
+                font-size: 16px !important; /* Prevents iOS zoom */
+                padding: 0.75rem;
+                border-radius: 10px;
+            }
+
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            /* Cards - Full width */
+            .card {
+                border-radius: 12px;
+                margin-bottom: 1rem;
+            }
+
+            .card-header {
+                padding: 0.75rem 1rem;
+                font-size: 0.95rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            /* Summary boxes - Better mobile layout */
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+
+            .summary-box {
+                padding: 0.75rem;
+                border-radius: 12px;
+            }
+
+            .summary-box-icon {
+                font-size: 2rem;
+            }
+
+            .summary-box-value {
+                font-size: 1.25rem;
+            }
+
+            .summary-box-label {
+                font-size: 0.7rem;
+            }
+
+            /* Tables - Horizontal scroll */
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -1rem;
+                padding: 0 1rem;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+
+            /* Clickable rows - Larger touch area */
+            .clickable-row {
+                min-height: 48px;
+            }
+
+            /* Modal - Full screen on mobile */
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                height: 100%;
+                max-height: 100%;
+                border-radius: 0;
+                margin: 0;
+            }
+
+            .modal-header {
+                padding: 1rem;
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 10;
+            }
+
+            .modal-body {
+                padding: 1rem;
+                padding-bottom: 2rem;
+            }
+
+            .modal-close {
+                font-size: 2rem;
+                min-width: 44px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Toast - Full width on mobile */
+            .toast-container {
+                left: 0.5rem;
+                right: 0.5rem;
+                top: auto;
+                bottom: 5rem;
+            }
+
+            .toast {
+                width: 100%;
+            }
+
+            /* Filters - Stack on mobile */
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.5rem;
+            }
+
+            .filters .form-input,
+            .filters .form-select,
+            .filters select {
+                width: 100%;
+                min-width: auto;
+            }
+
+            /* Cría tab sub-navigation */
+            .cria-tabs, [style*="display: flex"][style*="gap: 0.5rem"] {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 0.5rem;
+                flex-wrap: nowrap !important;
+            }
+
+            /* Animal profile modal */
+            .profile-section {
+                margin-bottom: 1rem;
+                padding: 0.75rem;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+
+            .profile-item {
+                padding: 0.5rem;
+            }
+
+            .profile-item-value.large {
+                font-size: 1.1rem;
+            }
+
+            /* Quick action buttons */
+            [style*="display: flex"][style*="gap: 0.5rem"] button,
+            [style*="display: flex"][style*="gap: 1rem"] button {
+                flex: 1;
+                min-height: 44px;
+            }
+
+            /* Better spacing for inline elements */
+            .badge {
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            /* Photo grid */
+            .photo-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+
+            /* Hide scrollbars but allow scroll */
+            .nav-tabs::-webkit-scrollbar,
+            .table-container::-webkit-scrollbar {
+                display: none;
+            }
+
+            .nav-tabs, .table-container {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 360px) {
+            .nav-tab {
+                min-width: 45px;
+                padding: 0.4rem 0.3rem;
+            }
+
+            .nav-tab-icon {
+                font-size: 1.2rem;
+            }
+
+            .nav-tab span:not(.nav-tab-icon) {
+                font-size: 0.55rem;
+                max-width: 40px;
+            }
+
+            .summary-box-icon {
+                font-size: 1.75rem;
+            }
+
+            .summary-box-value {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Landscape mode on phones */
+        @media (max-width: 812px) and (orientation: landscape) {
+            .nav-tabs {
+                padding: 0.25rem 0.5rem;
+            }
+
+            .nav-tab {
+                flex-direction: row;
+                padding: 0.4rem 0.6rem;
+            }
+
+            .nav-tab span:not(.nav-tab-icon) {
+                display: block;
+                font-size: 0.7rem;
+            }
+
+            .container {
+                padding-bottom: 4rem;
+            }
+        }
+
+        /* PWA Standalone mode tweaks */
+        @media (display-mode: standalone) {
+            .header {
+                padding-top: calc(0.75rem + env(safe-area-inset-top, 0));
             }
         }
         
