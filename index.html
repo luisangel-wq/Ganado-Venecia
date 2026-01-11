@@ -25,7 +25,7 @@
     <script src="firebase-config.js"></script>
     
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=8"></script>
+    <script src="cloud-sync.js?v=9"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3942,6 +3942,39 @@
 
         <!-- Tab: Reportes & IA -->
         <div id="tab-analytics" class="tab-content">
+            <!-- API Key Configuration -->
+            <div class="card" style="margin-bottom: 1.5rem;" id="apiKeySetup">
+                <div class="card-header" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                    <span>🔑 Configurar API Key de Google Gemini</span>
+                </div>
+                <div class="card-body">
+                    <div style="background: #eef2ff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #6366f1;">
+                        <strong>📝 ¿Cómo obtener tu API Key gratis?</strong>
+                        <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                            <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #4f46e5;">Google AI Studio</a></li>
+                            <li>Inicia sesión con tu cuenta de Google</li>
+                            <li>Haz clic en "Create API Key"</li>
+                            <li>Copia la clave y pégala aquí abajo</li>
+                        </ol>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="password"
+                               id="googleApiKey"
+                               class="form-input"
+                               placeholder="Pega tu API Key de Google Gemini aquí..."
+                               style="flex: 1; min-width: 250px;">
+                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                            💾 Guardar
+                        </button>
+                        <button class="btn btn-secondary" onclick="testGoogleApiKey()">
+                            🧪 Probar
+                        </button>
+                    </div>
+                    <div id="googleApiKeyStatus" style="margin-top: 0.75rem; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+
             <!-- Custom Question Chatbox -->
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
@@ -14168,14 +14201,14 @@
                 showToast('Primero ingrese una API Key', 'error');
                 return;
             }
-            
+
             const statusDiv = document.getElementById('googleApiKeyStatus');
             statusDiv.style.display = 'block';
             statusDiv.innerHTML = '<span style="color: #ff9800;">🔄 Probando conexión con Google Gemini...</span>';
-            
+
             try {
-                // Test with a simple prompt using stable model
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                // Test with a simple prompt using current model (gemini-2.0-flash)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -14255,16 +14288,23 @@
             }
         }
         
-        // Get data summary for a specific ranch
+        // Get data summary for a specific ranch (limited to last 5 years)
         function getRanchDataSummary(ranchId, ranchData) {
             const today = new Date();
+            const fiveYearsAgo = new Date();
+            fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
             const gdp = ranchData.config?.gdp || 0.31;
             const precioVenta = ranchData.config?.precioVenta || 9000;
 
-            const inventario = ranchData.entradas ? ranchData.entradas.filter(e => {
-                const salidaIds = (ranchData.salidas || []).map(s => s.numero);
-                return !salidaIds.includes(e.numero);
-            }) : [];
+            // Filter entries from last 5 years only
+            const recentEntradas = (ranchData.entradas || []).filter(e => {
+                const entryDate = new Date(e.fechaEntrada);
+                return entryDate >= fiveYearsAgo;
+            });
+
+            const salidaIds = (ranchData.salidas || []).map(s => s.numero);
+            const inventario = recentEntradas.filter(e => !salidaIds.includes(e.numero));
 
             let totalPesoInicial = 0;
             let totalPesoEstimado = 0;
@@ -14334,8 +14374,14 @@
                     gananciaEstimada: Math.round(totalValorActual - totalInversion),
                     animalesListosVenta: animalDetails.filter(a => a.listoParaVenta).length
                 },
-                ventas: (ranchData.salidas || []).filter(s => s.comprador !== 'MUERTE').length,
-                muertes: (ranchData.salidas || []).filter(s => s.comprador === 'MUERTE').length,
+                ventas: (ranchData.salidas || []).filter(s => {
+                    const saleDate = new Date(s.fechaSalida || s.fecha);
+                    return s.comprador !== 'MUERTE' && saleDate >= fiveYearsAgo;
+                }).length,
+                muertes: (ranchData.salidas || []).filter(s => {
+                    const deathDate = new Date(s.fechaSalida || s.fecha);
+                    return s.comprador === 'MUERTE' && deathDate >= fiveYearsAgo;
+                }).length,
                 potreros: (ranchData.potreros || []).length,
                 breeding: breedingData,
                 animales: animalDetails.slice(0, 20) // Limit to avoid token overflow
@@ -14359,8 +14405,14 @@
                 animalesListosVenta: 0
             };
 
-            // Iterate through all ranches
+            // Iterate through all ranches (excluding San Fernando - test ranch with non-real data)
             Object.keys(RANCHES).forEach(ranchId => {
+                // Skip San Fernando - it's a test ranch with non-real data
+                if (ranchId === 'san_fernando') {
+                    console.log('AI: Skipping San Fernando (test ranch)');
+                    return;
+                }
+
                 const ranch = RANCHES[ranchId];
                 try {
                     const ranchDataStr = localStorage.getItem(ranch.storageKey);
@@ -14574,25 +14626,35 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
         }
         
         // ========== GOOGLE GEMINI API WITH RETRY ==========
-        // Use stable Gemini models
+        // Use current Gemini models (2026)
         const GEMINI_MODEL_FALLBACKS = [
-            { name: 'gemini-1.5-flash', label: 'Flash 1.5 (rápido)', endpoint: 'v1beta' },
-            { name: 'gemini-1.5-pro', label: 'Pro 1.5 (mejor calidad)', endpoint: 'v1beta' },
-            { name: 'gemini-pro', label: 'Pro (legacy)', endpoint: 'v1beta' }
+            { name: 'gemini-2.0-flash', label: 'Flash 2.0 (rápido)', endpoint: 'v1beta' },
+            { name: 'gemini-1.5-flash-latest', label: 'Flash 1.5 Latest', endpoint: 'v1beta' },
+            { name: 'gemini-pro', label: 'Pro (legacy)', endpoint: 'v1' }
         ];
 
         async function callGoogleGeminiAPI(prompt) {
+            console.log('🤖 callGoogleGeminiAPI called with prompt:', prompt.substring(0, 50) + '...');
             const apiKey = localStorage.getItem('googleApiKey');
-            
+
             if (!apiKey) {
+                console.error('❌ No API key configured');
                 showToast('⚠️ API Key de Google no configurada', 'error');
                 return null;
             }
-            
+            console.log('✅ API Key found, length:', apiKey.length);
+
             try {
                 const dataSummary = getDataSummaryForAI();
+                console.log('AI Data Summary:', {
+                    totalFincas: Object.keys(dataSummary.fincas || {}).length,
+                    totalAnimales: dataSummary.resumenGlobal?.totalAnimales,
+                    fincas: Object.keys(dataSummary.fincas || {})
+                });
                 const systemPrompt = getSystemPrompt(dataSummary);
+                console.log('System prompt length:', systemPrompt.length, 'chars');
                 const fullPrompt = `${systemPrompt}\n\n---\n\nSOLICITUD DEL USUARIO:\n${prompt}`;
+                console.log('Full prompt length:', fullPrompt.length, 'chars');
 
                 const callGeminiModel = async (modelConfig) => {
                     const url = `https://generativelanguage.googleapis.com/${modelConfig.endpoint}/models/${modelConfig.name}:generateContent?key=${apiKey}`;
@@ -14633,18 +14695,29 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
                         })
                     });
                     
+                    console.log('Gemini API response status:', response.status);
+
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        console.error('API Error:', errorData);
-                        throw new Error(errorData.error?.message || 'Error en la API de Google');
+                        const errorText = await response.text();
+                        console.error('API Error Status:', response.status);
+                        console.error('API Error Body:', errorText);
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            throw new Error(errorData.error?.message || `Error ${response.status} en la API de Google`);
+                        } catch (e) {
+                            throw new Error(`Error ${response.status}: ${errorText.substring(0, 200)}`);
+                        }
                     }
-                    
+
                     const result = await response.json();
-                    
+                    console.log('Gemini API result keys:', Object.keys(result));
+
                     if (result.candidates && result.candidates[0] && result.candidates[0].content) {
+                        console.log('Gemini response received successfully');
                         return result.candidates[0].content.parts[0].text;
                     }
-                    
+
+                    console.error('Unexpected Gemini response structure:', JSON.stringify(result).substring(0, 500));
                     throw new Error('Respuesta inesperada de Google Gemini');
                 };
 
@@ -17547,6 +17620,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Initialize speech recognition on page load
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 Ganado Finca - Version 2.1');
             if (SpeechRecognition) {
                 initSpeechRecognition();
                 console.log('🎤 Speech recognition available');
