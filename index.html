@@ -14407,31 +14407,45 @@
         }
         
         function getSystemPrompt(dataSummary) {
-            // Build list of available ranches
-            const ranchList = Object.keys(dataSummary.fincas || {}).map(id => {
+            // Build compact summary per ranch (without individual animals to reduce token count)
+            const ranchSummaries = Object.keys(dataSummary.fincas || {}).map(id => {
                 const f = dataSummary.fincas[id];
-                return `- ${f.fincaNombre}: ${f.resumen.totalAnimales} animales`;
+                let summary = `
+### ${f.fincaNombre}
+- Animales: ${f.resumen.totalAnimales} (${f.resumen.machos} machos, ${f.resumen.hembras} hembras)
+- Peso estimado total: ${f.resumen.totalPesoEstimado?.toLocaleString('es-CO')} kg
+- Inversión: $${f.resumen.inversionTotal?.toLocaleString('es-CO')}
+- Valor actual: $${f.resumen.valorActualTotal?.toLocaleString('es-CO')}
+- Ganancia estimada: $${f.resumen.gananciaEstimada?.toLocaleString('es-CO')}
+- Listos para venta: ${f.resumen.animalesListosVenta}
+- Ventas realizadas: ${f.ventas}, Muertes: ${f.muertes}`;
+
+                // Add breeding info for San Fernando
+                if (f.breeding) {
+                    summary += `
+- DATOS CRÍA: ${f.breeding.totalVacas} vacas, ${f.breeding.totalToros} toros, ${f.breeding.totalCrias} crías
+- Servicios: ${f.breeding.serviciosRegistrados}, Preñadas: ${f.breeding.vacasPrenadas}
+- Crías listas destete: ${f.breeding.criasListasDestete}`;
+                }
+                return summary;
             }).join('\n');
 
             return `Eres un experto en ganadería bovina colombiana, especializado en cría y ceba de ganado grass-fed en zonas tropicales.
 Analizas datos de múltiples fincas ganaderas y proporcionas insights accionables.
 
-📊 TIENES ACCESO A DATOS DE TODAS LAS FINCAS:
-${ranchList || '(No hay fincas con datos)'}
+🏠 Finca actual del usuario: "${dataSummary.fincaActual}"
 
-🏠 El usuario está actualmente viendo: "${dataSummary.fincaActual}"
-
-📈 RESUMEN GLOBAL (TODAS LAS FINCAS COMBINADAS):
+📈 RESUMEN GLOBAL (TODAS LAS FINCAS):
 - Total animales: ${dataSummary.resumenGlobal?.totalAnimales || 0}
-- Machos: ${dataSummary.resumenGlobal?.totalMachos || 0}
-- Hembras: ${dataSummary.resumenGlobal?.totalHembras || 0}
+- Machos: ${dataSummary.resumenGlobal?.totalMachos || 0} | Hembras: ${dataSummary.resumenGlobal?.totalHembras || 0}
 - Inversión total: $${(dataSummary.resumenGlobal?.totalInversion || 0).toLocaleString('es-CO')}
-- Valor actual estimado: $${(dataSummary.resumenGlobal?.totalValorActual || 0).toLocaleString('es-CO')}
+- Valor actual: $${(dataSummary.resumenGlobal?.totalValorActual || 0).toLocaleString('es-CO')}
 - Ganancia estimada: $${(dataSummary.resumenGlobal?.totalGanancia || 0).toLocaleString('es-CO')}
-- Animales listos para venta: ${dataSummary.resumenGlobal?.animalesListosVenta || 0}
+- Listos para venta: ${dataSummary.resumenGlobal?.animalesListosVenta || 0}
+- Ventas totales: ${dataSummary.resumenGlobal?.totalVentas || 0} | Muertes: ${dataSummary.resumenGlobal?.totalMuertes || 0}
 
-📋 DATOS DETALLADOS POR FINCA:
-${JSON.stringify(dataSummary.fincas, null, 2)}
+📋 DETALLE POR FINCA:
+${ranchSummaries || '(No hay datos)'}
 
 INSTRUCCIONES DE CONTENIDO:
 - Responde en español
