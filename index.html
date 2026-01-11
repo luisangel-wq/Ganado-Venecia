@@ -25,7 +25,7 @@
     <script src="firebase-config.js"></script>
     
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=7"></script>
+    <script src="cloud-sync.js?v=8"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2777,6 +2777,9 @@
                         <button id="criaBtnVacas" onclick="showCriaSection('vacas')" class="btn" style="background: #0ea5e9; color: white;">
                             🐄 Vacas
                         </button>
+                        <button id="criaBtnCrias" onclick="showCriaSection('crias')" class="btn btn-secondary">
+                            👶 Crías
+                        </button>
                         <button id="criaBtnServicios" onclick="showCriaSection('servicios')" class="btn btn-secondary">
                             💕 Servicios
                         </button>
@@ -2833,6 +2836,71 @@
                                 <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐄</div>
                                 <p>No hay vacas registradas en San Fernando</p>
                                 <p style="font-size: 0.85rem;">Agregue animales hembra en la pestaña "Entradas"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Crías (Cow-Calf Pairs & Weaning) -->
+                    <div id="cria-section-crias" style="display: none;">
+                        <!-- Weaning Alert Banner -->
+                        <div id="criaWeaningAlert" style="display: none; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b; border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.5rem;">⚠️</span>
+                                <h4 style="margin: 0; color: #92400e;">Crías Listas para Destete</h4>
+                            </div>
+                            <p style="color: #78350f; margin: 0 0 0.75rem 0; font-size: 0.9rem;">
+                                Las siguientes crías tienen 6-9 meses de edad y están listas para ser destetadas:
+                            </p>
+                            <div id="criaWeaningAlertList" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
+                        </div>
+
+                        <!-- Filter Controls -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                            <label style="font-weight: bold; color: #0284c7;">Filtrar:</label>
+                            <select id="criaCriasFilter" onchange="renderCriaCrias()" class="form-input" style="width: auto; min-width: 150px;">
+                                <option value="todas">Todas las crías</option>
+                                <option value="con_madre">🍼 Con madre (lactando)</option>
+                                <option value="destete_listo">⚠️ Listas para destete</option>
+                                <option value="destetadas">✅ Destetadas</option>
+                                <option value="machos">♂️ Machos</option>
+                                <option value="hembras">♀️ Hembras</option>
+                            </select>
+                            <button onclick="showRegistrarDesteteModal()" class="btn" style="background: #f59e0b; color: white; margin-left: auto;">
+                                🍼➡️ Registrar Destete
+                            </button>
+                        </div>
+
+                        <!-- Summary Cards -->
+                        <div class="summary-grid" style="margin-bottom: 1rem;">
+                            <div class="summary-box" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
+                                <div class="summary-box-icon">👶</div>
+                                <div class="summary-box-value" id="criaTotalCrias">0</div>
+                                <div class="summary-box-label">Total Crías</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
+                                <div class="summary-box-icon">🍼</div>
+                                <div class="summary-box-value" id="criaCriasConMadre">0</div>
+                                <div class="summary-box-label">Con Madre</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                                <div class="summary-box-icon">⚠️</div>
+                                <div class="summary-box-value" id="criaCriasListasDestete">0</div>
+                                <div class="summary-box-label">Listas Destete</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe);">
+                                <div class="summary-box-icon">✅</div>
+                                <div class="summary-box-value" id="criaCriasDestetadas">0</div>
+                                <div class="summary-box-label">Destetadas</div>
+                            </div>
+                        </div>
+
+                        <!-- Cow-Calf Pairs List -->
+                        <h4 style="color: #0284c7; margin-bottom: 0.75rem;">👶🐄 Parejas Vaca-Cría</h4>
+                        <div id="criaCriasList" style="max-height: 500px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">👶</div>
+                                <p>No hay crías registradas en San Fernando</p>
+                                <p style="font-size: 0.85rem;">Registre nacimientos en la pestaña "Entradas" → "Nacimiento"</p>
                             </div>
                         </div>
                     </div>
@@ -7586,13 +7654,19 @@
             document.getElementById('criaBtnDiagnosticos').style.background = section === 'diagnosticos' ? '#0ea5e9' : '';
             document.getElementById('criaBtnDiagnosticos').style.color = section === 'diagnosticos' ? 'white' : '';
 
+            document.getElementById('criaBtnCrias').className = section === 'crias' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('criaBtnCrias').style.background = section === 'crias' ? '#0ea5e9' : '';
+            document.getElementById('criaBtnCrias').style.color = section === 'crias' ? 'white' : '';
+
             // Show/hide sections
             document.getElementById('cria-section-vacas').style.display = section === 'vacas' ? 'block' : 'none';
+            document.getElementById('cria-section-crias').style.display = section === 'crias' ? 'block' : 'none';
             document.getElementById('cria-section-servicios').style.display = section === 'servicios' ? 'block' : 'none';
             document.getElementById('cria-section-diagnosticos').style.display = section === 'diagnosticos' ? 'block' : 'none';
 
             // Refresh the section data
             if (section === 'vacas') renderCriaVacas();
+            else if (section === 'crias') renderCriaCrias();
             else if (section === 'servicios') renderCriaServicios();
             else if (section === 'diagnosticos') renderCriaDiagnosticos();
         }
@@ -7926,6 +8000,271 @@
                 });
                 container.innerHTML = html;
             }
+        }
+
+        // Render the Crías (offspring) section with cow-calf pairs
+        function renderCriaCrias() {
+            if (currentRanch !== 'san_fernando') return;
+
+            // Get all calves (animals born from nacimiento with a mother)
+            const calves = data.entradas.filter(e =>
+                e.tipoEntrada === 'nacimiento' && e.numeroVaca
+            );
+
+            const now = new Date();
+
+            // Calculate age and weaning status for each calf
+            const calvesWithStatus = calves.map(calf => {
+                const birthDate = new Date(calf.fechaEntrada);
+                const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+                const ageInMonths = Math.floor(ageInDays / 30);
+
+                // Find the mother in inventory
+                const mother = data.inventario.find(inv => inv.numero === calf.numeroVaca);
+
+                // Determine weaning status
+                let weaningStatus = 'con_madre'; // Default: with mother
+                let weaningLabel = '🍼 Con madre';
+                let weaningColor = '#10b981';
+
+                if (calf.fechaDestete) {
+                    weaningStatus = 'destetada';
+                    weaningLabel = '✅ Destetada';
+                    weaningColor = '#6366f1';
+                } else if (ageInDays >= 180 && ageInDays <= 270) {
+                    weaningStatus = 'destete_listo';
+                    weaningLabel = '⚠️ Lista para destete';
+                    weaningColor = '#f59e0b';
+                } else if (ageInDays > 270) {
+                    weaningStatus = 'destete_listo';
+                    weaningLabel = '⚠️ Destete urgente';
+                    weaningColor = '#ef4444';
+                }
+
+                return {
+                    ...calf,
+                    mother,
+                    ageInDays,
+                    ageInMonths,
+                    weaningStatus,
+                    weaningLabel,
+                    weaningColor,
+                    birthDate
+                };
+            });
+
+            // Calculate stats
+            const totalCrias = calvesWithStatus.length;
+            const conMadre = calvesWithStatus.filter(c => c.weaningStatus === 'con_madre').length;
+            const listasDestete = calvesWithStatus.filter(c => c.weaningStatus === 'destete_listo').length;
+            const destetadas = calvesWithStatus.filter(c => c.weaningStatus === 'destetada').length;
+
+            // Update summary cards
+            document.getElementById('criaTotalCrias').textContent = totalCrias;
+            document.getElementById('criaCriasConMadre').textContent = conMadre;
+            document.getElementById('criaCriasListasDestete').textContent = listasDestete;
+            document.getElementById('criaCriasDestetadas').textContent = destetadas;
+
+            // Show weaning alert if there are calves ready
+            const weaningAlert = document.getElementById('criaWeaningAlert');
+            const weaningAlertList = document.getElementById('criaWeaningAlertList');
+            const weaningReady = calvesWithStatus.filter(c => c.weaningStatus === 'destete_listo');
+
+            if (weaningReady.length > 0) {
+                weaningAlert.style.display = 'block';
+                let alertHtml = '';
+                weaningReady.forEach(c => {
+                    const urgentStyle = c.ageInDays > 270 ? 'background: #fef2f2; border: 1px solid #ef4444;' : 'background: white;';
+                    alertHtml += `
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; ${urgentStyle} padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;" onclick="showRegistrarDesteteModal('${c.numero}')">
+                            👶 #${c.numero} <span style="color: #666;">(${c.ageInMonths} meses)</span>
+                        </span>
+                    `;
+                });
+                weaningAlertList.innerHTML = alertHtml;
+            } else {
+                weaningAlert.style.display = 'none';
+            }
+
+            // Apply filter
+            const filter = document.getElementById('criaCriasFilter').value;
+            let filteredCalves = calvesWithStatus;
+
+            if (filter === 'con_madre') {
+                filteredCalves = calvesWithStatus.filter(c => c.weaningStatus === 'con_madre');
+            } else if (filter === 'destete_listo') {
+                filteredCalves = calvesWithStatus.filter(c => c.weaningStatus === 'destete_listo');
+            } else if (filter === 'destetadas') {
+                filteredCalves = calvesWithStatus.filter(c => c.weaningStatus === 'destetada');
+            } else if (filter === 'machos') {
+                filteredCalves = calvesWithStatus.filter(c => c.sexo === 'MACHO');
+            } else if (filter === 'hembras') {
+                filteredCalves = calvesWithStatus.filter(c => c.sexo === 'HEMBRA');
+            }
+
+            // Sort by age (youngest first)
+            filteredCalves.sort((a, b) => b.birthDate - a.birthDate);
+
+            // Render cow-calf pairs
+            const container = document.getElementById('criaCriasList');
+
+            if (filteredCalves.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">👶</div>
+                        <p>No hay crías ${filter !== 'todas' ? 'con este filtro' : 'registradas en San Fernando'}</p>
+                        <p style="font-size: 0.85rem;">Registre nacimientos en la pestaña "Entradas" → "Nacimiento"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filteredCalves.forEach(calf => {
+                const birthDateStr = calf.birthDate.toLocaleDateString('es-CO');
+                const sexIcon = calf.sexo === 'MACHO' ? '♂️' : '♀️';
+                const sexColor = calf.sexo === 'MACHO' ? '#3b82f6' : '#ec4899';
+
+                // Mother info
+                const motherInfo = calf.mother
+                    ? `🐄 Madre: #${calf.mother.numero} ${calf.mother.raza ? `(${calf.mother.raza})` : ''}`
+                    : `🐄 Madre: #${calf.numeroVaca} (no encontrada en inventario)`;
+
+                // Weaning info
+                let weaningInfo = '';
+                if (calf.fechaDestete) {
+                    const desteteDate = new Date(calf.fechaDestete).toLocaleDateString('es-CO');
+                    weaningInfo = `<div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">Destetada: ${desteteDate} ${calf.pesoDestete ? `| Peso: ${calf.pesoDestete} kg` : ''}</div>`;
+                }
+
+                html += `
+                    <div style="background: white; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; border-left: 4px solid ${calf.weaningColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 1.2rem;">👶</span>
+                                    <strong style="font-size: 1.1rem;">Cría #${calf.numero}</strong>
+                                    <span style="color: ${sexColor}; font-size: 1.1rem;">${sexIcon}</span>
+                                    <span style="background: ${calf.weaningColor}; color: white; padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.75rem;">
+                                        ${calf.weaningLabel}
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                                    ${motherInfo}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: bold; color: #0284c7;">${calf.ageInMonths} meses</div>
+                                <div style="font-size: 0.8rem; color: #666;">${calf.ageInDays} días</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.85rem; color: #666;">
+                                <span>📅 Nacimiento: ${birthDateStr}</span>
+                                ${calf.raza ? `<span>🏷️ Raza: ${calf.raza}</span>` : ''}
+                                ${calf.peso ? `<span>⚖️ Peso nac.: ${calf.peso} kg</span>` : ''}
+                            </div>
+                            ${weaningInfo}
+                        </div>
+                        ${calf.weaningStatus === 'destete_listo' ? `
+                            <div style="margin-top: 0.75rem;">
+                                <button onclick="showRegistrarDesteteModal('${calf.numero}')" class="btn" style="background: #f59e0b; color: white; padding: 0.4rem 0.75rem; font-size: 0.85rem;">
+                                    🍼➡️ Registrar Destete
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Show modal to register weaning
+        function showRegistrarDesteteModal(calfNumero = '') {
+            // Get calves that can be weaned (not yet weaned)
+            const calves = data.entradas.filter(e =>
+                e.tipoEntrada === 'nacimiento' &&
+                e.numeroVaca &&
+                !e.fechaDestete
+            );
+
+            const now = new Date();
+            const calvesWithAge = calves.map(c => {
+                const birthDate = new Date(c.fechaEntrada);
+                const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+                return { ...c, ageInDays };
+            }).sort((a, b) => b.ageInDays - a.ageInDays); // Oldest first
+
+            let calvesOptions = '<option value="">-- Seleccionar Cría --</option>';
+            calvesWithAge.forEach(c => {
+                const selected = c.numero === calfNumero ? 'selected' : '';
+                const ageMonths = Math.floor(c.ageInDays / 30);
+                const urgentBadge = c.ageInDays >= 180 ? ' ⚠️' : '';
+                calvesOptions += `<option value="${c.numero}" ${selected}>#${c.numero} - ${ageMonths} meses (madre: #${c.numeroVaca})${urgentBadge}</option>`;
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+
+            showModal(`
+                <h3 style="margin-top: 0; color: #f59e0b;">🍼➡️ Registrar Destete</h3>
+                <form id="desteteForm" onsubmit="guardarDestete(event)">
+                    <div class="form-group">
+                        <label>Cría a destetar *</label>
+                        <select id="desteteCalfNumero" required class="form-input">
+                            ${calvesOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha de destete *</label>
+                        <input type="date" id="desteteFecha" required class="form-input" value="${today}">
+                    </div>
+                    <div class="form-group">
+                        <label>Peso al destete (kg)</label>
+                        <input type="number" id="destetePeso" class="form-input" placeholder="ej: 180" step="0.1" min="50" max="400">
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea id="desteteObservaciones" class="form-input" rows="2" placeholder="ej: Buen estado, destete gradual..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancelar</button>
+                        <button type="submit" class="btn" style="background: #f59e0b; color: white;">💾 Guardar Destete</button>
+                    </div>
+                </form>
+            `);
+        }
+
+        // Save weaning record
+        function guardarDestete(event) {
+            event.preventDefault();
+
+            const calfNumero = document.getElementById('desteteCalfNumero').value;
+            const fecha = document.getElementById('desteteFecha').value;
+            const peso = document.getElementById('destetePeso').value;
+            const observaciones = document.getElementById('desteteObservaciones').value;
+
+            if (!calfNumero || !fecha) {
+                showNotification('Por favor seleccione la cría y fecha', 'error');
+                return;
+            }
+
+            // Find the calf entry and update it
+            const calfIndex = data.entradas.findIndex(e => e.numero === calfNumero);
+            if (calfIndex === -1) {
+                showNotification('Cría no encontrada', 'error');
+                return;
+            }
+
+            // Update the entry with weaning data
+            data.entradas[calfIndex].fechaDestete = fecha;
+            if (peso) data.entradas[calfIndex].pesoDestete = parseFloat(peso);
+            if (observaciones) data.entradas[calfIndex].observacionesDestete = observaciones;
+
+            saveData();
+            closeModal();
+            renderCriaCrias();
+            showNotification(`✅ Destete registrado para cría #${calfNumero}`, 'success');
         }
 
         // Show modal to register a new servicio (breeding event)
@@ -11497,7 +11836,9 @@
                         </div>
                     ` : '<div style="color: var(--gray);">Sin registros de salud</div>'}
                 </div>
-                
+
+                ${generateOffspringSection(numero, animal)}
+
                 <!-- Photo History -->
                 <div class="profile-section">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -11540,6 +11881,144 @@
         
         function closeAnimalProfile() {
             document.getElementById('animalProfileModal').style.display = 'none';
+        }
+
+        // Generate offspring/reproductive history section for animal profile
+        function generateOffspringSection(numero, animal) {
+            // Only show for San Fernando ranch and females
+            if (currentRanch !== 'san_fernando') return '';
+
+            const isFemale = animal.sexo === 'HEMBRA';
+            const now = new Date();
+
+            // Check if this animal is a calf (has a mother)
+            const isCalfEntry = data.entradas.find(e => e.numero === numero && e.numeroVaca);
+
+            let html = '';
+
+            // For female cows - show their offspring
+            if (isFemale) {
+                // Get this cow's offspring
+                const offspring = data.entradas.filter(e =>
+                    e.tipoEntrada === 'nacimiento' && e.numeroVaca === numero
+                ).sort((a, b) => new Date(b.fechaEntrada) - new Date(a.fechaEntrada));
+
+                // Get reproductive status
+                const reproStatus = getReproductiveStatus(numero);
+
+                html += `
+                    <div class="profile-section" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">
+                        <div class="profile-section-title">🐄 Historial Reproductivo</div>
+                        <div class="profile-grid">
+                            <div class="profile-item">
+                                <span class="profile-item-label">Estado Reproductivo</span>
+                                <span class="profile-item-value" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="background: ${reproStatus.color}; color: white; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem;">${reproStatus.label}</span>
+                                </span>
+                            </div>
+                            <div class="profile-item">
+                                <span class="profile-item-label">Total Crías</span>
+                                <span class="profile-item-value large">${offspring.length}</span>
+                            </div>
+                        </div>
+                        ${reproStatus.detail ? `<div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">${reproStatus.detail}</div>` : ''}
+
+                        ${offspring.length > 0 ? `
+                            <div style="margin-top: 1rem;">
+                                <strong style="font-size: 0.9rem; color: #9d174d;">Historial de Crías:</strong>
+                                <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+                                    ${offspring.map(calf => {
+                                        const birthDate = new Date(calf.fechaEntrada);
+                                        const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+                                        const ageInMonths = Math.floor(ageInDays / 30);
+                                        const sexIcon = calf.sexo === 'MACHO' ? '♂️' : '♀️';
+                                        const weanedBadge = calf.fechaDestete ? '<span style="background: #6366f1; color: white; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.7rem; margin-left: 0.5rem;">Destetada</span>' : '';
+
+                                        return `
+                                            <div style="background: white; padding: 0.5rem; border-radius: 6px; margin-bottom: 0.25rem; display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <span style="font-weight: bold;">#${calf.numero}</span> ${sexIcon}
+                                                    ${weanedBadge}
+                                                </div>
+                                                <div style="font-size: 0.8rem; color: #666;">
+                                                    ${formatDate(calf.fechaEntrada)} (${ageInMonths}m)
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : '<div style="margin-top: 0.75rem; color: #9d174d; font-style: italic;">Sin crías registradas</div>'}
+                    </div>
+                `;
+            }
+
+            // For calves - show their mother
+            if (isCalfEntry) {
+                const mother = data.inventario.find(inv => inv.numero === isCalfEntry.numeroVaca);
+                const birthDate = new Date(isCalfEntry.fechaEntrada);
+                const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+                const ageInMonths = Math.floor(ageInDays / 30);
+
+                // Weaning status
+                let weaningStatus = 'Con madre';
+                let weaningColor = '#10b981';
+                if (isCalfEntry.fechaDestete) {
+                    weaningStatus = 'Destetada';
+                    weaningColor = '#6366f1';
+                } else if (ageInDays >= 180 && ageInDays <= 270) {
+                    weaningStatus = 'Lista para destete';
+                    weaningColor = '#f59e0b';
+                } else if (ageInDays > 270) {
+                    weaningStatus = 'Destete urgente';
+                    weaningColor = '#ef4444';
+                }
+
+                html += `
+                    <div class="profile-section" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
+                        <div class="profile-section-title">👶 Información de Cría</div>
+                        <div class="profile-grid">
+                            <div class="profile-item">
+                                <span class="profile-item-label">Madre</span>
+                                <span class="profile-item-value" style="cursor: pointer; color: #0284c7;" onclick="closeAnimalProfile(); setTimeout(() => showAnimalProfile('${isCalfEntry.numeroVaca}'), 300);">
+                                    #${isCalfEntry.numeroVaca} ${mother ? `(${mother.raza || 'Sin raza'})` : ''}
+                                </span>
+                            </div>
+                            <div class="profile-item">
+                                <span class="profile-item-label">Edad</span>
+                                <span class="profile-item-value">${ageInMonths} meses (${ageInDays} días)</span>
+                            </div>
+                            <div class="profile-item">
+                                <span class="profile-item-label">Estado</span>
+                                <span class="profile-item-value">
+                                    <span style="background: ${weaningColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem;">${weaningStatus}</span>
+                                </span>
+                            </div>
+                            ${isCalfEntry.fechaDestete ? `
+                                <div class="profile-item">
+                                    <span class="profile-item-label">Fecha Destete</span>
+                                    <span class="profile-item-value">${formatDate(isCalfEntry.fechaDestete)}</span>
+                                </div>
+                                ${isCalfEntry.pesoDestete ? `
+                                    <div class="profile-item">
+                                        <span class="profile-item-label">Peso al Destete</span>
+                                        <span class="profile-item-value">${isCalfEntry.pesoDestete} kg</span>
+                                    </div>
+                                ` : ''}
+                            ` : ''}
+                        </div>
+                        ${!isCalfEntry.fechaDestete && ageInDays >= 180 ? `
+                            <div style="margin-top: 0.75rem;">
+                                <button onclick="closeAnimalProfile(); showRegistrarDesteteModal('${numero}')" class="btn" style="background: #f59e0b; color: white; padding: 0.4rem 0.75rem; font-size: 0.85rem;">
+                                    🍼➡️ Registrar Destete
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            return html;
         }
 
         // Quick weight update from animal profile
