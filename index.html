@@ -14255,115 +14255,150 @@
             }
         }
         
-        function getDataSummaryForAI() {
-            const inventario = getInventario();
+        // Get data summary for a specific ranch
+        function getRanchDataSummary(ranchId, ranchData) {
             const today = new Date();
-            const gdp = data.config.gdp || 0.31;
-            const precioVenta = data.config.precioVenta || 9000;
-            
+            const gdp = ranchData.config?.gdp || 0.31;
+            const precioVenta = ranchData.config?.precioVenta || 9000;
+
+            const inventario = ranchData.entradas ? ranchData.entradas.filter(e => {
+                const salidaIds = (ranchData.salidas || []).map(s => s.numero);
+                return !salidaIds.includes(e.numero);
+            }) : [];
+
             let totalPesoInicial = 0;
             let totalPesoEstimado = 0;
             let totalInversion = 0;
             let totalValorActual = 0;
-            
+
             const animalDetails = inventario.map(a => {
                 const dias = Math.floor((today - new Date(a.fechaEntrada)) / (1000 * 60 * 60 * 24));
                 const pesoEst = a.peso + (dias * gdp);
                 const costo = a.costoTotal || (a.peso * a.precioKilo) || 0;
                 const valorActual = pesoEst * precioVenta;
                 const ganancia = valorActual - costo;
-                const margen = costo > 0 ? ((ganancia / costo) * 100) : 0;
-                
+
                 totalPesoInicial += a.peso;
                 totalPesoEstimado += pesoEst;
                 totalInversion += costo;
                 totalValorActual += valorActual;
-                
+
                 return {
                     numero: a.numero,
-                    lote: a.lote || 'N/A',
                     sexo: a.sexo,
                     raza: a.raza || 'No especificada',
-                    vendedor: a.vendedor || 'Nacimiento',
                     pesoInicial: a.peso,
                     pesoEstimado: Math.round(pesoEst),
                     diasEnFinca: dias,
-                    gdpReal: dias > 0 ? ((pesoEst - a.peso) / dias).toFixed(3) : gdp,
-                    costo: costo,
-                    valorActual: Math.round(valorActual),
-                    gananciaEstimada: Math.round(ganancia),
-                    margenPorcentaje: margen.toFixed(1),
-                    listoParaVenta: pesoEst >= (data.config.pesoObjetivo || 450),
-                    enRetiro: typeof isAnimalInRetiro === 'function' ? isAnimalInRetiro(a.numero) : false,
-                    potrero: data.animalPotreros && data.animalPotreros[a.numero] ? 
-                        (data.potreros.find(p => p.id === data.animalPotreros[a.numero])?.nombre || 'Desconocido') : 'Sin asignar'
+                    listoParaVenta: pesoEst >= (ranchData.config?.pesoObjetivo || 450)
                 };
             });
-            
-            const vendedorStats = {};
-            inventario.forEach(a => {
-                const v = a.vendedor || 'Nacimiento';
-                if (!vendedorStats[v]) vendedorStats[v] = { count: 0, totalPeso: 0, totalCosto: 0 };
-                vendedorStats[v].count++;
-                vendedorStats[v].totalPeso += a.peso;
-                vendedorStats[v].totalCosto += a.costoTotal || (a.peso * a.precioKilo) || 0;
-            });
-            
-            const ventasRecientes = data.salidas.filter(s => s.comprador !== 'MUERTE').slice(-20).map(s => ({
-                numero: s.numero,
-                peso: s.peso,
-                fecha: s.fechaSalida,
-                precioKg: s.precioKiloVenta,
-                comprador: s.comprador,
-                total: s.costoVenta || (s.peso * s.precioKiloVenta)
-            }));
-            
-            const saludResumen = {
-                totalEventos: data.saludEventos ? data.saludEventos.length : 0,
-                ultimasVacunas: data.saludEventos ? data.saludEventos.filter(e => e.tipo === 'vacuna').slice(-5) : [],
-                animalesEnRetiro: inventario.filter(a => typeof isAnimalInRetiro === 'function' ? isAnimalInRetiro(a.numero) : false).length
-            };
-            
-            const potreroResumen = data.potreros ? data.potreros.map(p => {
-                const animalesEnPotrero = Object.values(data.animalPotreros || {}).filter(pId => pId === p.id).length;
-                return {
-                    nombre: p.nombre,
-                    area: p.area,
-                    capacidad: p.capacidad,
-                    animalesActuales: animalesEnPotrero,
-                    estado: p.estado,
-                    tipoPasto: p.tipoPasto
+
+            // Breeding data for San Fernando
+            let breedingData = null;
+            if (ranchId === 'san_fernando') {
+                const servicios = ranchData.servicios || [];
+                const diagnosticos = ranchData.diagnosticos || [];
+                const toros = ranchData.toros || [];
+                const vacas = inventario.filter(a => a.sexo === 'HEMBRA');
+                const crias = inventario.filter(a => a.tipoEntrada === 'nacimiento' && a.numeroVaca);
+
+                breedingData = {
+                    totalVacas: vacas.length,
+                    totalToros: toros.length,
+                    totalCrias: crias.length,
+                    serviciosRegistrados: servicios.length,
+                    diagnosticosRegistrados: diagnosticos.length,
+                    vacasServidas: servicios.filter(s => {
+                        const diag = diagnosticos.find(d => d.vacaNumero === s.vacaNumero);
+                        return !diag;
+                    }).length,
+                    vacasPrenadas: diagnosticos.filter(d => d.resultado === 'prenada').length,
+                    criasListasDestete: crias.filter(c => {
+                        const dias = Math.floor((today - new Date(c.fechaEntrada)) / (1000 * 60 * 60 * 24));
+                        return dias >= 180 && !c.fechaDestete;
+                    }).length
                 };
-            }) : [];
-            
+            }
+
             return {
-                fecha: today.toISOString().split('T')[0],
-                finca: RANCHES[currentRanch].name,
-                config: {
-                    gdpConfigurado: gdp,
-                    precioVentaKg: precioVenta,
-                    pesoObjetivo: data.config.pesoObjetivo || 450
-                },
-                resumenGeneral: {
+                fincaId: ranchId,
+                fincaNombre: RANCHES[ranchId]?.name || ranchId,
+                resumen: {
                     totalAnimales: inventario.length,
                     machos: inventario.filter(a => a.sexo === 'MACHO').length,
                     hembras: inventario.filter(a => a.sexo === 'HEMBRA').length,
-                    totalPesoInicial: Math.round(totalPesoInicial),
                     totalPesoEstimado: Math.round(totalPesoEstimado),
-                    pesoPromedioEstimado: inventario.length > 0 ? Math.round(totalPesoEstimado / inventario.length) : 0,
                     inversionTotal: Math.round(totalInversion),
                     valorActualTotal: Math.round(totalValorActual),
-                    gananciaEstimadaTotal: Math.round(totalValorActual - totalInversion),
-                    animalesListosVenta: animalDetails.filter(a => a.listoParaVenta && !a.enRetiro).length
+                    gananciaEstimada: Math.round(totalValorActual - totalInversion),
+                    animalesListosVenta: animalDetails.filter(a => a.listoParaVenta).length
                 },
-                animales: animalDetails,
-                vendedores: vendedorStats,
-                ventasRecientes: ventasRecientes,
-                totalVentas: data.salidas.filter(s => s.comprador !== 'MUERTE').length,
-                totalMuertes: data.salidas.filter(s => s.comprador === 'MUERTE').length,
-                salud: saludResumen,
-                potreros: potreroResumen
+                ventas: (ranchData.salidas || []).filter(s => s.comprador !== 'MUERTE').length,
+                muertes: (ranchData.salidas || []).filter(s => s.comprador === 'MUERTE').length,
+                potreros: (ranchData.potreros || []).length,
+                breeding: breedingData,
+                animales: animalDetails.slice(0, 20) // Limit to avoid token overflow
             };
+        }
+
+        // Get combined data from ALL ranches for AI analysis
+        function getAllRanchesDataForAI() {
+            const today = new Date();
+            const allRanchesData = {};
+            let globalTotals = {
+                totalAnimales: 0,
+                totalMachos: 0,
+                totalHembras: 0,
+                totalPesoEstimado: 0,
+                totalInversion: 0,
+                totalValorActual: 0,
+                totalGanancia: 0,
+                totalVentas: 0,
+                totalMuertes: 0,
+                animalesListosVenta: 0
+            };
+
+            // Iterate through all ranches
+            Object.keys(RANCHES).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                try {
+                    const ranchDataStr = localStorage.getItem(ranch.storageKey);
+                    const ranchData = ranchDataStr ? JSON.parse(ranchDataStr) : null;
+
+                    if (ranchData && ranchData.entradas && ranchData.entradas.length > 0) {
+                        const summary = getRanchDataSummary(ranchId, ranchData);
+                        allRanchesData[ranchId] = summary;
+
+                        // Add to global totals
+                        globalTotals.totalAnimales += summary.resumen.totalAnimales;
+                        globalTotals.totalMachos += summary.resumen.machos;
+                        globalTotals.totalHembras += summary.resumen.hembras;
+                        globalTotals.totalPesoEstimado += summary.resumen.totalPesoEstimado;
+                        globalTotals.totalInversion += summary.resumen.inversionTotal;
+                        globalTotals.totalValorActual += summary.resumen.valorActualTotal;
+                        globalTotals.totalGanancia += summary.resumen.gananciaEstimada;
+                        globalTotals.totalVentas += summary.ventas;
+                        globalTotals.totalMuertes += summary.muertes;
+                        globalTotals.animalesListosVenta += summary.resumen.animalesListosVenta;
+                    }
+                } catch (e) {
+                    console.error(`Error loading ranch ${ranchId} for AI:`, e);
+                }
+            });
+
+            return {
+                fecha: today.toISOString().split('T')[0],
+                fincaActual: RANCHES[currentRanch]?.name || currentRanch,
+                fincaActualId: currentRanch,
+                resumenGlobal: globalTotals,
+                fincas: allRanchesData
+            };
+        }
+
+        function getDataSummaryForAI() {
+            // Get data from ALL ranches combined
+            return getAllRanchesDataForAI();
         }
         
         function updateAIStats() {
@@ -14372,20 +14407,44 @@
         }
         
         function getSystemPrompt(dataSummary) {
-            return `Eres un experto en ganadería bovina colombiana, especializado en cría y ceba de ganado grass-fed en zonas tropicales. 
-Analizas datos de fincas ganaderas y proporcionas insights accionables.
+            // Build list of available ranches
+            const ranchList = Object.keys(dataSummary.fincas || {}).map(id => {
+                const f = dataSummary.fincas[id];
+                return `- ${f.fincaNombre}: ${f.resumen.totalAnimales} animales`;
+            }).join('\n');
 
-DATOS ACTUALES DE LA FINCA "${dataSummary.finca}":
-${JSON.stringify(dataSummary, null, 2)}
+            return `Eres un experto en ganadería bovina colombiana, especializado en cría y ceba de ganado grass-fed en zonas tropicales.
+Analizas datos de múltiples fincas ganaderas y proporcionas insights accionables.
+
+📊 TIENES ACCESO A DATOS DE TODAS LAS FINCAS:
+${ranchList || '(No hay fincas con datos)'}
+
+🏠 El usuario está actualmente viendo: "${dataSummary.fincaActual}"
+
+📈 RESUMEN GLOBAL (TODAS LAS FINCAS COMBINADAS):
+- Total animales: ${dataSummary.resumenGlobal?.totalAnimales || 0}
+- Machos: ${dataSummary.resumenGlobal?.totalMachos || 0}
+- Hembras: ${dataSummary.resumenGlobal?.totalHembras || 0}
+- Inversión total: $${(dataSummary.resumenGlobal?.totalInversion || 0).toLocaleString('es-CO')}
+- Valor actual estimado: $${(dataSummary.resumenGlobal?.totalValorActual || 0).toLocaleString('es-CO')}
+- Ganancia estimada: $${(dataSummary.resumenGlobal?.totalGanancia || 0).toLocaleString('es-CO')}
+- Animales listos para venta: ${dataSummary.resumenGlobal?.animalesListosVenta || 0}
+
+📋 DATOS DETALLADOS POR FINCA:
+${JSON.stringify(dataSummary.fincas, null, 2)}
 
 INSTRUCCIONES:
 - Responde en español
+- SIEMPRE considera los datos de TODAS las fincas en tu análisis
+- Cuando te pregunten sobre una finca específica, da el análisis de esa finca Y compárala con las otras
+- Si preguntan en general, da un resumen consolidado de todas las fincas
 - Usa formato claro con secciones cuando sea apropiado
 - Incluye números específicos de los datos
 - Da recomendaciones prácticas y accionables
 - Considera el contexto de ganadería colombiana (clima tropical, pastos, mercado local)
 - Usa emojis para hacer el análisis más visual
-- Cuando menciones valores monetarios, usa formato colombiano ($ con separador de miles)`;
+- Cuando menciones valores monetarios, usa formato colombiano ($ con separador de miles)
+- Si hay datos de cría (San Fernando), incluye análisis reproductivo`;
         }
         
         // ========== API RATE LIMITING & RETRY LOGIC ==========
