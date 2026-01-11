@@ -2967,27 +2967,6 @@
                                 ➕ Registrar Peso
                             </button>
                         </div>
-                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <span style="font-size: 1.2rem;">📊</span>
-                                <h4 style="margin: 0; font-size: 0.9rem; color: #92400e;">Actualizar Análisis</h4>
-                            </div>
-                            <button onclick="refreshPerformanceAnalytics()" class="btn" style="width: 100%; background: #f59e0b; color: white; padding: 0.5rem; font-size: 0.85rem;">
-                                🔄 Recalcular
-                            </button>
-                        </div>
-                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); border-radius: 10px; padding: 1rem; border: 2px solid #6366f1;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <span style="font-size: 1.2rem;">🧪</span>
-                                <h4 style="margin: 0; font-size: 0.9rem; color: #4338ca;">Datos Demo</h4>
-                            </div>
-                            <button onclick="generateDemoData()" class="btn" style="width: 100%; background: #6366f1; color: white; padding: 0.5rem; font-size: 0.85rem;">
-                                ✨ Generar Demo
-                            </button>
-                            <button onclick="clearDemoData()" class="btn btn-secondary" style="width: 100%; padding: 0.3rem; font-size: 0.75rem; margin-top: 0.25rem;">
-                                🗑️ Limpiar Demo
-                            </button>
-                        </div>
                     </div>
 
                     <!-- Pending Progreso Dictations -->
@@ -3070,77 +3049,6 @@
                                 <div>
                                     <div style="font-size: 0.8rem; color: #666;">Mejor GDP</div>
                                     <div id="herdBestGDP" style="font-size: 1.5rem; font-weight: bold; color: #059669;">-- kg/día</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ==================== CORRELATION ANALYSIS ==================== -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
-                            <span>🔍 Factores que Afectan el Rendimiento</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="correlationAnalysis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                                <!-- By Raza -->
-                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">🐄 Por Raza</h4>
-                                    <div id="correlationByRaza" style="font-size: 0.85rem;"></div>
-                                </div>
-                                <!-- By Condition -->
-                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">💪 Por Condición</h4>
-                                    <div id="correlationByCondition" style="font-size: 0.85rem;"></div>
-                                </div>
-                                <!-- By Entry Weight -->
-                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">⚖️ Por Peso Entrada</h4>
-                                    <div id="correlationByWeight" style="font-size: 0.85rem;"></div>
-                                </div>
-                                <!-- By Sex -->
-                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">♂️♀️ Por Sexo</h4>
-                                    <div id="correlationBySex" style="font-size: 0.85rem;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ==================== ACTIONABLE LISTS ==================== -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <div class="card-header" style="background: linear-gradient(135deg, #ec4899, #db2777);">
-                            <span>📋 Listas de Acción</span>
-                        </div>
-                        <div class="card-body">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                                <!-- Ready to Sell -->
-                                <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; padding: 1rem; border: 2px solid #10b981;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #065f46; display: flex; align-items: center; gap: 0.5rem;">
-                                        <span>💰</span> Listos para Venta
-                                    </h4>
-                                    <p style="font-size: 0.8rem; color: #047857; margin: 0 0 0.75rem 0;">Buen GDP + peso objetivo alcanzado</p>
-                                    <div id="readyToSellList" style="max-height: 200px; overflow-y: auto;"></div>
-                                    <div id="readyToSellCount" style="text-align: center; font-weight: bold; color: #059669; margin-top: 0.5rem;">0 animales</div>
-                                </div>
-
-                                <!-- Stars - Keep -->
-                                <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem;">
-                                        <span>⭐</span> Estrellas
-                                    </h4>
-                                    <p style="font-size: 0.8rem; color: #b45309; margin: 0 0 0.75rem 0;">Excelente GDP - considerar retener</p>
-                                    <div id="starAnimalsList" style="max-height: 200px; overflow-y: auto;"></div>
-                                    <div id="starAnimalsCount" style="text-align: center; font-weight: bold; color: #d97706; margin-top: 0.5rem;">0 animales</div>
-                                </div>
-
-                                <!-- Underperformers -->
-                                <div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 10px; padding: 1rem; border: 2px solid #ef4444;">
-                                    <h4 style="margin: 0 0 0.75rem 0; color: #991b1b; display: flex; align-items: center; gap: 0.5rem;">
-                                        <span>⚠️</span> Bajo Rendimiento
-                                    </h4>
-                                    <p style="font-size: 0.8rem; color: #dc2626; margin: 0 0 0.75rem 0;">Considerar venta o revisar salud</p>
-                                    <div id="underperformersList" style="max-height: 200px; overflow-y: auto;"></div>
-                                    <div id="underperformersCount" style="text-align: center; font-weight: bold; color: #ef4444; margin-top: 0.5rem;">0 animales</div>
                                 </div>
                             </div>
                         </div>
@@ -3281,6 +3189,46 @@
                         </div>
                     </div>
 
+                    <!-- ==================== ACTIONABLE LISTS ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                            <span>📋 Listas de Acción</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                                <!-- Ready to Sell -->
+                                <div style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 10px; padding: 1rem; border: 2px solid #10b981;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #065f46; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>💰</span> Listos para Venta
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #047857; margin: 0 0 0.75rem 0;">Buen GDP + peso objetivo alcanzado</p>
+                                    <div id="readyToSellList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="readyToSellCount" style="text-align: center; font-weight: bold; color: #059669; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+
+                                <!-- Stars - Keep -->
+                                <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 10px; padding: 1rem; border: 2px solid #f59e0b;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>⭐</span> Estrellas
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #b45309; margin: 0 0 0.75rem 0;">Excelente GDP - considerar retener</p>
+                                    <div id="starAnimalsList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="starAnimalsCount" style="text-align: center; font-weight: bold; color: #d97706; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+
+                                <!-- Underperformers -->
+                                <div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 10px; padding: 1rem; border: 2px solid #ef4444;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #991b1b; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span>⚠️</span> Bajo Rendimiento
+                                    </h4>
+                                    <p style="font-size: 0.8rem; color: #dc2626; margin: 0 0 0.75rem 0;">Considerar venta o revisar salud</p>
+                                    <div id="underperformersList" style="max-height: 200px; overflow-y: auto;"></div>
+                                    <div id="underperformersCount" style="text-align: center; font-weight: bold; color: #ef4444; margin-top: 0.5rem;">0 animales</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ==================== PESO REGISTRATION FORM ==================== -->
                     <div id="pesoFormContainer" style="display: none;">
                         <div class="card" style="border: 2px solid #10b981; margin-bottom: 1.5rem;">
@@ -3326,41 +3274,41 @@
                         </div>
                     </div>
 
-                    <!-- ==================== WEIGHT HISTORY TABLE ==================== -->
-                    <div class="card">
-                        <div class="card-header">
-                            <span>📜 Historial de Actualizaciones de Peso</span>
+                    <!-- ==================== CORRELATION ANALYSIS (Moved to end) ==================== -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                            <span>🔍 Factores que Afectan el Rendimiento</span>
                         </div>
                         <div class="card-body">
-                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                                <input type="text" class="form-input" id="progresoSearch" placeholder="Buscar por chapeta..." oninput="filterProgreso()" style="flex: 1; min-width: 150px;">
-                            </div>
-                            <div class="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Chapeta</th>
-                                            <th>Fecha</th>
-                                            <th class="text-right">Peso Anterior</th>
-                                            <th class="text-right">Peso Nuevo</th>
-                                            <th class="text-right">Ganancia</th>
-                                            <th class="text-right">Días</th>
-                                            <th class="text-right">GDP Real</th>
-                                            <th>Observaciones</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="progresoHistoryTable">
-                                        <tr><td colspan="9" class="text-center">No hay actualizaciones registradas</td></tr>
-                                    </tbody>
-                                </table>
+                            <div id="correlationAnalysis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <!-- By Raza -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">🐄 Por Raza</h4>
+                                    <div id="correlationByRaza" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Condition -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">💪 Por Condición</h4>
+                                    <div id="correlationByCondition" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Entry Weight -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">⚖️ Por Peso Entrada</h4>
+                                    <div id="correlationByWeight" style="font-size: 0.85rem;"></div>
+                                </div>
+                                <!-- By Sex -->
+                                <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                                    <h4 style="margin: 0 0 0.75rem 0; color: #6d28d9; font-size: 0.95rem;">♂️♀️ Por Sexo</h4>
+                                    <div id="correlationBySex" style="font-size: 0.85rem;"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
-        
+
         <!-- Tab: Reportes & IA -->
         <div id="tab-analytics" class="tab-content">
             <!-- Custom Question Chatbox -->
