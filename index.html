@@ -14,7 +14,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect fill=%27%232e7d32%27 width=%27100%27 height=%27100%27 rx=%2720%27/><text x=%2750%27 y=%2770%27 font-size=%2760%27 text-anchor=%27middle%27 fill=%27white%27>🐂</text></svg>">
     <title>Ganado Finca - Sistema de Gestión</title>
-    <!-- v2.1 - Added Chart.js for Performance Analytics -->
+    <!-- v2.2 - Embedded default API key for all family devices -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <!-- Firebase SDK -->
@@ -3945,24 +3945,33 @@
             <!-- API Key Configuration -->
             <div class="card" style="margin-bottom: 1.5rem;" id="apiKeySetup">
                 <div class="card-header" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                    <span>🔑 Configurar API Key de Google Gemini</span>
+                    <span>🔑 Configuración de API Key (Opcional)</span>
                 </div>
                 <div class="card-body">
-                    <div style="background: #eef2ff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #6366f1;">
-                        <strong>📝 ¿Cómo obtener tu API Key gratis?</strong>
-                        <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
-                            <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #4f46e5;">Google AI Studio</a></li>
-                            <li>Inicia sesión con tu cuenta de Google</li>
-                            <li>Haz clic en "Create API Key"</li>
-                            <li>Copia la clave y pégala aquí abajo</li>
-                        </ol>
+                    <div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #28a745;">
+                        <strong>✅ API Key configurada automáticamente</strong>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                            La IA ya funciona en todos los dispositivos de la familia. Solo configura una clave personalizada si lo deseas.
+                        </p>
                     </div>
+
+                    <details style="margin-bottom: 1rem;">
+                        <summary style="cursor: pointer; color: #4f46e5; font-weight: 500;">📝 ¿Quieres usar tu propia API Key? (opcional)</summary>
+                        <div style="background: #eef2ff; padding: 1rem; border-radius: 8px; margin-top: 0.5rem; border-left: 4px solid #6366f1;">
+                            <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                                <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #4f46e5;">Google AI Studio</a></li>
+                                <li>Inicia sesión con tu cuenta de Google</li>
+                                <li>Haz clic en "Create API Key"</li>
+                                <li>Copia la clave y pégala aquí abajo</li>
+                            </ol>
+                        </div>
+                    </details>
 
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <input type="password"
                                id="googleApiKey"
                                class="form-input"
-                               placeholder="Pega tu API Key de Google Gemini aquí..."
+                               placeholder="(Opcional) Pega tu API Key personalizada..."
                                style="flex: 1; min-width: 250px;">
                         <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
                             💾 Guardar
@@ -14626,6 +14635,9 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
         }
         
         // ========== GOOGLE GEMINI API WITH RETRY ==========
+        // Default API key for family use (embedded for convenience across all devices)
+        const DEFAULT_GEMINI_API_KEY = 'AIzaSyA2OpWwDWSvFVdtEGOEQiE5eKnt6CFKcqA';
+
         // Use current Gemini models (2026)
         const GEMINI_MODEL_FALLBACKS = [
             { name: 'gemini-2.0-flash', label: 'Flash 2.0 (rápido)', endpoint: 'v1beta' },
@@ -14635,14 +14647,15 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
 
         async function callGoogleGeminiAPI(prompt) {
             console.log('🤖 callGoogleGeminiAPI called with prompt:', prompt.substring(0, 50) + '...');
-            const apiKey = localStorage.getItem('googleApiKey');
+            // Use localStorage key if set, otherwise use embedded default
+            const apiKey = localStorage.getItem('googleApiKey') || DEFAULT_GEMINI_API_KEY;
 
             if (!apiKey) {
                 console.error('❌ No API key configured');
                 showToast('⚠️ API Key de Google no configurada', 'error');
                 return null;
             }
-            console.log('✅ API Key found, length:', apiKey.length);
+            console.log('✅ API Key found (using ' + (localStorage.getItem('googleApiKey') ? 'custom' : 'default') + '), length:', apiKey.length);
 
             try {
                 const dataSummary = getDataSummaryForAI();
