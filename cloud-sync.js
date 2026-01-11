@@ -35,6 +35,11 @@ class CloudSync {
                 id: 'la_vega',
                 name: 'La Vega',
                 storageKey: 'ganadoFinca_LaVega'
+            },
+            san_fernando: {
+                id: 'san_fernando',
+                name: 'San Fernando',
+                storageKey: 'ganadoFinca_SanFernando'
             }
         };
     }

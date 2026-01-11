@@ -118,7 +118,11 @@
         body.theme-vega-bg {
             background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
         }
-        
+
+        body.theme-fernando-bg {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+        }
+
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -1235,7 +1239,19 @@
             border-color: #fff;
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.5);
         }
-        
+
+        /* San Fernando - Sky Blue Theme (Breeding Ranch) */
+        .ranch-fernando {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            color: white;
+            border-color: #0ea5e9;
+        }
+
+        .ranch-fernando.active {
+            border-color: #fff;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.5);
+        }
+
         /* Dynamic header themes */
         .header.theme-coruna {
             background: linear-gradient(135deg, #FFEB3B, #FDD835) !important;
@@ -1258,7 +1274,11 @@
         .header.theme-vega {
             background: linear-gradient(135deg, #4caf50, #1b5e20) !important;
         }
-        
+
+        .header.theme-fernando {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+        }
+
         /* Active tab indicator color change */
         .theme-coruna-active .nav-tab.active {
             border-bottom-color: #FDD835 !important;
@@ -1269,7 +1289,12 @@
             border-bottom-color: #e65100 !important;
             color: #e65100 !important;
         }
-        
+
+        .theme-fernando-active .nav-tab.active {
+            border-bottom-color: #0ea5e9 !important;
+            color: #0ea5e9 !important;
+        }
+
         /* Animal Selector Styles */
         .animal-selector {
             display: grid;
@@ -1611,6 +1636,10 @@
                     <span class="ranch-icon">🌾</span>
                     <span class="ranch-name">La Vega</span>
                 </button>
+                <button class="ranch-btn ranch-fernando" onclick="switchRanch('san_fernando')" id="btnRanchFernando">
+                    <span class="ranch-icon">🐄</span>
+                    <span class="ranch-name">San Fernando</span>
+                </button>
             </div>
             <!-- Cloud Sync Status Indicator -->
             <div id="cloudSyncIndicator" style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;" onclick="showTab('config')" title="Estado de sincronización">
@@ -1670,6 +1699,10 @@
             <button class="nav-tab" data-tab="salud">
                 <span class="nav-tab-icon">💉</span>
                 <span>Salud</span>
+            </button>
+            <button class="nav-tab" data-tab="cria" id="tabCria" style="display: none;">
+                <span class="nav-tab-icon">🐄</span>
+                <span>Cría</span>
             </button>
             <button class="nav-tab" data-tab="potreros">
                 <span class="nav-tab-icon">🌿</span>
@@ -2731,7 +2764,187 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- Tab: Cría (Breeding Management - San Fernando Only) -->
+        <div id="tab-cria" class="tab-content">
+            <div class="card" style="border: 2px solid #0ea5e9;">
+                <div class="card-header" style="background: linear-gradient(135deg, #0ea5e9, #0284c7);">
+                    <span>🐄 Gestión de Cría - San Fernando</span>
+                </div>
+                <div class="card-body">
+                    <!-- Breeding Sub-Navigation -->
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.75rem;">
+                        <button id="criaBtnVacas" onclick="showCriaSection('vacas')" class="btn" style="background: #0ea5e9; color: white;">
+                            🐄 Vacas
+                        </button>
+                        <button id="criaBtnServicios" onclick="showCriaSection('servicios')" class="btn btn-secondary">
+                            💕 Servicios
+                        </button>
+                        <button id="criaBtnDiagnosticos" onclick="showCriaSection('diagnosticos')" class="btn btn-secondary">
+                            🔍 Diagnósticos
+                        </button>
+                    </div>
+
+                    <!-- Section: Vacas (Breeding Cows) -->
+                    <div id="cria-section-vacas">
+                        <!-- Status Filter -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <label style="font-weight: bold; color: #0284c7; align-self: center;">Filtrar:</label>
+                            <select id="criaVacasFilter" onchange="renderCriaVacas()" class="form-input" style="width: auto; min-width: 150px;">
+                                <option value="todas">Todas las vacas</option>
+                                <option value="vacia">🔵 Vacías</option>
+                                <option value="servida">💕 Servidas</option>
+                                <option value="prenada">🤰 Preñadas</option>
+                                <option value="proxima_parto">⏰ Próximas a parir</option>
+                                <option value="lactando">🍼 Lactando</option>
+                            </select>
+                            <button onclick="showRegistrarServicioModal()" class="btn" style="background: #ec4899; color: white; margin-left: auto;">
+                                💕 Registrar Servicio
+                            </button>
+                        </div>
+
+                        <!-- Vacas Summary Cards -->
+                        <div class="summary-grid" style="margin-bottom: 1rem;">
+                            <div class="summary-box" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
+                                <div class="summary-box-icon">🐄</div>
+                                <div class="summary-box-value" id="criaTotalVacas">0</div>
+                                <div class="summary-box-label">Total Vacas</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">
+                                <div class="summary-box-icon">🤰</div>
+                                <div class="summary-box-value" id="criaTotalPrenadas">0</div>
+                                <div class="summary-box-label">Preñadas</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
+                                <div class="summary-box-icon">🍼</div>
+                                <div class="summary-box-value" id="criaTotalLactando">0</div>
+                                <div class="summary-box-label">Lactando</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                                <div class="summary-box-icon">⏰</div>
+                                <div class="summary-box-value" id="criaTotalProximas">0</div>
+                                <div class="summary-box-label">Próx. 30 días</div>
+                            </div>
+                        </div>
+
+                        <!-- Vacas List -->
+                        <div id="criaVacasList" style="max-height: 500px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐄</div>
+                                <p>No hay vacas registradas en San Fernando</p>
+                                <p style="font-size: 0.85rem;">Agregue animales hembra en la pestaña "Entradas"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Servicios (Breeding Events) -->
+                    <div id="cria-section-servicios" style="display: none;">
+                        <!-- Quick Actions -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <button onclick="showRegistrarServicioModal()" class="btn" style="background: #ec4899; color: white;">
+                                ➕ Registrar Servicio
+                            </button>
+                            <button onclick="showRegistrarToroModal()" class="btn" style="background: #8b5cf6; color: white;">
+                                🐂 Agregar Toro
+                            </button>
+                        </div>
+
+                        <!-- Services Summary -->
+                        <div class="summary-grid" style="margin-bottom: 1rem;">
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fce7f3, #fbcfe8);">
+                                <div class="summary-box-icon">💕</div>
+                                <div class="summary-box-value" id="criaTotalServicios">0</div>
+                                <div class="summary-box-label">Servicios Totales</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #e0e7ff, #c7d2fe);">
+                                <div class="summary-box-icon">🐂</div>
+                                <div class="summary-box-value" id="criaTotalMontaNatural">0</div>
+                                <div class="summary-box-label">Monta Natural</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #cffafe, #a5f3fc);">
+                                <div class="summary-box-icon">💉</div>
+                                <div class="summary-box-value" id="criaTotalIA">0</div>
+                                <div class="summary-box-label">Inseminación</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                                <div class="summary-box-icon">⏳</div>
+                                <div class="summary-box-value" id="criaPendienteDiagnostico">0</div>
+                                <div class="summary-box-label">Pend. Diagnóstico</div>
+                            </div>
+                        </div>
+
+                        <!-- Toros Section -->
+                        <div class="card" style="margin-bottom: 1rem; border: 1px solid #8b5cf6;">
+                            <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 0.5rem 1rem;">
+                                <span>🐂 Toros Registrados</span>
+                            </div>
+                            <div class="card-body" style="padding: 0.75rem;">
+                                <div id="criaTorosList">
+                                    <div style="text-align: center; padding: 1rem; color: #666;">
+                                        <p>No hay toros registrados</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Services History -->
+                        <h4 style="color: #0284c7; margin-bottom: 0.75rem;">📋 Historial de Servicios</h4>
+                        <div id="criaServiciosList" style="max-height: 400px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">💕</div>
+                                <p>No hay servicios registrados</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Diagnósticos (Pregnancy Checks) -->
+                    <div id="cria-section-diagnosticos" style="display: none;">
+                        <!-- Quick Actions -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <button onclick="showRegistrarDiagnosticoModal()" class="btn" style="background: #10b981; color: white;">
+                                ➕ Registrar Diagnóstico
+                            </button>
+                        </div>
+
+                        <!-- Pending Diagnostics Alert -->
+                        <div id="criaPendingDiagnosticsAlert" style="display: none; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <h4 style="color: #b45309; margin: 0 0 0.5rem 0;">⏰ Vacas pendientes de diagnóstico</h4>
+                            <p style="color: #92400e; margin: 0; font-size: 0.9rem;">Las siguientes vacas tienen 60-90 días desde su último servicio y necesitan diagnóstico de preñez:</p>
+                            <div id="criaPendingDiagnosticsList" style="margin-top: 0.75rem;"></div>
+                        </div>
+
+                        <!-- Diagnostics Summary -->
+                        <div class="summary-grid" style="margin-bottom: 1rem;">
+                            <div class="summary-box" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
+                                <div class="summary-box-icon">✅</div>
+                                <div class="summary-box-value" id="criaDiagPrenadas">0</div>
+                                <div class="summary-box-label">Preñadas</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fee2e2, #fecaca);">
+                                <div class="summary-box-icon">❌</div>
+                                <div class="summary-box-value" id="criaDiagVacias">0</div>
+                                <div class="summary-box-label">Vacías</div>
+                            </div>
+                            <div class="summary-box" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                                <div class="summary-box-icon">⚠️</div>
+                                <div class="summary-box-value" id="criaDiagReabsorcion">0</div>
+                                <div class="summary-box-label">Reabsorción</div>
+                            </div>
+                        </div>
+
+                        <!-- Diagnostics History -->
+                        <h4 style="color: #0284c7; margin-bottom: 0.75rem;">📋 Historial de Diagnósticos</h4>
+                        <div id="criaDiagnosticosList" style="max-height: 400px; overflow-y: auto;">
+                            <div style="text-align: center; padding: 2rem; color: #666;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                                <p>No hay diagnósticos registrados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Potreros (Paddock Rotation) -->
         <div id="tab-potreros" class="tab-content">
             <div class="card">
@@ -3713,6 +3926,13 @@
                 icon: '🌾',
                 theme: 'vega',
                 storageKey: 'ganadoFinca_LaVega'
+            },
+            san_fernando: {
+                id: 'san_fernando',
+                name: 'San Fernando',
+                icon: '🐄',
+                theme: 'fernando',
+                storageKey: 'ganadoFinca_SanFernando'
             }
         };
         
@@ -3924,7 +4144,8 @@
             const btnIds = {
                 'la_coruna': 'btnRanchCoruna',
                 'santa_catalina': 'btnRanchCatalina',
-                'la_vega': 'btnRanchVega'
+                'la_vega': 'btnRanchVega',
+                'san_fernando': 'btnRanchFernando'
             };
             const activeBtn = document.getElementById(btnIds[currentRanch]);
             if (activeBtn) activeBtn.classList.add('active');
@@ -3932,7 +4153,7 @@
             // Update header
             const header = document.getElementById('mainHeader');
             if (header) {
-                header.classList.remove('theme-coruna', 'theme-catalina', 'theme-vega');
+                header.classList.remove('theme-coruna', 'theme-catalina', 'theme-vega', 'theme-fernando');
                 header.classList.add('theme-' + ranch.theme);
             }
             
@@ -3940,7 +4161,7 @@
             document.getElementById('headerRanchName').innerHTML = `${ranch.icon} ${ranch.name}`;
             
             // Update body background based on ranch
-            document.body.classList.remove('theme-coruna-bg', 'theme-catalina-bg', 'theme-vega-bg', 'theme-coruna-active', 'theme-catalina-active', 'theme-vega-active');
+            document.body.classList.remove('theme-coruna-bg', 'theme-catalina-bg', 'theme-vega-bg', 'theme-fernando-bg', 'theme-coruna-active', 'theme-catalina-active', 'theme-vega-active', 'theme-fernando-active');
             document.body.classList.add('theme-' + ranch.theme + '-bg');
             document.body.classList.add('theme-' + ranch.theme + '-active');
         }
@@ -4132,7 +4353,13 @@
                 if (!data.weatherHistory) data.weatherHistory = [];
                 if (!data.pesoUpdates) data.pesoUpdates = [];
                 if (!data.fotoSesiones) data.fotoSesiones = [];
-                
+
+                // Breeding-specific arrays (for San Fernando)
+                if (!data.servicios) data.servicios = [];           // Breeding events
+                if (!data.diagnosticos) data.diagnosticos = [];     // Pregnancy checks
+                if (!data.toros) data.toros = [];                   // Bulls registry
+                if (!data.semenInventario) data.semenInventario = []; // AI semen inventory
+
                 // Ensure config has all fields including new weather-related fields
                 if (!data.config) data.config = {};
                 if (!data.config.fotoIntervalo) data.config.fotoIntervalo = 90;
@@ -4159,6 +4386,11 @@
                     rotaciones: [],
                     animalPotreros: {},
                     weatherHistory: [],
+                    // Breeding-specific arrays (for San Fernando)
+                    servicios: [],
+                    diagnosticos: [],
+                    toros: [],
+                    semenInventario: [],
                     config: {
                         gdp: 0.31,
                         precioVenta: 9000,
@@ -5660,6 +5892,8 @@
             updateAIStats();
             updateAnimalPhotosGrid(); // Update animal photos grid
             refreshPerformanceAnalytics(); // Update performance analytics dashboard
+            updateCriaTabVisibility(); // Show/hide Cría tab based on ranch
+            if (currentRanch === 'san_fernando') updateCriaViews(); // Update breeding module
         }
         
         function updateSummary() {
@@ -7321,6 +7555,705 @@
         });
 
         // ==================== END QIF EXPORT ====================
+
+        // ==================== BREEDING MODULE (CRÍA) - SAN FERNANDO ====================
+
+        let currentCriaSection = 'vacas';
+        const GESTATION_DAYS = 283; // Days for cattle gestation
+
+        // Show/hide Cría tab based on current ranch
+        function updateCriaTabVisibility() {
+            const criaTab = document.getElementById('tabCria');
+            if (criaTab) {
+                criaTab.style.display = (currentRanch === 'san_fernando') ? 'flex' : 'none';
+            }
+        }
+
+        // Switch between Cría sub-sections
+        function showCriaSection(section) {
+            currentCriaSection = section;
+
+            // Update buttons
+            document.getElementById('criaBtnVacas').className = section === 'vacas' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('criaBtnVacas').style.background = section === 'vacas' ? '#0ea5e9' : '';
+            document.getElementById('criaBtnVacas').style.color = section === 'vacas' ? 'white' : '';
+
+            document.getElementById('criaBtnServicios').className = section === 'servicios' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('criaBtnServicios').style.background = section === 'servicios' ? '#0ea5e9' : '';
+            document.getElementById('criaBtnServicios').style.color = section === 'servicios' ? 'white' : '';
+
+            document.getElementById('criaBtnDiagnosticos').className = section === 'diagnosticos' ? 'btn' : 'btn btn-secondary';
+            document.getElementById('criaBtnDiagnosticos').style.background = section === 'diagnosticos' ? '#0ea5e9' : '';
+            document.getElementById('criaBtnDiagnosticos').style.color = section === 'diagnosticos' ? 'white' : '';
+
+            // Show/hide sections
+            document.getElementById('cria-section-vacas').style.display = section === 'vacas' ? 'block' : 'none';
+            document.getElementById('cria-section-servicios').style.display = section === 'servicios' ? 'block' : 'none';
+            document.getElementById('cria-section-diagnosticos').style.display = section === 'diagnosticos' ? 'block' : 'none';
+
+            // Refresh the section data
+            if (section === 'vacas') renderCriaVacas();
+            else if (section === 'servicios') renderCriaServicios();
+            else if (section === 'diagnosticos') renderCriaDiagnosticos();
+        }
+
+        // Calculate reproductive status for a cow
+        function getReproductiveStatus(vacaNumero) {
+            const now = new Date();
+
+            // Check if lactating (has calf under 60 days old)
+            const recentCalf = data.entradas.find(e =>
+                e.numeroVaca === vacaNumero &&
+                e.fechaEntrada &&
+                ((now - new Date(e.fechaEntrada)) / (1000 * 60 * 60 * 24)) < 60
+            );
+            if (recentCalf) {
+                return { status: 'lactando', label: '🍼 Lactando', color: '#10b981', detail: `Cría #${recentCalf.numero}` };
+            }
+
+            // Get most recent service for this cow
+            const servicios = (data.servicios || [])
+                .filter(s => s.vacaNumero === vacaNumero)
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            const lastServicio = servicios[0];
+
+            if (!lastServicio) {
+                return { status: 'vacia', label: '🔵 Vacía', color: '#3b82f6', detail: 'Sin servicio registrado' };
+            }
+
+            // Get most recent diagnostic for this cow (after last service)
+            const diagnosticos = (data.diagnosticos || [])
+                .filter(d => d.vacaNumero === vacaNumero && new Date(d.fecha) >= new Date(lastServicio.fecha))
+                .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            const lastDiagnostico = diagnosticos[0];
+
+            if (lastDiagnostico) {
+                if (lastDiagnostico.resultado === 'prenada') {
+                    // Calculate expected calving date
+                    const servicioDate = new Date(lastServicio.fecha);
+                    const expectedCalving = new Date(servicioDate);
+                    expectedCalving.setDate(expectedCalving.getDate() + GESTATION_DAYS);
+
+                    const daysToCalving = Math.ceil((expectedCalving - now) / (1000 * 60 * 60 * 24));
+
+                    if (daysToCalving <= 30 && daysToCalving > 0) {
+                        return {
+                            status: 'proxima_parto',
+                            label: '⏰ Próxima a parir',
+                            color: '#f59e0b',
+                            detail: `Parto esperado: ${expectedCalving.toLocaleDateString('es-CO')} (${daysToCalving} días)`
+                        };
+                    }
+
+                    const diasGestacion = Math.floor((now - servicioDate) / (1000 * 60 * 60 * 24));
+                    return {
+                        status: 'prenada',
+                        label: '🤰 Preñada',
+                        color: '#ec4899',
+                        detail: `${diasGestacion} días de gestación`
+                    };
+                } else if (lastDiagnostico.resultado === 'vacia' || lastDiagnostico.resultado === 'reabsorcion') {
+                    return { status: 'vacia', label: '🔵 Vacía', color: '#3b82f6', detail: `Diagnóstico: ${lastDiagnostico.resultado}` };
+                }
+            }
+
+            // Serviced but not yet diagnosed
+            const daysSinceService = Math.floor((now - new Date(lastServicio.fecha)) / (1000 * 60 * 60 * 24));
+            return {
+                status: 'servida',
+                label: '💕 Servida',
+                color: '#8b5cf6',
+                detail: `Hace ${daysSinceService} días - Pendiente diagnóstico`
+            };
+        }
+
+        // Get all breeding cows (HEMBRA in inventory)
+        function getBreedingCows() {
+            return getInventario().filter(animal => animal.sexo === 'HEMBRA');
+        }
+
+        // Render the Vacas section
+        function renderCriaVacas() {
+            if (currentRanch !== 'san_fernando') return;
+
+            const vacas = getBreedingCows();
+            const filter = document.getElementById('criaVacasFilter')?.value || 'todas';
+
+            // Calculate stats
+            let totalPrenadas = 0, totalLactando = 0, totalProximas = 0;
+
+            const vacasWithStatus = vacas.map(vaca => {
+                const status = getReproductiveStatus(vaca.numero);
+                if (status.status === 'prenada') totalPrenadas++;
+                if (status.status === 'lactando') totalLactando++;
+                if (status.status === 'proxima_parto') { totalPrenadas++; totalProximas++; }
+                return { ...vaca, reproStatus: status };
+            });
+
+            // Update summary cards
+            document.getElementById('criaTotalVacas').textContent = vacas.length;
+            document.getElementById('criaTotalPrenadas').textContent = totalPrenadas;
+            document.getElementById('criaTotalLactando').textContent = totalLactando;
+            document.getElementById('criaTotalProximas').textContent = totalProximas;
+
+            // Filter vacas
+            let filteredVacas = vacasWithStatus;
+            if (filter !== 'todas') {
+                filteredVacas = vacasWithStatus.filter(v => v.reproStatus.status === filter);
+            }
+
+            // Render list
+            const container = document.getElementById('criaVacasList');
+            if (filteredVacas.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐄</div>
+                        <p>${filter === 'todas' ? 'No hay vacas registradas en San Fernando' : 'No hay vacas con este estado'}</p>
+                        <p style="font-size: 0.85rem;">Agregue animales hembra en la pestaña "Entradas"</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filteredVacas.forEach(vaca => {
+                const status = vaca.reproStatus;
+                html += `
+                    <div style="background: white; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; border-left: 4px solid ${status.color}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div>
+                                <strong style="font-size: 1.1rem;">#${vaca.numero}</strong>
+                                <span style="color: #666; margin-left: 0.5rem;">${vaca.raza || 'Sin raza'}</span>
+                            </div>
+                            <span style="background: ${status.color}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.85rem;">
+                                ${status.label}
+                            </span>
+                        </div>
+                        <div style="color: #666; font-size: 0.85rem; margin-top: 0.25rem;">
+                            ${status.detail}
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="showRegistrarServicioModal('${vaca.numero}')" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                💕 Servicio
+                            </button>
+                            <button onclick="showRegistrarDiagnosticoModal('${vaca.numero}')" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                🔍 Diagnóstico
+                            </button>
+                            <button onclick="showAnimalProfile('${vaca.numero}')" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                📋 Perfil
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Render the Servicios section
+        function renderCriaServicios() {
+            if (currentRanch !== 'san_fernando') return;
+
+            const servicios = data.servicios || [];
+            const toros = data.toros || [];
+
+            // Update stats
+            const montaNatural = servicios.filter(s => s.tipo === 'monta_natural').length;
+            const inseminacion = servicios.filter(s => s.tipo === 'inseminacion').length;
+
+            // Count pending diagnostics (services 60-90 days ago without diagnosis)
+            const now = new Date();
+            let pendienteDiagnostico = 0;
+            servicios.forEach(s => {
+                const daysSince = Math.floor((now - new Date(s.fecha)) / (1000 * 60 * 60 * 24));
+                if (daysSince >= 60 && daysSince <= 120) {
+                    const hasDiag = (data.diagnosticos || []).some(d =>
+                        d.vacaNumero === s.vacaNumero &&
+                        new Date(d.fecha) >= new Date(s.fecha)
+                    );
+                    if (!hasDiag) pendienteDiagnostico++;
+                }
+            });
+
+            document.getElementById('criaTotalServicios').textContent = servicios.length;
+            document.getElementById('criaTotalMontaNatural').textContent = montaNatural;
+            document.getElementById('criaTotalIA').textContent = inseminacion;
+            document.getElementById('criaPendienteDiagnostico').textContent = pendienteDiagnostico;
+
+            // Render toros list
+            const torosContainer = document.getElementById('criaTorosList');
+            if (toros.length === 0) {
+                torosContainer.innerHTML = '<div style="text-align: center; padding: 1rem; color: #666;"><p>No hay toros registrados</p></div>';
+            } else {
+                let torosHtml = '<div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">';
+                toros.forEach(toro => {
+                    const serviciosCount = servicios.filter(s => s.toroNumero === toro.numero).length;
+                    torosHtml += `
+                        <div style="background: #f3e8ff; border-radius: 8px; padding: 0.5rem 0.75rem; border: 1px solid #8b5cf6;">
+                            <strong>🐂 ${toro.numero}</strong> ${toro.nombre ? `(${toro.nombre})` : ''}
+                            <span style="font-size: 0.8rem; color: #666;"> | ${toro.raza || 'N/A'} | ${serviciosCount} servicios</span>
+                        </div>
+                    `;
+                });
+                torosHtml += '</div>';
+                torosContainer.innerHTML = torosHtml;
+            }
+
+            // Render servicios history
+            const serviciosContainer = document.getElementById('criaServiciosList');
+            if (servicios.length === 0) {
+                serviciosContainer.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💕</div>
+                        <p>No hay servicios registrados</p>
+                    </div>
+                `;
+            } else {
+                const sortedServicios = [...servicios].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                let html = '';
+                sortedServicios.forEach(s => {
+                    const fecha = new Date(s.fecha).toLocaleDateString('es-CO');
+                    const expectedCalving = new Date(s.fecha);
+                    expectedCalving.setDate(expectedCalving.getDate() + GESTATION_DAYS);
+                    const tipoLabel = s.tipo === 'monta_natural' ? '🐂 Monta Natural' : '💉 Inseminación';
+                    const toroInfo = s.tipo === 'monta_natural' ? `Toro: ${s.toroNumero}` : `Semen: ${s.semenId || 'N/A'}`;
+
+                    html += `
+                        <div style="background: white; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; border-left: 4px solid #ec4899; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                                <strong>Vaca #${s.vacaNumero}</strong>
+                                <span style="font-size: 0.85rem; color: #666;">${fecha}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                                ${tipoLabel} | ${toroInfo}
+                            </div>
+                            <div style="font-size: 0.8rem; color: #ec4899; margin-top: 0.25rem;">
+                                Parto esperado: ${expectedCalving.toLocaleDateString('es-CO')}
+                            </div>
+                        </div>
+                    `;
+                });
+                serviciosContainer.innerHTML = html;
+            }
+        }
+
+        // Render the Diagnósticos section
+        function renderCriaDiagnosticos() {
+            if (currentRanch !== 'san_fernando') return;
+
+            const diagnosticos = data.diagnosticos || [];
+            const servicios = data.servicios || [];
+
+            // Calculate stats
+            const prenadas = diagnosticos.filter(d => d.resultado === 'prenada').length;
+            const vacias = diagnosticos.filter(d => d.resultado === 'vacia').length;
+            const reabsorcion = diagnosticos.filter(d => d.resultado === 'reabsorcion').length;
+
+            document.getElementById('criaDiagPrenadas').textContent = prenadas;
+            document.getElementById('criaDiagVacias').textContent = vacias;
+            document.getElementById('criaDiagReabsorcion').textContent = reabsorcion;
+
+            // Find pending diagnostics
+            const now = new Date();
+            const pendingList = [];
+            servicios.forEach(s => {
+                const daysSince = Math.floor((now - new Date(s.fecha)) / (1000 * 60 * 60 * 24));
+                if (daysSince >= 60 && daysSince <= 120) {
+                    const hasDiag = diagnosticos.some(d =>
+                        d.vacaNumero === s.vacaNumero &&
+                        new Date(d.fecha) >= new Date(s.fecha)
+                    );
+                    if (!hasDiag) {
+                        pendingList.push({ vacaNumero: s.vacaNumero, daysSince, servicioFecha: s.fecha });
+                    }
+                }
+            });
+
+            const alertEl = document.getElementById('criaPendingDiagnosticsAlert');
+            const pendingListEl = document.getElementById('criaPendingDiagnosticsList');
+
+            if (pendingList.length > 0) {
+                alertEl.style.display = 'block';
+                let pendingHtml = '';
+                pendingList.forEach(p => {
+                    pendingHtml += `
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; background: white; padding: 0.25rem 0.5rem; border-radius: 6px; margin: 0.25rem; font-size: 0.85rem; cursor: pointer;" onclick="showRegistrarDiagnosticoModal('${p.vacaNumero}')">
+                            🐄 #${p.vacaNumero} <span style="color: #666;">(${p.daysSince} días)</span>
+                        </span>
+                    `;
+                });
+                pendingListEl.innerHTML = pendingHtml;
+            } else {
+                alertEl.style.display = 'none';
+            }
+
+            // Render diagnostics history
+            const container = document.getElementById('criaDiagnosticosList');
+            if (diagnosticos.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+                        <p>No hay diagnósticos registrados</p>
+                    </div>
+                `;
+            } else {
+                const sortedDiag = [...diagnosticos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                let html = '';
+                sortedDiag.forEach(d => {
+                    const fecha = new Date(d.fecha).toLocaleDateString('es-CO');
+                    let resultColor = '#10b981';
+                    let resultIcon = '✅';
+                    if (d.resultado === 'vacia') { resultColor = '#ef4444'; resultIcon = '❌'; }
+                    if (d.resultado === 'reabsorcion') { resultColor = '#f59e0b'; resultIcon = '⚠️'; }
+
+                    html += `
+                        <div style="background: white; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; border-left: 4px solid ${resultColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                                <strong>Vaca #${d.vacaNumero}</strong>
+                                <span style="font-size: 0.85rem; color: #666;">${fecha}</span>
+                            </div>
+                            <div style="margin-top: 0.25rem;">
+                                <span style="background: ${resultColor}; color: white; padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.8rem;">
+                                    ${resultIcon} ${d.resultado.charAt(0).toUpperCase() + d.resultado.slice(1)}
+                                </span>
+                                ${d.diasGestacion ? `<span style="font-size: 0.8rem; color: #666; margin-left: 0.5rem;">${d.diasGestacion} días gestación</span>` : ''}
+                            </div>
+                            ${d.veterinario ? `<div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">Veterinario: ${d.veterinario}</div>` : ''}
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+        }
+
+        // Show modal to register a new servicio (breeding event)
+        function showRegistrarServicioModal(vacaNumero = '') {
+            const vacas = getBreedingCows();
+            const toros = data.toros || [];
+
+            let vacasOptions = '<option value="">-- Seleccionar Vaca --</option>';
+            vacas.forEach(v => {
+                const selected = v.numero === vacaNumero ? 'selected' : '';
+                vacasOptions += `<option value="${v.numero}" ${selected}>#${v.numero} - ${v.raza || 'Sin raza'}</option>`;
+            });
+
+            let torosOptions = '<option value="">-- Seleccionar Toro --</option>';
+            toros.forEach(t => {
+                torosOptions += `<option value="${t.numero}">${t.numero} - ${t.nombre || t.raza || 'N/A'}</option>`;
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+
+            const modalHtml = `
+                <div id="servicioModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                        <div style="background: linear-gradient(135deg, #ec4899, #be185d); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0;">💕 Registrar Servicio</h3>
+                        </div>
+                        <div style="padding: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Vaca *</label>
+                                <select id="servicioVaca" class="form-input" required>${vacasOptions}</select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha del Servicio *</label>
+                                <input type="date" id="servicioFecha" class="form-input" value="${today}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Servicio *</label>
+                                <select id="servicioTipo" class="form-input" onchange="toggleServicioFields()" required>
+                                    <option value="monta_natural">🐂 Monta Natural</option>
+                                    <option value="inseminacion">💉 Inseminación Artificial</option>
+                                </select>
+                            </div>
+                            <div id="servicioToroField" class="form-group">
+                                <label class="form-label">Toro *</label>
+                                <select id="servicioToro" class="form-input">${torosOptions}</select>
+                                <small style="color: #666;">¿No está el toro? <a href="#" onclick="closeServicioModal(); showRegistrarToroModal(); return false;">Agregar nuevo toro</a></small>
+                            </div>
+                            <div id="servicioIAFields" style="display: none;">
+                                <div class="form-group">
+                                    <label class="form-label">ID del Semen</label>
+                                    <input type="text" id="servicioSemenId" class="form-input" placeholder="Ej: BRAHMAN-001">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Técnico</label>
+                                    <input type="text" id="servicioTecnico" class="form-input" placeholder="Nombre del técnico">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="servicioObservaciones" class="form-input" rows="2" placeholder="Observaciones adicionales..."></textarea>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                                <button onclick="closeServicioModal()" class="btn btn-secondary">Cancelar</button>
+                                <button onclick="saveServicio()" class="btn" style="background: #ec4899; color: white;">💕 Guardar Servicio</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function toggleServicioFields() {
+            const tipo = document.getElementById('servicioTipo').value;
+            document.getElementById('servicioToroField').style.display = tipo === 'monta_natural' ? 'block' : 'none';
+            document.getElementById('servicioIAFields').style.display = tipo === 'inseminacion' ? 'block' : 'none';
+        }
+
+        function closeServicioModal() {
+            const modal = document.getElementById('servicioModal');
+            if (modal) modal.remove();
+        }
+
+        function saveServicio() {
+            const vacaNumero = document.getElementById('servicioVaca').value;
+            const fecha = document.getElementById('servicioFecha').value;
+            const tipo = document.getElementById('servicioTipo').value;
+
+            if (!vacaNumero || !fecha) {
+                showToast('Complete los campos obligatorios', 'warning');
+                return;
+            }
+
+            if (tipo === 'monta_natural' && !document.getElementById('servicioToro').value) {
+                showToast('Seleccione un toro para monta natural', 'warning');
+                return;
+            }
+
+            const servicio = {
+                id: 'srv_' + Date.now(),
+                vacaNumero,
+                fecha,
+                tipo,
+                toroNumero: tipo === 'monta_natural' ? document.getElementById('servicioToro').value : null,
+                semenId: tipo === 'inseminacion' ? document.getElementById('servicioSemenId').value : null,
+                tecnico: tipo === 'inseminacion' ? document.getElementById('servicioTecnico').value : null,
+                observaciones: document.getElementById('servicioObservaciones').value,
+                fechaEsperadaParto: (() => {
+                    const d = new Date(fecha);
+                    d.setDate(d.getDate() + GESTATION_DAYS);
+                    return d.toISOString().split('T')[0];
+                })()
+            };
+
+            if (!data.servicios) data.servicios = [];
+            data.servicios.push(servicio);
+            saveData();
+
+            closeServicioModal();
+            showToast('💕 Servicio registrado exitosamente', 'success');
+
+            // Refresh views
+            if (currentCriaSection === 'vacas') renderCriaVacas();
+            else if (currentCriaSection === 'servicios') renderCriaServicios();
+        }
+
+        // Show modal to register a new toro
+        function showRegistrarToroModal() {
+            const modalHtml = `
+                <div id="toroModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 400px; width: 100%;">
+                        <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0;">🐂 Agregar Toro</h3>
+                        </div>
+                        <div style="padding: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Número/ID del Toro *</label>
+                                <input type="text" id="toroNumero" class="form-input" placeholder="Ej: T-01" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nombre (opcional)</label>
+                                <input type="text" id="toroNombre" class="form-input" placeholder="Ej: Emperador">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Raza</label>
+                                <select id="toroRaza" class="form-input">
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Brahman">Brahman</option>
+                                    <option value="Cebú">Cebú</option>
+                                    <option value="Angus">Angus</option>
+                                    <option value="Simmental">Simmental</option>
+                                    <option value="Gyr">Gyr</option>
+                                    <option value="Criollo">Criollo</option>
+                                    <option value="Mestizo">Mestizo</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Peso (kg)</label>
+                                <input type="number" id="toroPeso" class="form-input" placeholder="Ej: 800">
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                                <button onclick="closeToroModal()" class="btn btn-secondary">Cancelar</button>
+                                <button onclick="saveToro()" class="btn" style="background: #8b5cf6; color: white;">🐂 Guardar Toro</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeToroModal() {
+            const modal = document.getElementById('toroModal');
+            if (modal) modal.remove();
+        }
+
+        function saveToro() {
+            const numero = document.getElementById('toroNumero').value.trim();
+
+            if (!numero) {
+                showToast('Ingrese el número del toro', 'warning');
+                return;
+            }
+
+            // Check if toro already exists
+            if ((data.toros || []).some(t => t.numero === numero)) {
+                showToast('Ya existe un toro con ese número', 'error');
+                return;
+            }
+
+            const toro = {
+                numero,
+                nombre: document.getElementById('toroNombre').value.trim(),
+                raza: document.getElementById('toroRaza').value,
+                peso: parseFloat(document.getElementById('toroPeso').value) || null,
+                estado: 'activo',
+                fechaRegistro: new Date().toISOString()
+            };
+
+            if (!data.toros) data.toros = [];
+            data.toros.push(toro);
+            saveData();
+
+            closeToroModal();
+            showToast('🐂 Toro registrado exitosamente', 'success');
+            renderCriaServicios();
+        }
+
+        // Show modal to register pregnancy diagnosis
+        function showRegistrarDiagnosticoModal(vacaNumero = '') {
+            const vacas = getBreedingCows();
+
+            let vacasOptions = '<option value="">-- Seleccionar Vaca --</option>';
+            vacas.forEach(v => {
+                const selected = v.numero === vacaNumero ? 'selected' : '';
+                vacasOptions += `<option value="${v.numero}" ${selected}>#${v.numero} - ${v.raza || 'Sin raza'}</option>`;
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+
+            const modalHtml = `
+                <div id="diagnosticoModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 450px; width: 100%;">
+                        <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0;">🔍 Registrar Diagnóstico de Preñez</h3>
+                        </div>
+                        <div style="padding: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Vaca *</label>
+                                <select id="diagnosticoVaca" class="form-input" required>${vacasOptions}</select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha del Diagnóstico *</label>
+                                <input type="date" id="diagnosticoFecha" class="form-input" value="${today}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Resultado *</label>
+                                <select id="diagnosticoResultado" class="form-input" required>
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="prenada">✅ Preñada</option>
+                                    <option value="vacia">❌ Vacía</option>
+                                    <option value="reabsorcion">⚠️ Reabsorción</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Días de Gestación (si preñada)</label>
+                                <input type="number" id="diagnosticoDias" class="form-input" placeholder="Ej: 60">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Método</label>
+                                <select id="diagnosticoMetodo" class="form-input">
+                                    <option value="palpacion">Palpación rectal</option>
+                                    <option value="ecografia">Ecografía</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Veterinario</label>
+                                <input type="text" id="diagnosticoVeterinario" class="form-input" placeholder="Nombre del veterinario">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="diagnosticoObservaciones" class="form-input" rows="2" placeholder="Observaciones..."></textarea>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                                <button onclick="closeDiagnosticoModal()" class="btn btn-secondary">Cancelar</button>
+                                <button onclick="saveDiagnostico()" class="btn" style="background: #10b981; color: white;">🔍 Guardar Diagnóstico</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeDiagnosticoModal() {
+            const modal = document.getElementById('diagnosticoModal');
+            if (modal) modal.remove();
+        }
+
+        function saveDiagnostico() {
+            const vacaNumero = document.getElementById('diagnosticoVaca').value;
+            const fecha = document.getElementById('diagnosticoFecha').value;
+            const resultado = document.getElementById('diagnosticoResultado').value;
+
+            if (!vacaNumero || !fecha || !resultado) {
+                showToast('Complete los campos obligatorios', 'warning');
+                return;
+            }
+
+            const diagnostico = {
+                id: 'diag_' + Date.now(),
+                vacaNumero,
+                fecha,
+                resultado,
+                diasGestacion: parseInt(document.getElementById('diagnosticoDias').value) || null,
+                metodo: document.getElementById('diagnosticoMetodo').value,
+                veterinario: document.getElementById('diagnosticoVeterinario').value.trim(),
+                observaciones: document.getElementById('diagnosticoObservaciones').value.trim()
+            };
+
+            if (!data.diagnosticos) data.diagnosticos = [];
+            data.diagnosticos.push(diagnostico);
+            saveData();
+
+            closeDiagnosticoModal();
+
+            const resultText = resultado === 'prenada' ? '✅ Preñada' : resultado === 'vacia' ? '❌ Vacía' : '⚠️ Reabsorción';
+            showToast(`Diagnóstico registrado: ${resultText}`, 'success');
+
+            // Refresh views
+            renderCriaVacas();
+            renderCriaDiagnosticos();
+        }
+
+        // Update Cría views when needed
+        function updateCriaViews() {
+            if (currentRanch === 'san_fernando') {
+                updateCriaTabVisibility();
+                if (currentCriaSection === 'vacas') renderCriaVacas();
+                else if (currentCriaSection === 'servicios') renderCriaServicios();
+                else if (currentCriaSection === 'diagnosticos') renderCriaDiagnosticos();
+            }
+        }
+
+        // ==================== END BREEDING MODULE ====================
 
         // ==================== CLOUD SYNC UI FUNCTIONS ====================
         async function manualSync() {
