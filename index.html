@@ -1191,6 +1191,71 @@
             }
         }
 
+        /* Progreso tab mobile fixes */
+        @media (max-width: 600px) {
+            /* Performance tiers: 1 column on mobile */
+            #performanceTiers {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            #performanceTiers > div {
+                padding: 1rem !important;
+            }
+
+            #performanceTiers h3 {
+                font-size: 1rem !important;
+            }
+
+            #performanceTiers > div > div > div:first-child {
+                font-size: 2rem !important;
+            }
+
+            /* Action lists: 1 column on mobile */
+            #tab-progreso .card-body > div[style*="grid-template-columns: repeat(3"] {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
+
+            /* Herd summary: 2x2 grid on mobile */
+            #herdSummary {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+                padding: 0.75rem !important;
+            }
+
+            #herdSummary > div > div:first-child {
+                font-size: 0.7rem !important;
+            }
+
+            #herdSummary > div > div:last-child {
+                font-size: 1.2rem !important;
+            }
+
+            /* Quick actions row in progreso */
+            #tab-progreso .card-body > div:first-child {
+                flex-direction: column !important;
+            }
+
+            #tab-progreso .card-body > div:first-child > div {
+                min-width: 100% !important;
+            }
+        }
+
+        @media (max-width: 400px) {
+            #performanceTiers > div {
+                padding: 0.75rem !important;
+            }
+
+            #performanceTiers h3 {
+                font-size: 0.9rem !important;
+            }
+
+            #performanceTiers p {
+                font-size: 0.7rem !important;
+            }
+        }
+
         /* PWA Standalone mode tweaks */
         @media (display-mode: standalone) {
             .header {
