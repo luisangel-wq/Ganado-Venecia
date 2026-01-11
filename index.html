@@ -3851,6 +3851,25 @@
                         </div>
                     </div>
 
+                    <!-- San Fernando Test Data (only shown for San Fernando ranch) -->
+                    <div id="sanFernandoTestDataSection" style="display: none; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; border: 2px solid #0ea5e9;">
+                        <h4 style="margin: 0 0 0.75rem 0; color: #0369a1;">🧪 Datos de Prueba - San Fernando</h4>
+                        <p style="font-size: 0.85rem; color: #0369a1; margin: 0 0 1rem 0;">
+                            Genere datos simulados para probar el módulo de cría, o elimine todos los datos para comenzar de nuevo.
+                        </p>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="generateSanFernandoTestData()" class="btn" style="background: #0ea5e9; color: white;">
+                                🐄 Generar Datos de Prueba
+                            </button>
+                            <button onclick="clearSanFernandoTestData()" class="btn" style="background: #ef4444; color: white;">
+                                🗑️ Eliminar Todos los Datos
+                            </button>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #0369a1; margin-top: 0.75rem; padding: 0.5rem; background: rgba(255,255,255,0.5); border-radius: 6px;">
+                            <strong>Datos generados:</strong> 120 vacas, 6 toros, 70 crías (edades variadas), servicios y diagnósticos
+                        </div>
+                    </div>
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">GDP Promedio (kg/día)</label>
@@ -4477,10 +4496,260 @@
             }
         }
         
+        // Generate simulated data for San Fernando testing
+        function generateSanFernandoTestData() {
+            if (currentRanch !== 'san_fernando') {
+                showNotification('Esta función solo está disponible para San Fernando', 'error');
+                return;
+            }
+
+            if (!confirm('¿Generar datos de prueba para San Fernando?\n\nEsto creará:\n- 120 vacas\n- 6 toros\n- 70 crías (recién nacidas a ~11 meses)\n- Servicios y diagnósticos simulados\n\n¿Continuar?')) {
+                return;
+            }
+
+            const razas = ['Brahman', 'Gyr', 'Brahman x Gyr', 'Nelore', 'Guzerat'];
+            const toroNombres = ['Emperador', 'Titán', 'Relámpago', 'Dominante', 'Campeón', 'Guerrero'];
+            const now = new Date();
+
+            // Clear existing data for fresh start
+            data.entradas = [];
+            data.inventario = [];
+            data.toros = [];
+            data.servicios = [];
+            data.diagnosticos = [];
+
+            // Generate 6 bulls
+            for (let i = 1; i <= 6; i++) {
+                const toroNumero = `T-${String(i).padStart(2, '0')}`;
+                const birthDate = new Date(now);
+                birthDate.setFullYear(birthDate.getFullYear() - (3 + Math.floor(Math.random() * 3))); // 3-5 years old
+
+                data.toros.push({
+                    numero: toroNumero,
+                    nombre: toroNombres[i - 1],
+                    raza: razas[Math.floor(Math.random() * razas.length)],
+                    fechaNacimiento: birthDate.toISOString().split('T')[0],
+                    peso: 700 + Math.floor(Math.random() * 200),
+                    estado: 'activo',
+                    observaciones: ''
+                });
+
+                // Also add to entradas/inventario
+                data.entradas.push({
+                    numero: toroNumero,
+                    fechaEntrada: birthDate.toISOString().split('T')[0],
+                    tipoEntrada: 'compra',
+                    sexo: 'MACHO',
+                    raza: razas[Math.floor(Math.random() * razas.length)],
+                    peso: 400,
+                    precioKilo: 8000,
+                    vendedor: 'Hacienda El Roble',
+                    lote: 'TOROS',
+                    observaciones: `Toro reproductor - ${toroNombres[i - 1]}`
+                });
+            }
+
+            // Generate 120 cows
+            const cowNumbers = [];
+            for (let i = 1; i <= 120; i++) {
+                const cowNumero = String(100 + i);
+                cowNumbers.push(cowNumero);
+
+                const entryDate = new Date(now);
+                entryDate.setMonth(entryDate.getMonth() - (12 + Math.floor(Math.random() * 24))); // 1-3 years ago
+
+                data.entradas.push({
+                    numero: cowNumero,
+                    fechaEntrada: entryDate.toISOString().split('T')[0],
+                    tipoEntrada: 'compra',
+                    sexo: 'HEMBRA',
+                    raza: razas[Math.floor(Math.random() * razas.length)],
+                    peso: 280 + Math.floor(Math.random() * 80),
+                    precioKilo: 7500,
+                    vendedor: 'Subasta Ganadera',
+                    lote: `LOTE-${Math.ceil(i / 30)}`,
+                    observaciones: ''
+                });
+            }
+
+            // Select 70 cows to have calves (mothers)
+            const mothersWithCalves = cowNumbers.slice(0, 70);
+            let calfCounter = 1;
+
+            mothersWithCalves.forEach((motherNumero, index) => {
+                // Distribute calves across age groups:
+                // 20 newborns (0-2 months)
+                // 20 young (2-5 months)
+                // 15 ready for weaning (6-8 months)
+                // 15 older (9-11 months, some weaned)
+
+                let ageInDays;
+                let isWeaned = false;
+
+                if (index < 20) {
+                    // Newborns: 0-60 days
+                    ageInDays = Math.floor(Math.random() * 60);
+                } else if (index < 40) {
+                    // Young: 60-150 days
+                    ageInDays = 60 + Math.floor(Math.random() * 90);
+                } else if (index < 55) {
+                    // Ready for weaning: 180-240 days
+                    ageInDays = 180 + Math.floor(Math.random() * 60);
+                } else {
+                    // Older: 270-330 days (some weaned)
+                    ageInDays = 270 + Math.floor(Math.random() * 60);
+                    isWeaned = Math.random() > 0.4; // 60% chance of being weaned
+                }
+
+                const birthDate = new Date(now);
+                birthDate.setDate(birthDate.getDate() - ageInDays);
+
+                const calfNumero = `C-${String(calfCounter).padStart(3, '0')}`;
+                const isMale = Math.random() > 0.5;
+                const birthWeight = 28 + Math.floor(Math.random() * 10);
+
+                const calfEntry = {
+                    numero: calfNumero,
+                    fechaEntrada: birthDate.toISOString().split('T')[0],
+                    tipoEntrada: 'nacimiento',
+                    sexo: isMale ? 'MACHO' : 'HEMBRA',
+                    raza: razas[Math.floor(Math.random() * razas.length)],
+                    peso: birthWeight,
+                    precioKilo: 0,
+                    vendedor: '',
+                    numeroVaca: motherNumero, // Link to mother
+                    lote: 'CRIAS',
+                    observaciones: `Cría de vaca #${motherNumero}`
+                };
+
+                // Add weaning data for weaned calves
+                if (isWeaned) {
+                    const weaningDate = new Date(birthDate);
+                    weaningDate.setDate(weaningDate.getDate() + 210 + Math.floor(Math.random() * 30));
+                    calfEntry.fechaDestete = weaningDate.toISOString().split('T')[0];
+                    calfEntry.pesoDestete = 160 + Math.floor(Math.random() * 40);
+                }
+
+                data.entradas.push(calfEntry);
+
+                // Create service record for the mother (9 months + calf age before birth)
+                const serviceDate = new Date(birthDate);
+                serviceDate.setDate(serviceDate.getDate() - 283); // Gestation period
+
+                const toroUsed = data.toros[Math.floor(Math.random() * data.toros.length)];
+                const isAI = Math.random() > 0.7; // 30% AI
+
+                data.servicios.push({
+                    id: `srv_${Date.now()}_${index}`,
+                    vacaNumero: motherNumero,
+                    fecha: serviceDate.toISOString().split('T')[0],
+                    tipo: isAI ? 'inseminacion' : 'monta_natural',
+                    toroNumero: isAI ? null : toroUsed.numero,
+                    semenId: isAI ? `SEM-${Math.floor(Math.random() * 100)}` : null,
+                    tecnico: isAI ? 'Dr. Rodríguez' : null,
+                    observaciones: '',
+                    fechaEsperadaParto: birthDate.toISOString().split('T')[0]
+                });
+
+                // Create pregnancy diagnosis record
+                const diagDate = new Date(serviceDate);
+                diagDate.setDate(diagDate.getDate() + 60 + Math.floor(Math.random() * 30));
+
+                data.diagnosticos.push({
+                    id: `diag_${Date.now()}_${index}`,
+                    vacaNumero: motherNumero,
+                    fecha: diagDate.toISOString().split('T')[0],
+                    resultado: 'prenada',
+                    diasGestacion: 60 + Math.floor(Math.random() * 30),
+                    metodo: Math.random() > 0.5 ? 'palpacion' : 'ecografia',
+                    veterinario: 'Dr. Martínez',
+                    observaciones: ''
+                });
+
+                calfCounter++;
+            });
+
+            // Add some services for cows without calves yet (pending pregnancy checks)
+            const cowsWithoutCalves = cowNumbers.slice(70, 90);
+            cowsWithoutCalves.forEach((cowNumero, index) => {
+                const serviceDate = new Date(now);
+                serviceDate.setDate(serviceDate.getDate() - (30 + Math.floor(Math.random() * 60)));
+
+                const toroUsed = data.toros[Math.floor(Math.random() * data.toros.length)];
+
+                data.servicios.push({
+                    id: `srv_pending_${Date.now()}_${index}`,
+                    vacaNumero: cowNumero,
+                    fecha: serviceDate.toISOString().split('T')[0],
+                    tipo: 'monta_natural',
+                    toroNumero: toroUsed.numero,
+                    semenId: null,
+                    tecnico: null,
+                    observaciones: 'Pendiente diagnóstico',
+                    fechaEsperadaParto: new Date(serviceDate.getTime() + 283 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                });
+            });
+
+            // Rebuild inventario from entradas
+            data.inventario = data.entradas.filter(e => {
+                const salida = data.salidas.find(s => s.numero === e.numero);
+                return !salida;
+            });
+
+            saveData();
+            updateAllViews();
+            showNotification('✅ Datos de prueba generados: 120 vacas, 6 toros, 70 crías', 'success');
+        }
+
+        // Clear San Fernando test data
+        function clearSanFernandoTestData() {
+            if (currentRanch !== 'san_fernando') {
+                showNotification('Esta función solo está disponible para San Fernando', 'error');
+                return;
+            }
+
+            if (!confirm('¿Eliminar TODOS los datos de San Fernando?\n\nEsta acción no se puede deshacer.')) {
+                return;
+            }
+
+            data = {
+                entradas: [],
+                salidas: [],
+                inventario: [],
+                saludEventos: [],
+                potreros: [],
+                rotaciones: [],
+                animalPotreros: {},
+                weatherHistory: [],
+                servicios: [],
+                diagnosticos: [],
+                toros: [],
+                semenInventario: [],
+                config: {
+                    gdp: 0.31,
+                    precioVenta: 9000,
+                    pesoObjetivo: 450,
+                    pesoMinimo: 380,
+                    fotoIntervalo: 90,
+                    currentWeather: 'lluvias',
+                    gdpByWeather: {
+                        'lluvias_fuertes': 0.22,
+                        'lluvias': 0.36,
+                        'veranillo': 0.42,
+                        'seco': 0.30
+                    }
+                }
+            };
+
+            saveData();
+            updateAllViews();
+            showNotification('✅ Datos de San Fernando eliminados', 'success');
+        }
+
         function saveData() {
             const ranch = RANCHES[currentRanch];
             localStorage.setItem(ranch.storageKey, JSON.stringify(data));
-            
+
             // 🔄 Trigger immediate cloud sync
             if (window.cloudSync && window.cloudSync.enabled) {
                 window.cloudSync.syncToCloud().catch(err => console.error('Cloud sync error:', err));
@@ -7634,6 +7903,12 @@
             const criaTab = document.getElementById('tabCria');
             if (criaTab) {
                 criaTab.style.display = (currentRanch === 'san_fernando') ? 'flex' : 'none';
+            }
+
+            // Show/hide San Fernando test data section in config
+            const testDataSection = document.getElementById('sanFernandoTestDataSection');
+            if (testDataSection) {
+                testDataSection.style.display = (currentRanch === 'san_fernando') ? 'block' : 'none';
             }
         }
 
