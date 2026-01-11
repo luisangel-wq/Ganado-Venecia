@@ -3942,48 +3942,6 @@
 
         <!-- Tab: Reportes & IA -->
         <div id="tab-analytics" class="tab-content">
-            <!-- API Key Configuration -->
-            <div class="card" style="margin-bottom: 1.5rem;" id="apiKeySetup">
-                <div class="card-header" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                    <span>🔑 Configuración de API Key (Opcional)</span>
-                </div>
-                <div class="card-body">
-                    <div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #28a745;">
-                        <strong>✅ API Key configurada automáticamente</strong>
-                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                            La IA ya funciona en todos los dispositivos de la familia. Solo configura una clave personalizada si lo deseas.
-                        </p>
-                    </div>
-
-                    <details style="margin-bottom: 1rem;">
-                        <summary style="cursor: pointer; color: #4f46e5; font-weight: 500;">📝 ¿Quieres usar tu propia API Key? (opcional)</summary>
-                        <div style="background: #eef2ff; padding: 1rem; border-radius: 8px; margin-top: 0.5rem; border-left: 4px solid #6366f1;">
-                            <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
-                                <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #4f46e5;">Google AI Studio</a></li>
-                                <li>Inicia sesión con tu cuenta de Google</li>
-                                <li>Haz clic en "Create API Key"</li>
-                                <li>Copia la clave y pégala aquí abajo</li>
-                            </ol>
-                        </div>
-                    </details>
-
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <input type="password"
-                               id="googleApiKey"
-                               class="form-input"
-                               placeholder="(Opcional) Pega tu API Key personalizada..."
-                               style="flex: 1; min-width: 250px;">
-                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                            💾 Guardar
-                        </button>
-                        <button class="btn btn-secondary" onclick="testGoogleApiKey()">
-                            🧪 Probar
-                        </button>
-                    </div>
-                    <div id="googleApiKeyStatus" style="margin-top: 0.75rem; font-size: 0.9rem;"></div>
-                </div>
-            </div>
-
             <!-- Custom Question Chatbox -->
             <div class="card" style="margin-bottom: 1.5rem;">
                 <div class="card-header" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
@@ -4477,6 +4435,52 @@
                             <li>Seleccione la cuenta donde importar</li>
                             <li>Revise las transacciones importadas</li>
                         </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Google Gemini API Key Configuration -->
+            <div class="card" style="margin-top: 1.5rem; border: 2px solid #6366f1;">
+                <div class="card-header" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                    <span>🤖 Configuración de IA (Google Gemini)</span>
+                </div>
+                <div class="card-body">
+                    <div style="background: #d4edda; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #28a745;">
+                        <strong>✅ IA Configurada Automáticamente</strong>
+                        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">
+                            La IA funciona en todos los dispositivos de la familia usando Google Gemini 2.0 Flash.
+                        </p>
+                    </div>
+
+                    <details style="margin-bottom: 1rem;">
+                        <summary style="cursor: pointer; color: #4f46e5; font-weight: 500;">📝 ¿Quieres usar tu propia API Key? (opcional)</summary>
+                        <div style="background: #eef2ff; padding: 1rem; border-radius: 8px; margin-top: 0.5rem; border-left: 4px solid #6366f1;">
+                            <ol style="margin: 0.5rem 0 0 1.5rem; font-size: 0.9rem;">
+                                <li>Ve a <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #4f46e5;">Google AI Studio</a></li>
+                                <li>Inicia sesión con tu cuenta de Google</li>
+                                <li>Haz clic en "Create API Key"</li>
+                                <li>Copia la clave y pégala aquí abajo</li>
+                            </ol>
+                        </div>
+                    </details>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <input type="password"
+                               id="googleApiKey"
+                               class="form-input"
+                               placeholder="(Opcional) Pega tu API Key personalizada..."
+                               style="flex: 1; min-width: 250px;">
+                        <button class="btn btn-primary" onclick="saveGoogleApiKey()" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                            💾 Guardar
+                        </button>
+                        <button class="btn btn-secondary" onclick="testGoogleApiKey()">
+                            🧪 Probar
+                        </button>
+                    </div>
+                    <div id="googleApiKeyStatus" style="margin-top: 0.75rem; font-size: 0.9rem;"></div>
+
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 8px; font-size: 0.85rem; color: #666;">
+                        <strong>Modelo:</strong> Google Gemini 2.0 Flash (rápido y eficiente)
                     </div>
                 </div>
             </div>
