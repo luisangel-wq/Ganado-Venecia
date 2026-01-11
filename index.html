@@ -2987,6 +2987,26 @@
                             <span>🏆 Clasificación de Rendimiento (GDP)</span>
                         </div>
                         <div class="card-body">
+                            <!-- Filter Controls -->
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                                <label style="font-weight: bold; color: #065f46;">Período:</label>
+                                <select id="tierPeriodSelect" onchange="refreshPerformanceAnalytics()" class="form-input" style="width: auto; min-width: 150px;">
+                                    <option value="all">Todo el historial</option>
+                                    <option value="24months">Últimos 24 meses</option>
+                                    <option value="12months">Últimos 12 meses</option>
+                                </select>
+                            </div>
+
+                            <!-- Data Source Tabs -->
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">
+                                <button id="tabTierInventory" onclick="showTierTab('inventory')" class="btn" style="background: #10b981; color: white; font-size: 0.85rem;">
+                                    📦 Inventario Actual
+                                </button>
+                                <button id="tabTierSold" onclick="showTierTab('sold')" class="btn btn-secondary" style="font-size: 0.85rem;">
+                                    💰 Ganado Vendido
+                                </button>
+                            </div>
+
                             <div id="performanceTiers" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
                                 <!-- Top Performers -->
                                 <div onclick="showTierAnimals('top')" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); border-radius: 12px; padding: 1.25rem; border: 3px solid #10b981; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
@@ -3035,7 +3055,7 @@
                             <!-- Herd Summary -->
                             <div id="herdSummary" style="background: #f8fafc; border-radius: 8px; padding: 1rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">
                                 <div>
-                                    <div style="font-size: 0.8rem; color: #666;">Total Animales</div>
+                                    <div id="herdTotalLabel" style="font-size: 0.8rem; color: #666;">Total Animales</div>
                                     <div id="herdTotalAnimals" style="font-size: 1.5rem; font-weight: bold; color: #333;">0</div>
                                 </div>
                                 <div>
@@ -13762,11 +13782,53 @@ document.addEventListener('DOMContentLoaded', async function() {
         let gdpDistributionChart = null;
         let gdpByRazaChart = null;
         let performanceData = { top: [], average: [], poor: [], all: [] };
+        let currentTierTab = 'inventory'; // 'inventory' or 'sold'
 
         // GDP Thresholds
         const GDP_TOP_THRESHOLD = 0.40;
         const GDP_AVG_THRESHOLD = 0.25;
         const TARGET_WEIGHT = 450; // kg - target weight for sale
+
+        function showTierTab(tab) {
+            currentTierTab = tab;
+
+            // Update button styles
+            const invBtn = document.getElementById('tabTierInventory');
+            const soldBtn = document.getElementById('tabTierSold');
+
+            if (tab === 'inventory') {
+                invBtn.className = 'btn';
+                invBtn.style.background = '#10b981';
+                invBtn.style.color = 'white';
+                soldBtn.className = 'btn btn-secondary';
+                soldBtn.style.background = '';
+                soldBtn.style.color = '';
+            } else {
+                soldBtn.className = 'btn';
+                soldBtn.style.background = '#10b981';
+                soldBtn.style.color = 'white';
+                invBtn.className = 'btn btn-secondary';
+                invBtn.style.background = '';
+                invBtn.style.color = '';
+            }
+
+            refreshPerformanceAnalytics();
+        }
+
+        function getTierDateRange() {
+            const period = document.getElementById('tierPeriodSelect')?.value || 'all';
+            const now = new Date();
+            let startDate = new Date(2000, 0, 1);
+            let endDate = new Date();
+
+            if (period === '24months') {
+                startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+            } else if (period === '12months') {
+                startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            }
+
+            return { startDate, endDate };
+        }
 
         function calculateAnimalGDP(numero) {
             const animal = data.entradas.find(e => String(e.numero) === String(numero));
@@ -13823,29 +13885,96 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         function refreshPerformanceAnalytics() {
-            const inventario = getInventario();
+            const { startDate, endDate } = getTierDateRange();
             performanceData = { top: [], average: [], poor: [], all: [] };
 
-            // Calculate GDP for all animals
-            inventario.forEach(animal => {
-                const gdpData = calculateAnimalGDP(animal.numero);
-                if (gdpData && gdpData.gdp !== null) {
-                    gdpData.raza = animal.raza || 'Sin raza';
-                    gdpData.sexo = animal.sexo || 'N/A';
-                    gdpData.condicion = animal.condicionGeneral || 'Sin datos';
+            if (currentTierTab === 'inventory') {
+                // Get current inventory and filter by entry date
+                const inventario = getInventario();
+                const filteredInv = inventario.filter(a => {
+                    if (!a.fechaEntrada) return true; // Include if no date
+                    const fecha = new Date(a.fechaEntrada);
+                    return fecha >= startDate && fecha <= endDate;
+                });
 
-                    performanceData.all.push(gdpData);
+                // Calculate GDP for all animals in inventory
+                filteredInv.forEach(animal => {
+                    const gdpData = calculateAnimalGDP(animal.numero);
+                    if (gdpData && gdpData.gdp !== null) {
+                        gdpData.raza = animal.raza || 'Sin raza';
+                        gdpData.sexo = animal.sexo || 'N/A';
+                        gdpData.condicion = animal.condicionGeneral || 'Sin datos';
+                        gdpData.isSold = false;
 
-                    // Classify by tier
-                    if (gdpData.gdp >= GDP_TOP_THRESHOLD) {
-                        performanceData.top.push(gdpData);
-                    } else if (gdpData.gdp >= GDP_AVG_THRESHOLD) {
-                        performanceData.average.push(gdpData);
-                    } else {
-                        performanceData.poor.push(gdpData);
+                        performanceData.all.push(gdpData);
+
+                        // Classify by tier
+                        if (gdpData.gdp >= GDP_TOP_THRESHOLD) {
+                            performanceData.top.push(gdpData);
+                        } else if (gdpData.gdp >= GDP_AVG_THRESHOLD) {
+                            performanceData.average.push(gdpData);
+                        } else {
+                            performanceData.poor.push(gdpData);
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                // Get sold animals (exclude deaths and transfers)
+                const filteredSalidas = (data.salidas || []).filter(s => {
+                    if (!s.fechaSalida) return false;
+                    if (s.comprador === 'MUERTE' || s.comprador?.includes('TRANSFERENCIA')) return false;
+                    const fecha = new Date(s.fechaSalida);
+                    return fecha >= startDate && fecha <= endDate;
+                });
+
+                // Calculate GDP for sold animals
+                filteredSalidas.forEach(s => {
+                    const original = data.entradas.find(e => String(e.numero) === String(s.numero));
+                    const pesoEntrada = original?.peso || 0;
+                    const pesoSalida = s.peso || 0;
+                    const gananciaKg = pesoSalida - pesoEntrada;
+
+                    // Calculate days in farm
+                    let diasEnFinca = 0;
+                    if (original?.fechaEntrada && s.fechaSalida) {
+                        const entrada = new Date(original.fechaEntrada);
+                        const salida = new Date(s.fechaSalida);
+                        diasEnFinca = Math.floor((salida - entrada) / (1000 * 60 * 60 * 24));
+                    }
+
+                    // Use stored GDP or calculate
+                    const gdp = s.gananciaDay || (diasEnFinca > 0 ? gananciaKg / diasEnFinca : 0);
+
+                    if (gdp > 0) {
+                        const gdpData = {
+                            numero: s.numero,
+                            animal: original || s,
+                            gdp: gdp,
+                            pesoInicial: pesoEntrada,
+                            pesoActual: pesoSalida,
+                            gananciaTotal: gananciaKg,
+                            diasTotal: diasEnFinca,
+                            raza: original?.raza || s.raza || 'Sin raza',
+                            sexo: original?.sexo || 'N/A',
+                            condicion: original?.condicionGeneral || 'Sin datos',
+                            isSold: true,
+                            fechaSalida: s.fechaSalida,
+                            comprador: s.comprador
+                        };
+
+                        performanceData.all.push(gdpData);
+
+                        // Classify by tier
+                        if (gdp >= GDP_TOP_THRESHOLD) {
+                            performanceData.top.push(gdpData);
+                        } else if (gdp >= GDP_AVG_THRESHOLD) {
+                            performanceData.average.push(gdpData);
+                        } else {
+                            performanceData.poor.push(gdpData);
+                        }
+                    }
+                });
+            }
 
             // Sort each tier by GDP (best first)
             performanceData.top.sort((a, b) => b.gdp - a.gdp);
@@ -13855,6 +13984,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Update UI
             updatePerformanceTiers();
+            const inventario = getInventario();
             updateHerdSummary(inventario);
             updateCorrelationAnalysis();
             updateActionableLists();
@@ -13898,7 +14028,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         function updateHerdSummary(inventario) {
-            document.getElementById('herdTotalAnimals').textContent = inventario.length;
+            // Update label based on current tab
+            const labelEl = document.getElementById('herdTotalLabel');
+            if (labelEl) {
+                labelEl.textContent = currentTierTab === 'inventory' ? 'Total Inventario' : 'Total Vendidos';
+            }
+
+            // For sold animals, show the count from performanceData
+            if (currentTierTab === 'sold') {
+                document.getElementById('herdTotalAnimals').textContent = performanceData.all.length;
+            } else {
+                document.getElementById('herdTotalAnimals').textContent = inventario.length;
+            }
             document.getElementById('herdWithGDP').textContent = performanceData.all.length;
 
             if (performanceData.all.length > 0) {
