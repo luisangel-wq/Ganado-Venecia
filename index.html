@@ -2873,12 +2873,12 @@
                         <!-- Summary Cards -->
                         <div class="summary-grid" style="margin-bottom: 1rem;">
                             <div class="summary-box" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
-                                <div class="summary-box-icon">👶</div>
+                                <div class="summary-box-icon">🐮</div>
                                 <div class="summary-box-value" id="criaTotalCrias">0</div>
                                 <div class="summary-box-label">Total Crías</div>
                             </div>
                             <div class="summary-box" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
-                                <div class="summary-box-icon">🍼</div>
+                                <div class="summary-box-icon">🐄🐮</div>
                                 <div class="summary-box-value" id="criaCriasConMadre">0</div>
                                 <div class="summary-box-label">Con Madre</div>
                             </div>
@@ -2895,10 +2895,10 @@
                         </div>
 
                         <!-- Cow-Calf Pairs List -->
-                        <h4 style="color: #0284c7; margin-bottom: 0.75rem;">👶🐄 Parejas Vaca-Cría</h4>
+                        <h4 style="color: #0284c7; margin-bottom: 0.75rem;">🐄🐮 Parejas Vaca-Cría</h4>
                         <div id="criaCriasList" style="max-height: 500px; overflow-y: auto;">
                             <div style="text-align: center; padding: 2rem; color: #666;">
-                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">👶</div>
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐮</div>
                                 <p>No hay crías registradas en San Fernando</p>
                                 <p style="font-size: 0.85rem;">Registre nacimientos en la pestaña "Entradas" → "Nacimiento"</p>
                             </div>
@@ -8077,7 +8077,7 @@
                     const urgentStyle = c.ageInDays > 270 ? 'background: #fef2f2; border: 1px solid #ef4444;' : 'background: white;';
                     alertHtml += `
                         <span style="display: inline-flex; align-items: center; gap: 0.25rem; ${urgentStyle} padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;" onclick="showRegistrarDesteteModal('${c.numero}')">
-                            👶 #${c.numero} <span style="color: #666;">(${c.ageInMonths} meses)</span>
+                            🐮 #${c.numero} <span style="color: #666;">(${c.ageInMonths} meses)</span>
                         </span>
                     `;
                 });
@@ -8111,7 +8111,7 @@
             if (filteredCalves.length === 0) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: 2rem; color: #666;">
-                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">👶</div>
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🐮</div>
                         <p>No hay crías ${filter !== 'todas' ? 'con este filtro' : 'registradas en San Fernando'}</p>
                         <p style="font-size: 0.85rem;">Registre nacimientos en la pestaña "Entradas" → "Nacimiento"</p>
                     </div>
@@ -8142,7 +8142,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="font-size: 1.2rem;">👶</span>
+                                    <span style="font-size: 1.2rem;">🐮</span>
                                     <strong style="font-size: 1.1rem;">Cría #${calf.numero}</strong>
                                     <span style="color: ${sexColor}; font-size: 1.1rem;">${sexIcon}</span>
                                     <span style="background: ${calf.weaningColor}; color: white; padding: 0.15rem 0.5rem; border-radius: 8px; font-size: 0.75rem;">
