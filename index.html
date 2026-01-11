@@ -3601,9 +3601,81 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Quicken Export Section -->
+            <div class="card" style="margin-top: 1.5rem; border: 2px solid #7c3aed;">
+                <div class="card-header" style="background: linear-gradient(135deg, #7c3aed, #5b21b6);">
+                    <span>📊 Exportar a Quicken (QIF)</span>
+                </div>
+                <div class="card-body">
+                    <p style="color: #666; margin-bottom: 1rem;">
+                        Exporte transacciones de compra y venta de ganado para importar en Quicken.
+                    </p>
+
+                    <!-- Date Range Filter -->
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="margin-bottom: 0.25rem;">Desde:</label>
+                            <input type="date" class="form-input" id="qifDateFrom" style="width: auto;">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label" style="margin-bottom: 0.25rem;">Hasta:</label>
+                            <input type="date" class="form-input" id="qifDateTo" style="width: auto;">
+                        </div>
+                        <button onclick="loadQifTransactions()" class="btn" style="background: #7c3aed; color: white; align-self: flex-end;">
+                            🔍 Cargar Transacciones
+                        </button>
+                    </div>
+
+                    <!-- Transaction Type Tabs -->
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;">
+                        <button id="qifTabCompras" onclick="showQifTab('compras')" class="btn" style="background: #ef4444; color: white; font-size: 0.85rem;">
+                            📥 Compras (Gastos)
+                        </button>
+                        <button id="qifTabVentas" onclick="showQifTab('ventas')" class="btn btn-secondary" style="font-size: 0.85rem;">
+                            📤 Ventas (Ingresos)
+                        </button>
+                    </div>
+
+                    <!-- Select All / None -->
+                    <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="qifSelectAll" onchange="toggleQifSelectAll()">
+                            <span style="font-size: 0.85rem;">Seleccionar Todo</span>
+                        </label>
+                        <span id="qifSelectedCount" style="color: #666; font-size: 0.85rem;">0 seleccionados</span>
+                    </div>
+
+                    <!-- Transactions List -->
+                    <div id="qifTransactionsList" style="max-height: 350px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: #f9fafb;">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                            <p>Seleccione un rango de fechas y haga clic en "Cargar Transacciones"</p>
+                        </div>
+                    </div>
+
+                    <!-- Export Button -->
+                    <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button onclick="exportToQIF()" class="btn btn-primary" style="background: #7c3aed; padding: 0.75rem 1.5rem;">
+                            💾 Exportar Seleccionados a QIF
+                        </button>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div style="margin-top: 1rem; background: #ede9fe; border-radius: 8px; padding: 1rem; font-size: 0.85rem; color: #5b21b6;">
+                        <strong>Instrucciones para Quicken:</strong>
+                        <ol style="margin: 0.5rem 0 0 1rem; padding: 0;">
+                            <li>Exporte el archivo .qif</li>
+                            <li>En Quicken: File → Import → QIF File</li>
+                            <li>Seleccione la cuenta donde importar</li>
+                            <li>Revise las transacciones importadas</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
+
     <!-- Photo viewer modal -->
     <div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer(event)">
         <button class="photo-viewer-close" onclick="closePhotoViewer()">&times;</button>
@@ -6974,7 +7046,282 @@
             saveData();
             showToast('Configuración guardada', 'success');
         }
-        
+
+        // ==================== QIF EXPORT (QUICKEN) ====================
+        let qifTransactions = { compras: [], ventas: [] };
+        let qifCurrentTab = 'compras';
+
+        function initQifDates() {
+            // Set default dates: last 3 months
+            const today = new Date();
+            const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+
+            document.getElementById('qifDateTo').value = today.toISOString().split('T')[0];
+            document.getElementById('qifDateFrom').value = threeMonthsAgo.toISOString().split('T')[0];
+        }
+
+        function showQifTab(tab) {
+            qifCurrentTab = tab;
+
+            const comprasBtn = document.getElementById('qifTabCompras');
+            const ventasBtn = document.getElementById('qifTabVentas');
+
+            if (tab === 'compras') {
+                comprasBtn.style.background = '#ef4444';
+                comprasBtn.style.color = 'white';
+                comprasBtn.classList.remove('btn-secondary');
+                ventasBtn.style.background = '';
+                ventasBtn.style.color = '';
+                ventasBtn.classList.add('btn-secondary');
+            } else {
+                ventasBtn.style.background = '#10b981';
+                ventasBtn.style.color = 'white';
+                ventasBtn.classList.remove('btn-secondary');
+                comprasBtn.style.background = '';
+                comprasBtn.style.color = '';
+                comprasBtn.classList.add('btn-secondary');
+            }
+
+            renderQifTransactions();
+        }
+
+        function loadQifTransactions() {
+            const dateFrom = document.getElementById('qifDateFrom').value;
+            const dateTo = document.getElementById('qifDateTo').value;
+
+            if (!dateFrom || !dateTo) {
+                showToast('Seleccione un rango de fechas', 'warning');
+                return;
+            }
+
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            endDate.setHours(23, 59, 59);
+
+            // Load purchases (entradas) - grouped by vendor and date
+            const comprasMap = {};
+            data.entradas.forEach(e => {
+                if (!e.fechaEntrada) return;
+                const fecha = new Date(e.fechaEntrada);
+                if (fecha < startDate || fecha > endDate) return;
+
+                // Group by vendor + date
+                const vendedor = e.vendedor || 'Sin vendedor';
+                const dateKey = e.fechaEntrada.split('T')[0];
+                const key = `${vendedor}_${dateKey}`;
+
+                if (!comprasMap[key]) {
+                    comprasMap[key] = {
+                        id: key,
+                        fecha: e.fechaEntrada,
+                        vendedor: vendedor,
+                        animales: [],
+                        total: 0,
+                        selected: false
+                    };
+                }
+
+                comprasMap[key].animales.push({
+                    numero: e.numero,
+                    peso: e.peso,
+                    precioKilo: e.precioKilo,
+                    costo: e.costoTotal || (e.peso * e.precioKilo) || 0,
+                    raza: e.raza || 'Sin raza'
+                });
+                comprasMap[key].total += e.costoTotal || (e.peso * e.precioKilo) || 0;
+            });
+
+            qifTransactions.compras = Object.values(comprasMap).sort((a, b) =>
+                new Date(b.fecha) - new Date(a.fecha)
+            );
+
+            // Load sales (salidas) - grouped by buyer and date
+            const ventasMap = {};
+            (data.salidas || []).forEach(s => {
+                if (!s.fechaSalida) return;
+                if (s.comprador === 'MUERTE' || s.comprador?.includes('TRANSFERENCIA')) return;
+
+                const fecha = new Date(s.fechaSalida);
+                if (fecha < startDate || fecha > endDate) return;
+
+                const comprador = s.comprador || 'Sin comprador';
+                const dateKey = s.fechaSalida.split('T')[0];
+                const key = `${comprador}_${dateKey}`;
+
+                if (!ventasMap[key]) {
+                    ventasMap[key] = {
+                        id: key,
+                        fecha: s.fechaSalida,
+                        comprador: comprador,
+                        animales: [],
+                        total: 0,
+                        selected: false
+                    };
+                }
+
+                ventasMap[key].animales.push({
+                    numero: s.numero,
+                    peso: s.peso,
+                    precioKilo: s.precioKilo,
+                    total: s.total || (s.peso * s.precioKilo) || 0
+                });
+                ventasMap[key].total += s.total || (s.peso * s.precioKilo) || 0;
+            });
+
+            qifTransactions.ventas = Object.values(ventasMap).sort((a, b) =>
+                new Date(b.fecha) - new Date(a.fecha)
+            );
+
+            renderQifTransactions();
+
+            const totalCount = qifTransactions.compras.length + qifTransactions.ventas.length;
+            showToast(`Se cargaron ${totalCount} transacciones`, 'success');
+        }
+
+        function renderQifTransactions() {
+            const container = document.getElementById('qifTransactionsList');
+            const transactions = qifCurrentTab === 'compras' ? qifTransactions.compras : qifTransactions.ventas;
+
+            if (transactions.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: #666;">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${qifCurrentTab === 'compras' ? '📥' : '📤'}</div>
+                        <p>No hay ${qifCurrentTab === 'compras' ? 'compras' : 'ventas'} en este período</p>
+                    </div>
+                `;
+                updateQifSelectedCount();
+                return;
+            }
+
+            let html = '';
+            transactions.forEach((t, idx) => {
+                const fecha = new Date(t.fecha).toLocaleDateString('es-CO');
+                const persona = qifCurrentTab === 'compras' ? t.vendedor : t.comprador;
+                const bgColor = t.selected ? (qifCurrentTab === 'compras' ? '#fee2e2' : '#d1fae5') : 'white';
+                const borderColor = qifCurrentTab === 'compras' ? '#ef4444' : '#10b981';
+
+                html += `
+                    <div style="background: ${bgColor}; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; border-left: 3px solid ${borderColor}; cursor: pointer;" onclick="toggleQifTransaction('${qifCurrentTab}', ${idx})">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <input type="checkbox" ${t.selected ? 'checked' : ''} onclick="event.stopPropagation(); toggleQifTransaction('${qifCurrentTab}', ${idx})" style="width: 18px; height: 18px;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong style="color: #333;">${persona}</strong>
+                                    <span style="font-weight: bold; color: ${qifCurrentTab === 'compras' ? '#dc2626' : '#059669'};">
+                                        ${qifCurrentTab === 'compras' ? '-' : '+'}${formatCurrency(t.total)}
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">
+                                    ${fecha} | ${t.animales.length} animal${t.animales.length !== 1 ? 'es' : ''}: ${t.animales.map(a => '#' + a.numero).join(', ')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            updateQifSelectedCount();
+        }
+
+        function toggleQifTransaction(type, idx) {
+            qifTransactions[type][idx].selected = !qifTransactions[type][idx].selected;
+            renderQifTransactions();
+        }
+
+        function toggleQifSelectAll() {
+            const selectAll = document.getElementById('qifSelectAll').checked;
+            const transactions = qifCurrentTab === 'compras' ? qifTransactions.compras : qifTransactions.ventas;
+
+            transactions.forEach(t => t.selected = selectAll);
+            renderQifTransactions();
+        }
+
+        function updateQifSelectedCount() {
+            const comprasSelected = qifTransactions.compras.filter(t => t.selected).length;
+            const ventasSelected = qifTransactions.ventas.filter(t => t.selected).length;
+            const total = comprasSelected + ventasSelected;
+
+            document.getElementById('qifSelectedCount').textContent = `${total} seleccionados`;
+
+            // Update select all checkbox
+            const currentTransactions = qifCurrentTab === 'compras' ? qifTransactions.compras : qifTransactions.ventas;
+            const allSelected = currentTransactions.length > 0 && currentTransactions.every(t => t.selected);
+            document.getElementById('qifSelectAll').checked = allSelected;
+        }
+
+        function formatQifDate(dateStr) {
+            // QIF format: MM/DD/YYYY or M/D/YYYY
+            const d = new Date(dateStr);
+            return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+        }
+
+        function exportToQIF() {
+            const selectedCompras = qifTransactions.compras.filter(t => t.selected);
+            const selectedVentas = qifTransactions.ventas.filter(t => t.selected);
+
+            if (selectedCompras.length === 0 && selectedVentas.length === 0) {
+                showToast('Seleccione al menos una transacción', 'warning');
+                return;
+            }
+
+            // Build QIF content
+            let qifContent = '';
+
+            // Add purchases (expenses)
+            if (selectedCompras.length > 0) {
+                qifContent += '!Type:Cash\n';
+                selectedCompras.forEach(t => {
+                    const animalesList = t.animales.map(a => `#${a.numero}(${a.peso}kg)`).join(', ');
+                    qifContent += `D${formatQifDate(t.fecha)}\n`;
+                    qifContent += `T-${t.total.toFixed(2)}\n`;
+                    qifContent += `PCompra Ganado - ${t.vendedor}\n`;
+                    qifContent += `M${t.animales.length} animales: ${animalesList}\n`;
+                    qifContent += `LGanado:Compras\n`;
+                    qifContent += `^\n`;
+                });
+            }
+
+            // Add sales (income)
+            if (selectedVentas.length > 0) {
+                if (selectedCompras.length > 0) {
+                    qifContent += '\n';
+                }
+                qifContent += '!Type:Cash\n';
+                selectedVentas.forEach(t => {
+                    const animalesList = t.animales.map(a => `#${a.numero}(${a.peso}kg)`).join(', ');
+                    qifContent += `D${formatQifDate(t.fecha)}\n`;
+                    qifContent += `T${t.total.toFixed(2)}\n`;
+                    qifContent += `PVenta Ganado - ${t.comprador}\n`;
+                    qifContent += `M${t.animales.length} animales: ${animalesList}\n`;
+                    qifContent += `LGanado:Ventas\n`;
+                    qifContent += `^\n`;
+                });
+            }
+
+            // Download file
+            const blob = new Blob([qifContent], { type: 'application/qif' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const today = new Date().toISOString().split('T')[0];
+            const ranchName = RANCHES[currentRanch]?.name || 'Ganado';
+            a.download = `${ranchName}_Transacciones_${today}.qif`;
+
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast(`Exportadas ${selectedCompras.length + selectedVentas.length} transacciones a QIF`, 'success');
+        }
+
+        // Initialize QIF dates on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initQifDates, 500);
+        });
+
+        // ==================== END QIF EXPORT ====================
+
         // ==================== CLOUD SYNC UI FUNCTIONS ====================
         async function manualSync() {
             if (typeof cloudSync === 'undefined') {
