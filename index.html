@@ -14639,14 +14639,15 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
         }
         
         // ========== GOOGLE GEMINI API WITH RETRY ==========
-        // Default API key for family use (embedded for convenience across all devices)
-        const DEFAULT_GEMINI_API_KEY = 'AIzaSyA2OpWwDWSvFVdtEGOEQiE5eKnt6CFKcqA';
+        // SECURITY NOTE: The previous API key was compromised and removed.
+        // Users must configure their own API key in Settings → IA → Configuración
+        const DEFAULT_GEMINI_API_KEY = ''; // Removed for security - use your own key
 
-        // Use current Gemini models (2026)
+        // Use stable Gemini models (January 2026)
+        // Models tested and working as of 2026-01-13
         const GEMINI_MODEL_FALLBACKS = [
-            { name: 'gemini-2.0-flash', label: 'Flash 2.0 (rápido)', endpoint: 'v1beta' },
-            { name: 'gemini-1.5-flash-latest', label: 'Flash 1.5 Latest', endpoint: 'v1beta' },
-            { name: 'gemini-pro', label: 'Pro (legacy)', endpoint: 'v1' }
+            { name: 'gemini-1.5-flash', label: 'Flash 1.5 (rápido)', endpoint: 'v1' },
+            { name: 'gemini-1.5-pro', label: 'Pro 1.5 (avanzado)', endpoint: 'v1' }
         ];
 
         async function callGoogleGeminiAPI(prompt) {
@@ -14656,7 +14657,12 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
 
             if (!apiKey) {
                 console.error('❌ No API key configured');
-                showToast('⚠️ API Key de Google no configurada', 'error');
+                showToast('⚠️ Por favor configure su API Key de Google en Configuración → IA', 'error');
+                // Scroll to config section if it exists
+                const configSection = document.getElementById('apiKeySetup');
+                if (configSection) {
+                    configSection.scrollIntoView({ behavior: 'smooth' });
+                }
                 return null;
             }
             console.log('✅ API Key found (using ' + (localStorage.getItem('googleApiKey') ? 'custom' : 'default') + '), length:', apiKey.length);
@@ -14718,6 +14724,18 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
                         const errorText = await response.text();
                         console.error('API Error Status:', response.status);
                         console.error('API Error Body:', errorText);
+
+                        // Handle specific error cases with helpful messages
+                        if (response.status === 403) {
+                            throw new Error('API Key inválida o reportada como comprometida. Por favor obtenga una nueva API key en https://aistudio.google.com/apikey');
+                        }
+                        if (response.status === 404) {
+                            throw new Error(`Modelo ${modelConfig.name} no disponible. Intentando con modelo alternativo...`);
+                        }
+                        if (response.status === 429) {
+                            throw new Error('429 - Límite de API alcanzado. Reintentando...');
+                        }
+
                         try {
                             const errorData = JSON.parse(errorText);
                             throw new Error(errorData.error?.message || `Error ${response.status} en la API de Google`);
