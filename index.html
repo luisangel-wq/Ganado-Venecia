@@ -14644,10 +14644,10 @@ NUNCA des respuestas en texto plano sin formato. SIEMPRE usa tablas, emojis y se
         const DEFAULT_GEMINI_API_KEY = ''; // Removed for security - use your own key
 
         // Use stable Gemini models (January 2026)
-        // Models tested and working as of 2026-01-13
+        // Updated: 2026-01-13 - Using correct model names for v1beta API
         const GEMINI_MODEL_FALLBACKS = [
-            { name: 'gemini-1.5-flash', label: 'Flash 1.5 (rápido)', endpoint: 'v1' },
-            { name: 'gemini-1.5-pro', label: 'Pro 1.5 (avanzado)', endpoint: 'v1' }
+            { name: 'gemini-1.5-flash-latest', label: 'Flash 1.5 Latest (rápido)', endpoint: 'v1beta' },
+            { name: 'gemini-1.5-pro-latest', label: 'Pro 1.5 Latest (avanzado)', endpoint: 'v1beta' }
         ];
 
         async function callGoogleGeminiAPI(prompt) {
