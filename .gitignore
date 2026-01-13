@@ -1,8 +1,74 @@
 # API Keys and Sensitive Configuration
-firebase-config.js
+# NOTE: firebase-config.js is NOW included for GitHub Pages deployment
+# Firebase API keys are designed to be public - security comes from Firebase Rules
+# The Gemini API key is entered by users in the Config section (not stored in code)
 .env
 *.key
 *.secret
+firebase-config-fallback.js
+
+# Debug/utility files (not needed for production)
+check*.html
+check-*.html
+clear-*.html
+diagnose-*.html
+fix-*.html
+import-*.html
+restore*.html
+sync-*.html
+test_*.html
+investigate_*.html
+storage-inspector.html
+cambiar-userid*.html
+config-userid*.html
+index-standalone.html
+VERIFICAR_ARCHIVOS.html
+
+# Documentation files (keep README.md only)
+ACTUALIZAR*.txt
+ACTUALIZAR*.md
+API_KEY*.md
+CLEAR_*.md
+CLOUD_SYNC*.md
+COMO_*.txt
+COMO_*.md
+COMPARTIR*.md
+DATA_RECOVERY*.md
+EDIT_*.md
+FINAL_SYNC*.md
+FIREBASE_*.md
+GEMINI_*.md
+GITHUB_*.md
+GUIA_*.md
+HOMESCREEN*.md
+HOW_TO*.md
+INICIO_*.md
+INSTALL_*.md
+INSTRUCCIONES*.md
+INSTRUCCIONES*.txt
+LEEME*.md
+MENSAJE_*.txt
+MOBILE_*.md
+MULTI_*.md
+NUEVA_*.md
+OVERVIEW.md
+PASO_*.md
+PLAN_*.md
+PROBLEMA*.md
+QUICK_*.md
+RESTORE_*.md
+RESUMEN_*.md
+SECURITY_*.md
+SETUP_*.md
+SHARE_*.md
+START_*.md
+START_*.md
+SYNC_*.md
+SYNC_*.html
+TRANSFER_*.md
+UPDATE_*.md
+VISUAL_*.md
+WHERE_*.md
 
 # Backup files (may contain old keys)
 *.backup
