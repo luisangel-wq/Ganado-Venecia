@@ -12794,14 +12794,14 @@
         let mediaRecorder = null;
         let audioChunks = [];
 
-        // Speech recognition for dictation
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'es-ES';
+        // Speech recognition for dictation (use different name to avoid conflict)
+        const PotreroSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let potreroRecognition = null;
+        if (PotreroSpeechRecognition) {
+            potreroRecognition = new PotreroSpeechRecognition();
+            potreroRecognition.continuous = true;
+            potreroRecognition.interimResults = true;
+            potreroRecognition.lang = 'es-ES';
         }
 
         // Get days since last weight for an animal
@@ -13570,7 +13570,7 @@
         let isDictating = false;
 
         function toggleDictation() {
-            if (!recognition) {
+            if (!potreroRecognition) {
                 showToast('Dictado no disponible en este navegador', 'error');
                 return;
             }
@@ -13583,7 +13583,7 @@
         }
 
         function startDictation() {
-            if (!recognition) return;
+            if (!potreroRecognition) return;
 
             isDictating = true;
             const btn = document.getElementById('dictateBtn');
@@ -13596,7 +13596,7 @@
             if (text) text.textContent = 'Detener';
             if (status) status.style.display = 'block';
 
-            recognition.onresult = (event) => {
+            potreroRecognition.onresult = (event) => {
                 const textarea = document.getElementById('noteText');
                 if (textarea) {
                     let transcript = '';
@@ -13607,25 +13607,25 @@
                 }
             };
 
-            recognition.onerror = (event) => {
+            potreroRecognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
                 stopDictation();
             };
 
-            recognition.onend = () => {
+            potreroRecognition.onend = () => {
                 if (isDictating) {
                     // Restart if still dictating
-                    recognition.start();
+                    potreroRecognition.start();
                 }
             };
 
-            recognition.start();
+            potreroRecognition.start();
         }
 
         function stopDictation() {
             isDictating = false;
-            if (recognition) {
-                recognition.stop();
+            if (potreroRecognition) {
+                potreroRecognition.stop();
             }
 
             const btn = document.getElementById('dictateBtn');
@@ -13735,7 +13735,7 @@
         let isIssueDictating = false;
 
         function toggleIssueDictation() {
-            if (!recognition) {
+            if (!potreroRecognition) {
                 showToast('Dictado no disponible', 'error');
                 return;
             }
@@ -13748,7 +13748,7 @@
         }
 
         function startIssueDictation() {
-            if (!recognition) return;
+            if (!potreroRecognition) return;
 
             isIssueDictating = true;
             const btn = document.getElementById('issueDictateBtn');
@@ -13760,7 +13760,7 @@
             }
             if (status) status.style.display = 'block';
 
-            recognition.onresult = (event) => {
+            potreroRecognition.onresult = (event) => {
                 const textarea = document.getElementById('issueText');
                 if (textarea) {
                     let transcript = '';
@@ -13771,17 +13771,17 @@
                 }
             };
 
-            recognition.onerror = () => stopIssueDictation();
-            recognition.onend = () => {
-                if (isIssueDictating) recognition.start();
+            potreroRecognition.onerror = () => stopIssueDictation();
+            potreroRecognition.onend = () => {
+                if (isIssueDictating) potreroRecognition.start();
             };
 
-            recognition.start();
+            potreroRecognition.start();
         }
 
         function stopIssueDictation() {
             isIssueDictating = false;
-            if (recognition) recognition.stop();
+            if (potreroRecognition) potreroRecognition.stop();
 
             const btn = document.getElementById('issueDictateBtn');
             const status = document.getElementById('issueDictationStatus');
