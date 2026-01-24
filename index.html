@@ -3640,7 +3640,7 @@
                     </div>
                     
                     <!-- Potreros Grid -->
-                    <div id="potrerosGrid" class="summary-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
+                    <div id="potrerosGrid" class="summary-grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.4rem;">
                         <div class="text-center" style="grid-column: 1/-1; padding: 2rem; color: var(--gray);">
                             No hay potreros registrados. Haga clic en "Agregar Potrero" para comenzar.
                         </div>
@@ -12176,33 +12176,30 @@
         function getPotreroGroupColor(nombre) {
             const normalizedName = nombre.toLowerCase().trim();
 
-            // Extract base name (e.g., "Rincon 1" -> "rincon", "Mangos 3" -> "mangos")
-            const baseName = normalizedName.replace(/\s*\d+\s*$/, '').trim();
+            // Extract FIRST WORD as base name (e.g., "Cruceta 2 guadual" -> "cruceta")
+            const firstWord = normalizedName.split(/\s+/)[0];
 
             const colorGroups = {
-                'rincon': { bg: '#DCFCE7', border: '#22C55E', text: '#166534', name: 'Verde' },           // Green
-                'mangos': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E', name: 'Amarillo' },        // Amber
-                'guayabos': { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF', name: 'Azul' },          // Blue
-                'casa': { bg: '#FCE7F3', border: '#EC4899', text: '#9D174D', name: 'Rosa' },              // Pink
-                'corral': { bg: '#E0E7FF', border: '#6366F1', text: '#3730A3', name: 'Indigo' },          // Indigo
-                'monte': { bg: '#D1FAE5', border: '#10B981', text: '#065F46', name: 'Esmeralda' },        // Emerald
-                'quebrada': { bg: '#CFFAFE', border: '#06B6D4', text: '#155E75', name: 'Cyan' },          // Cyan
-                'laguna': { bg: '#E0F2FE', border: '#0EA5E9', text: '#0369A1', name: 'Sky' },             // Sky
-                'cerro': { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B', name: 'Rojo' },             // Red
-                'llano': { bg: '#FEF9C3', border: '#EAB308', text: '#854D0E', name: 'Yellow' },           // Yellow
-                'potrero': { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8', name: 'Purple' },         // Purple
-                'default': { bg: '#F3F4F6', border: '#6B7280', text: '#374151', name: 'Gris' }            // Gray
+                'rincon': { bg: '#DCFCE7', border: '#22C55E', text: '#166534' },           // Green
+                'mangos': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },           // Amber
+                'guayabos': { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' },         // Blue
+                'cruceta': { bg: '#E0E7FF', border: '#6366F1', text: '#3730A3' },          // Indigo
+                'rotacion': { bg: '#FCE7F3', border: '#EC4899', text: '#9D174D' },         // Pink
+                'plan': { bg: '#CFFAFE', border: '#06B6D4', text: '#155E75' },             // Cyan
+                'falda': { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B' },            // Red
+                'dulce': { bg: '#FEF9C3', border: '#EAB308', text: '#854D0E' },            // Yellow
+                'guamo': { bg: '#D1FAE5', border: '#10B981', text: '#065F46' },            // Emerald
+                'catalina': { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8' },         // Purple
+                'default': { bg: '#F3F4F6', border: '#6B7280', text: '#374151' }           // Gray
             };
 
-            // Find matching color group
-            for (const [key, colors] of Object.entries(colorGroups)) {
-                if (baseName.includes(key) || key.includes(baseName)) {
-                    return colors;
-                }
+            // Direct match on first word
+            if (colorGroups[firstWord]) {
+                return colorGroups[firstWord];
             }
 
-            // Generate a consistent color based on the name hash for unknown groups
-            const hash = baseName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            // Generate consistent color based on first word hash
+            const hash = firstWord.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const colorKeys = Object.keys(colorGroups).filter(k => k !== 'default');
             const colorKey = colorKeys[hash % colorKeys.length];
             return colorGroups[colorKey];
@@ -12238,7 +12235,7 @@
                 </div>`;
             }
 
-            // Create compact potrero boxes
+            // Create VERY compact potrero boxes (tiny)
             html += potreros.map(p => {
                 const animalesInfo = countAnimalesInPotreroAllRanches(p);
                 const animalesCount = animalesInfo.total;
@@ -12247,33 +12244,24 @@
                 const status = statusConfig[p.estado] || statusConfig['disponible'];
 
                 return `
-                    <div class="potrero-compact-card"
+                    <div class="potrero-tiny-card"
                          data-potrero-key="${potreroKey}"
                          onclick="openPotreroFullScreen('${potreroKey}')"
-                         style="background: ${groupColor.bg}; border: 3px solid ${groupColor.border};
-                                border-radius: 12px; padding: 0.75rem; cursor: pointer;
-                                transition: all 0.2s; position: relative;">
-
-                        <!-- Potrero Name -->
-                        <div style="font-weight: 700; font-size: 1rem; color: ${groupColor.text}; margin-bottom: 0.5rem;">
-                            ${p.nombre}
+                         style="background: ${groupColor.bg}; border: 2px solid ${groupColor.border};
+                                border-radius: 8px; padding: 0.4rem 0.5rem; cursor: pointer;
+                                display: flex; align-items: center; justify-content: space-between;
+                                gap: 0.3rem; min-width: 0;">
+                        <div style="display: flex; align-items: center; gap: 0.3rem; min-width: 0; overflow: hidden;">
+                            <span style="font-size: 0.65rem;">${status.icon}</span>
+                            <span style="font-weight: 600; font-size: 0.7rem; color: ${groupColor.text};
+                                         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${p.nombre}
+                            </span>
                         </div>
-
-                        <!-- Status Badge -->
-                        <div style="display: inline-flex; align-items: center; gap: 0.25rem;
-                                    background: ${status.bg}; padding: 0.25rem 0.5rem;
-                                    border-radius: 6px; font-size: 0.75rem; color: ${status.color}; font-weight: 600;">
-                            <span>${status.icon}</span>
-                            <span>${status.label}</span>
-                        </div>
-
-                        <!-- Animal Count -->
-                        <div style="position: absolute; top: 0.5rem; right: 0.5rem;
-                                    background: white; padding: 0.35rem 0.6rem;
-                                    border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                                    font-weight: 700; font-size: 0.9rem; color: #374151;">
-                            🐄 ${animalesCount}
-                        </div>
+                        <span style="background: white; padding: 0.15rem 0.35rem; border-radius: 4px;
+                                     font-weight: 700; font-size: 0.65rem; color: #374151; flex-shrink: 0;">
+                            ${animalesCount}
+                        </span>
                     </div>
                 `;
             }).join('');
@@ -12281,10 +12269,10 @@
             container.innerHTML = html;
 
             // Add hover effect
-            document.querySelectorAll('.potrero-compact-card').forEach(card => {
+            document.querySelectorAll('.potrero-tiny-card').forEach(card => {
                 card.addEventListener('mouseenter', () => {
-                    card.style.transform = 'translateY(-2px)';
-                    card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                    card.style.transform = 'scale(1.02)';
+                    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
                 });
                 card.addEventListener('mouseleave', () => {
                     card.style.transform = '';
@@ -12958,23 +12946,16 @@
                 return `
                     <div class="fs-animal-card ${alertClass}" data-numero="${a.numero}" data-ranch="${a.ranchId}"
                          onclick="toggleFullScreenAnimal('${a.numero}', '${a.ranchId}')"
-                         style="background: ${colors.bg}; border: 3px solid ${colors.border}; ${a.needsWeighing ? 'box-shadow: 0 0 0 3px #EF4444;' : ''} ${hasIssues ? 'box-shadow: 0 0 0 3px #F59E0B;' : ''}">
+                         ondblclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')"
+                         style="background: ${colors.bg}; border: 2px solid ${colors.border}; ${a.needsWeighing ? 'box-shadow: 0 0 0 2px #EF4444;' : ''} ${hasIssues ? 'box-shadow: 0 0 0 2px #F59E0B;' : ''}">
                         <div class="fs-animal-header">
                             <span class="fs-animal-number">#${a.numero}</span>
-                            ${a.needsWeighing ? `<span class="fs-alert-badge weight">⚖️ ${a.daysSinceWeight}d</span>` : ''}
-                            ${hasIssues ? `<span class="fs-alert-badge issue">⚠️ ${a.issues.length}</span>` : ''}
+                            ${a.needsWeighing ? `<span class="fs-alert-badge weight">⚖️</span>` : ''}
+                            ${hasIssues ? `<span class="fs-alert-badge issue">⚠️</span>` : ''}
                         </div>
                         <div class="fs-animal-info">
                             <span>${a.peso || '?'}kg</span>
-                            <span>${a.sexo === 'macho' ? '♂️' : '♀️'}</span>
                         </div>
-                        <div class="fs-animal-ranch" style="color: ${colors.text};">${colors.name}</div>
-                        <button onclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')"
-                                style="width: 100%; margin-top: 0.5rem; padding: 0.4rem; background: rgba(255,255,255,0.8);
-                                       border: 1px solid ${colors.border}; border-radius: 6px; font-size: 0.75rem;
-                                       cursor: pointer; color: ${colors.text}; font-weight: 600;">
-                            👁️ Ver Perfil
-                        </button>
                     </div>
                 `;
             }).join('');
@@ -13036,27 +13017,27 @@
                         }
                         .fs-toolbar button:hover { background: #F3F4F6; }
                         .fs-toolbar button.primary { background: #059669; color: white; border: none; }
-                        .fs-content { flex: 1; overflow-y: auto; padding: 1rem; }
+                        .fs-content { flex: 1; overflow-y: auto; padding: 0.5rem; }
                         .fs-animals-grid {
                             display: grid;
-                            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                            gap: 0.75rem;
+                            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+                            gap: 0.4rem;
                         }
                         .fs-animal-card {
-                            padding: 0.75rem; border-radius: 10px; cursor: pointer;
+                            padding: 0.4rem; border-radius: 6px; cursor: pointer;
                             transition: all 0.2s; position: relative;
                         }
                         .fs-animal-card:hover { transform: scale(1.02); }
-                        .fs-animal-card.selected { transform: scale(1.05); box-shadow: 0 0 0 4px #3B82F6 !important; }
+                        .fs-animal-card.selected { transform: scale(1.03); box-shadow: 0 0 0 3px #3B82F6 !important; }
                         .fs-animal-card.needs-weighing { animation: pulse-red 2s infinite; }
                         @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
-                        .fs-animal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.3rem; }
-                        .fs-animal-number { font-weight: 700; font-size: 1.1rem; }
-                        .fs-alert-badge { font-size: 0.65rem; padding: 0.15rem 0.3rem; border-radius: 4px; }
+                        .fs-animal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.15rem; }
+                        .fs-animal-number { font-weight: 700; font-size: 0.85rem; }
+                        .fs-alert-badge { font-size: 0.55rem; padding: 0.1rem 0.2rem; border-radius: 3px; }
                         .fs-alert-badge.weight { background: #FEE2E2; color: #DC2626; }
                         .fs-alert-badge.issue { background: #FEF3C7; color: #D97706; }
-                        .fs-animal-info { display: flex; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.3rem; }
-                        .fs-animal-ranch { font-size: 0.7rem; opacity: 0.8; }
+                        .fs-animal-info { display: flex; gap: 0.3rem; font-size: 0.7rem; margin-bottom: 0.15rem; }
+                        .fs-animal-ranch { font-size: 0.6rem; opacity: 0.8; }
                         .fs-alerts-panel { background: white; border-radius: 8px; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
                         .fs-alerts-header {
                             background: #FEF3C7; padding: 0.75rem 1rem; cursor: pointer;
@@ -13258,6 +13239,20 @@
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
+        // Helper to parse animal key like "santa_catalina_264" into {ranchId, numero}
+        function parseAnimalKey(key) {
+            // Check against known ranch IDs that contain underscores
+            for (const ranchId of SHARED_POTRERO_RANCHES) {
+                if (key.startsWith(ranchId + '_')) {
+                    const numero = key.substring(ranchId.length + 1);
+                    return { ranchId, numero };
+                }
+            }
+            // Fallback for simple ranch IDs
+            const parts = key.split('_');
+            return { ranchId: parts[0], numero: parts.slice(1).join('_') };
+        }
+
         function executeFSMove() {
             const destino = document.getElementById('fsMoveDestino').value;
             if (!destino) {
@@ -13269,13 +13264,14 @@
             const animalsByRanch = {};
 
             fullScreenSelectedAnimals.forEach(key => {
-                const [ranchId, numero] = key.split('_');
+                const { ranchId, numero } = parseAnimalKey(key);
                 if (!animalsByRanch[ranchId]) animalsByRanch[ranchId] = [];
                 animalsByRanch[ranchId].push(numero);
             });
 
             Object.entries(animalsByRanch).forEach(([ranchId, animales]) => {
                 if (ranchId === currentRanch) {
+                    if (!data.animalPotreros) data.animalPotreros = {};
                     animales.forEach(n => { data.animalPotreros[n] = destino; });
                 } else {
                     const ranchData = getRanchData(ranchId);
@@ -13294,15 +13290,15 @@
                 id: Date.now(),
                 fecha: today,
                 desdeId: currentFullScreenPotrero?.key,
-                desdeNombre: currentFullScreenPotrero?.displayName,
+                desdeNombre: currentFullScreenPotrero?.displayName || currentFullScreenPotrero?.nombre,
                 haciaId: destino,
-                haciaNombre: toPotrero?.displayName,
-                animales: Array.from(fullScreenSelectedAnimals).map(k => k.split('_')[1])
+                haciaNombre: toPotrero?.displayName || toPotrero?.nombre,
+                animales: Array.from(fullScreenSelectedAnimals).map(k => parseAnimalKey(k).numero)
             });
 
             saveData();
             document.getElementById('fsMoveModal')?.remove();
-            showToast(`${fullScreenSelectedAnimals.size} animales movidos`, 'success');
+            showToast(`${fullScreenSelectedAnimals.size} animales movidos a ${toPotrero?.nombre || 'destino'}`, 'success');
             closePotreroFullScreen();
         }
 
