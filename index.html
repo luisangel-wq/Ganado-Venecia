@@ -4639,10 +4639,11 @@
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
-            // Load last selected ranch from localStorage
+            // Load last selected ranch from localStorage (with validation)
             const lastRanch = localStorage.getItem('ganadoFinca_lastRanch') || 'la_coruna';
-            currentRanch = lastRanch;
-            
+            // Validate that lastRanch is a valid key in RANCHES
+            currentRanch = RANCHES[lastRanch] ? lastRanch : 'la_coruna';
+
             // Apply ranch theme and load data
             applyRanchTheme();
             loadData();
@@ -4745,7 +4746,14 @@
         
         function applyRanchTheme() {
             const ranch = RANCHES[currentRanch];
-            
+
+            // Safety check - ensure ranch exists
+            if (!ranch) {
+                console.error('Invalid ranch:', currentRanch);
+                currentRanch = 'la_coruna';
+                return applyRanchTheme();
+            }
+
             // Update ranch buttons
             document.querySelectorAll('.ranch-btn').forEach(btn => btn.classList.remove('active'));
             const btnIds = {
@@ -4756,21 +4764,26 @@
             };
             const activeBtn = document.getElementById(btnIds[currentRanch]);
             if (activeBtn) activeBtn.classList.add('active');
-            
+
             // Update header
             const header = document.getElementById('mainHeader');
-            if (header) {
+            if (header && ranch.theme) {
                 header.classList.remove('theme-coruna', 'theme-catalina', 'theme-vega', 'theme-fernando');
                 header.classList.add('theme-' + ranch.theme);
             }
-            
+
             // Update header title
-            document.getElementById('headerRanchName').innerHTML = `${ranch.icon} ${ranch.name}`;
-            
+            const headerTitle = document.getElementById('headerRanchName');
+            if (headerTitle) {
+                headerTitle.innerHTML = `${ranch.icon} ${ranch.name}`;
+            }
+
             // Update body background based on ranch
-            document.body.classList.remove('theme-coruna-bg', 'theme-catalina-bg', 'theme-vega-bg', 'theme-fernando-bg', 'theme-coruna-active', 'theme-catalina-active', 'theme-vega-active', 'theme-fernando-active');
-            document.body.classList.add('theme-' + ranch.theme + '-bg');
-            document.body.classList.add('theme-' + ranch.theme + '-active');
+            if (ranch.theme) {
+                document.body.classList.remove('theme-coruna-bg', 'theme-catalina-bg', 'theme-vega-bg', 'theme-fernando-bg', 'theme-coruna-active', 'theme-catalina-active', 'theme-vega-active', 'theme-fernando-active');
+                document.body.classList.add('theme-' + ranch.theme + '-bg');
+                document.body.classList.add('theme-' + ranch.theme + '-active');
+            }
         }
         
         function initConfigValues() {
@@ -5268,6 +5281,14 @@
 
         function saveData() {
             const ranch = RANCHES[currentRanch];
+
+            // Safety check - ensure ranch exists
+            if (!ranch || !ranch.storageKey) {
+                console.error('Cannot save: invalid ranch', currentRanch);
+                currentRanch = 'la_coruna';
+                return saveData();
+            }
+
             localStorage.setItem(ranch.storageKey, JSON.stringify(data));
 
             // 🔄 Trigger immediate cloud sync (debounced 2 seconds)
@@ -12064,18 +12085,18 @@
                 return;
             }
 
-            // Switch to the animal's ranch and then show profile
+            // Automatically switch to the animal's ranch and show profile (no confirmation needed)
             const ranchName = RANCHES[animalRanchId]?.name || animalRanchId;
-            if (confirm(`El animal #${numero} pertenece a ${ranchName}. ¿Desea cambiar a esa finca para ver el perfil completo?`)) {
-                // Close any open full-screen views
-                closePotreroFullScreen();
-                // Switch ranch
-                switchRanch(animalRanchId);
-                // Show profile after a short delay for data to load
-                setTimeout(() => {
-                    showAnimalProfile(numero);
-                }, 300);
-            }
+            showToast(`Cambiando a ${ranchName}...`, 'info');
+
+            // Close any open full-screen views
+            closePotreroFullScreen();
+
+            // Switch ranch and show profile after data loads
+            switchRanch(animalRanchId);
+            setTimeout(() => {
+                showAnimalProfile(numero);
+            }, 300);
         }
 
         function updatePotrerosView() {

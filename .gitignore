@@ -5,7 +5,6 @@
 .env
 *.key
 *.secret
-firebase-config-fallback.js
 
 # Debug/utility files (not needed for production)
 check*.html
