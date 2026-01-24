@@ -4324,7 +4324,10 @@
                     <!-- Historical GDP Info -->
                     <div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; border: 2px solid #0ea5e9;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <h4 style="margin: 0; color: #0369a1;">📊 GDP Histórico (Últimos 2 años)</h4>
+                            <div>
+                                <h4 style="margin: 0; color: #0369a1;">📊 GDP Histórico (Últimos 2 años)</h4>
+                                <div id="historicalGDPRanchName" style="font-size: 0.75rem; color: #0284c7; font-weight: 600;">Finca: --</div>
+                            </div>
                             <button onclick="recalculateHistoricalGDP()" class="btn" style="background: #0ea5e9; color: white; font-size: 0.8rem; padding: 0.4rem 0.75rem;">
                                 🔄 Recalcular
                             </button>
@@ -4340,7 +4343,7 @@
                             </div>
                         </div>
                         <div style="font-size: 0.8rem; color: #0369a1; margin-top: 0.5rem;">
-                            Este GDP se usa para estimar el peso actual del inventario
+                            Este GDP se usa para calcular el "Peso Esperado" del inventario de esta finca
                         </div>
                     </div>
 
@@ -4673,6 +4676,33 @@
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
+            // VERSION INDICATOR - If you see this, code is updated
+            console.log('');
+            console.log('🚀🚀🚀 GANADO FINCA CODE VERSION: GDP-FIX-v4 🚀🚀🚀');
+            console.log('');
+
+            // AUTO-DIAGNÓSTICO: Log sales data for each ranch on startup
+            console.log('🔍 AUTO-DIAGNÓSTICO DE DATOS AL INICIO');
+            console.log('=====================================');
+            const diagKeys = {
+                'la_coruna': 'ganadoFinca_LaCoruna',
+                'santa_catalina': 'ganadoFinca_SantaCatalina'
+            };
+            Object.entries(diagKeys).forEach(([ranchId, key]) => {
+                const saved = localStorage.getItem(key);
+                if (saved) {
+                    try {
+                        const d = JSON.parse(saved);
+                        const salidas = d.salidas || [];
+                        const firstSale = salidas[0] ? `#${salidas[0].numero}` : 'ninguna';
+                        console.log(`📊 ${ranchId}: ${salidas.length} ventas, primera: ${firstSale}, GDP config: ${d.config?.gdp || 'no set'}`);
+                    } catch(e) { console.error(e); }
+                } else {
+                    console.log(`⚠️ ${ranchId}: Sin datos en localStorage`);
+                }
+            });
+            console.log('=====================================');
+
             // Load last selected ranch from localStorage (with validation)
             const lastRanch = localStorage.getItem('ganadoFinca_lastRanch') || 'la_coruna';
             // Validate that lastRanch is a valid key in RANCHES
@@ -4826,7 +4856,7 @@
             document.getElementById('configPesoObjetivo').value = data.config.pesoObjetivo || 450;
             document.getElementById('configPesoMinimo').value = data.config.pesoMinimo || 380;
             document.getElementById('configFotoIntervalo').value = data.config.fotoIntervalo || 90;
-            
+
             // Initialize weather selector
             const currentWeather = data.config.currentWeather || 'lluvias';
             const weatherRadio = document.querySelector(`input[name="currentWeather"][value="${currentWeather}"]`);
@@ -4834,7 +4864,7 @@
                 weatherRadio.checked = true;
                 updateWeatherVisuals();
             }
-            
+
             // Show last weather change info if available (only if weather UI exists)
             if (data.weatherHistory && data.weatherHistory.length > 0) {
                 const lastChange = data.weatherHistory[data.weatherHistory.length - 1];
@@ -4843,6 +4873,9 @@
                 if (weatherInfoEl) weatherInfoEl.style.display = 'block';
                 if (lastWeatherEl) lastWeatherEl.textContent = `${getTemporadaDisplay(lastChange.to)} - ${formatDate(lastChange.fecha)}`;
             }
+
+            // Update historical GDP display for current ranch
+            updateHistoricalGDPDisplay();
         }
         
         function updateWeatherCondition() {
@@ -4908,23 +4941,45 @@
         }
 
         // Calculate historical GDP from sold animals in last 2 years
+        // IMPORTANT: This reads directly from localStorage to ensure we get the correct ranch data
         function calculateHistoricalGDP() {
+            // Read fresh data directly from localStorage for the current ranch
+            const ranch = RANCHES[currentRanch];
+            const storageKey = ranch?.storageKey;
+            let ranchData;
+
+            if (storageKey) {
+                const saved = localStorage.getItem(storageKey);
+                ranchData = saved ? JSON.parse(saved) : null;
+            }
+
+            if (!ranchData) {
+                console.warn(`⚠️ No data found for ranch: ${currentRanch}`);
+                return { avgGDP: 0.31, count: 0, ranchId: currentRanch };
+            }
+
+            console.log(`📊 Calculating GDP for ${ranch.name}...`);
+            console.log(`   Total salidas: ${(ranchData.salidas || []).length}`);
+            console.log(`   Total entradas: ${(ranchData.entradas || []).length}`);
+
             const twoYearsAgo = new Date();
             twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
             // Filter salidas from last 2 years (exclude deaths and transfers)
-            const validSales = (data.salidas || []).filter(s => {
+            const validSales = (ranchData.salidas || []).filter(s => {
                 if (!s.fechaSalida) return false;
                 if (s.comprador === 'MUERTE' || s.comprador?.includes('TRANSFERENCIA')) return false;
                 const fecha = new Date(s.fechaSalida);
                 return fecha >= twoYearsAgo;
             });
 
+            console.log(`   Valid sales (last 2 years): ${validSales.length}`);
+
             // Calculate GDP for each sale
             const gdpValues = [];
             validSales.forEach(s => {
                 // Get original animal data
-                const original = data.entradas.find(e => String(e.numero) === String(s.numero));
+                const original = ranchData.entradas?.find(e => String(e.numero) === String(s.numero));
                 if (!original || !original.fechaEntrada) return;
 
                 const pesoEntrada = original.peso || 0;
@@ -4949,48 +5004,218 @@
             });
 
             if (gdpValues.length === 0) {
-                return { avgGDP: 0.31, count: 0 }; // Default if no data
+                console.log(`   No valid GDP values found for ${ranch.name}`);
+                return { avgGDP: 0.31, count: 0, ranchId: currentRanch };
             }
 
             const avgGDP = gdpValues.reduce((sum, g) => sum + g, 0) / gdpValues.length;
-            return { avgGDP, count: gdpValues.length };
+            console.log(`   ✅ ${ranch.name} GDP: ${avgGDP.toFixed(2)} kg/día (${gdpValues.length} ventas)`);
+            return { avgGDP, count: gdpValues.length, ranchId: currentRanch };
         }
 
-        // Recalculate and update historical GDP
+        // Recalculate and update historical GDP - SAVES to current ranch only
         function recalculateHistoricalGDP() {
+            const ranchName = RANCHES[currentRanch]?.name || currentRanch;
+            const storageKey = RANCHES[currentRanch]?.storageKey;
+            console.log(`🔄 [GDP-v3] RECALCULAR clicked for ${ranchName} (key: ${storageKey})`);
+
             const result = calculateHistoricalGDP();
+            console.log(`🔄 [GDP-v3] Calculated: ${result.avgGDP.toFixed(2)} kg/día from ${result.count} ventas`);
 
             // Update UI
             const gdpValueEl = document.getElementById('historicalGDPValue');
             const gdpCountEl = document.getElementById('historicalGDPCount');
+            const gdpRanchEl = document.getElementById('historicalGDPRanchName');
             const configGDPEl = document.getElementById('configGDP');
+
+            // Update ranch name display
+            if (gdpRanchEl) {
+                gdpRanchEl.textContent = `Finca: ${ranchName}`;
+                gdpRanchEl.style.fontWeight = 'bold';
+            }
 
             if (gdpValueEl) gdpValueEl.textContent = result.avgGDP.toFixed(2) + ' kg/día';
             if (gdpCountEl) gdpCountEl.textContent = result.count + ' ventas';
 
-            // Update config GDP if we have sales data
+            // Save GDP to CURRENT ranch's config only
             if (result.count > 0) {
-                data.config.gdp = parseFloat(result.avgGDP.toFixed(2));
+                const newGDP = parseFloat(result.avgGDP.toFixed(2));
+                console.log(`🔄 [GDP-v3] Saving GDP ${newGDP} to ${ranchName} (${storageKey})`);
+                data.config.gdp = newGDP;
                 data.config.historicalGDPCount = result.count;
                 if (configGDPEl) configGDPEl.value = result.avgGDP.toFixed(2);
-                saveData();
-                showToast(`📊 GDP actualizado: ${result.avgGDP.toFixed(2)} kg/día (basado en ${result.count} ventas)`, 'success');
+                saveData();  // This saves to currentRanch's localStorage key only
+                showToast(`📊 ${ranchName}: GDP guardado = ${newGDP} kg/día (${result.count} ventas)`, 'success');
             } else {
-                showToast('⚠️ No hay suficientes datos de ventas para calcular GDP histórico', 'info');
+                showToast(`⚠️ ${ranchName}: No hay suficientes datos de ventas`, 'info');
             }
 
             return result;
         }
 
         // Update historical GDP display on settings page load
+        // VERSION 3: Display ONLY - NO auto-save to prevent cross-contamination between ranches
         function updateHistoricalGDPDisplay() {
+            const ranchName = RANCHES[currentRanch]?.name || currentRanch;
+            console.log(`📊 [GDP-v3] Calculating GDP for: ${ranchName}`);
+
             const result = calculateHistoricalGDP();
             const gdpValueEl = document.getElementById('historicalGDPValue');
             const gdpCountEl = document.getElementById('historicalGDPCount');
+            const gdpRanchEl = document.getElementById('historicalGDPRanchName');
 
+            // Show current ranch name prominently
+            if (gdpRanchEl) {
+                gdpRanchEl.textContent = `Finca: ${ranchName}`;
+                gdpRanchEl.style.fontWeight = 'bold';
+            }
+
+            // Display calculated values from this ranch's sales data
             if (gdpValueEl) gdpValueEl.textContent = result.count > 0 ? result.avgGDP.toFixed(2) + ' kg/día' : '-- kg/día';
             if (gdpCountEl) gdpCountEl.textContent = result.count > 0 ? result.count + ' ventas' : 'Sin datos';
+
+            // Update the config input field to show calculated value (display only)
+            const configGDPEl = document.getElementById('configGDP');
+            if (configGDPEl && result.count > 0) {
+                configGDPEl.value = result.avgGDP.toFixed(2);
+            }
+
+            console.log(`📊 [GDP-v3] ${ranchName}: ${result.avgGDP.toFixed(2)} kg/día from ${result.count} ventas`);
+            // NOTE: Does NOT save automatically. User must click "Recalcular" button to save.
         }
+
+        // Calculate historical GDP for a SPECIFIC ranch (not just current)
+        function calculateHistoricalGDPForRanch(ranchId) {
+            const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+            if (!ranchData) return { avgGDP: 0.31, count: 0 };
+
+            const twoYearsAgo = new Date();
+            twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+            // Filter salidas from last 2 years (exclude deaths and transfers)
+            const validSales = (ranchData.salidas || []).filter(s => {
+                if (!s.fechaSalida) return false;
+                if (s.comprador === 'MUERTE' || s.comprador?.includes('TRANSFERENCIA')) return false;
+                const fecha = new Date(s.fechaSalida);
+                return fecha >= twoYearsAgo;
+            });
+
+            // Calculate GDP for each sale
+            const gdpValues = [];
+            validSales.forEach(s => {
+                const original = ranchData.entradas?.find(e => String(e.numero) === String(s.numero));
+                if (!original || !original.fechaEntrada) return;
+
+                const pesoEntrada = original.peso || 0;
+                const pesoSalida = s.peso || 0;
+                const gananciaKg = pesoSalida - pesoEntrada;
+
+                const entrada = new Date(original.fechaEntrada);
+                const salida = new Date(s.fechaSalida);
+                const diasEnFinca = Math.floor((salida - entrada) / (1000 * 60 * 60 * 24));
+
+                let gdp = s.gananciaDay;
+                if (!gdp && diasEnFinca > 0) {
+                    gdp = gananciaKg / diasEnFinca;
+                }
+
+                if (gdp && gdp > 0.1 && gdp < 1.0) {
+                    gdpValues.push(gdp);
+                }
+            });
+
+            if (gdpValues.length === 0) {
+                return { avgGDP: ranchData.config?.gdp || 0.31, count: 0 };
+            }
+
+            const avgGDP = gdpValues.reduce((sum, g) => sum + g, 0) / gdpValues.length;
+            return { avgGDP, count: gdpValues.length };
+        }
+
+        // Get GDP for a specific ranch (stored or calculated)
+        function getRanchGDP(ranchId) {
+            const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+            if (!ranchData || !ranchData.config) return 0.31; // Default
+            return ranchData.config.gdp || 0.31;
+        }
+
+        // Calculate Esperado (estimated) weight for an animal using its source ranch's GDP
+        function calculatePesoEsperado(animal, ranchId) {
+            const gdp = getRanchGDP(ranchId);
+            const diasEnFinca = getDiasEnFinca(animal.fechaEntrada);
+            return animal.peso + (diasEnFinca * gdp);
+        }
+
+        // DIAGNOSTIC FUNCTION - Call from browser console: diagnoseSalesData()
+        // This helps identify if ranch data got corrupted/duplicated
+        window.diagnoseSalesData = function() {
+            console.log('🔍 DIAGNÓSTICO DE DATOS DE VENTAS');
+            console.log('================================');
+
+            const ranchKeys = {
+                'la_coruna': 'ganadoFinca_LaCoruna',
+                'santa_catalina': 'ganadoFinca_SantaCatalina',
+                'la_vega': 'ganadoFinca_LaVega',
+                'san_fernando': 'ganadoFinca_SanFernando'
+            };
+
+            const ranchNames = {
+                'la_coruna': 'La Coruña',
+                'santa_catalina': 'Santa Catalina',
+                'la_vega': 'La Vega',
+                'san_fernando': 'San Fernando'
+            };
+
+            const results = {};
+
+            Object.entries(ranchKeys).forEach(([ranchId, storageKey]) => {
+                const saved = localStorage.getItem(storageKey);
+                if (saved) {
+                    try {
+                        const ranchData = JSON.parse(saved);
+                        const salidas = ranchData.salidas || [];
+                        const entradas = ranchData.entradas || [];
+
+                        // Get first 3 sale numbers to compare
+                        const sampleSales = salidas.slice(0, 3).map(s => s.numero).join(', ');
+
+                        results[ranchId] = {
+                            name: ranchNames[ranchId],
+                            totalSalidas: salidas.length,
+                            totalEntradas: entradas.length,
+                            gdpConfig: ranchData.config?.gdp || 'not set',
+                            sampleSaleNumbers: sampleSales || 'ninguna'
+                        };
+
+                        console.log(`\n📊 ${ranchNames[ranchId]}:`);
+                        console.log(`   Salidas: ${salidas.length}`);
+                        console.log(`   Entradas: ${entradas.length}`);
+                        console.log(`   GDP config: ${ranchData.config?.gdp || 'not set'}`);
+                        console.log(`   Primeros 3 números de venta: ${sampleSales || 'ninguna'}`);
+                    } catch (e) {
+                        console.error(`Error leyendo ${ranchNames[ranchId]}:`, e);
+                    }
+                } else {
+                    console.log(`\n⚠️ ${ranchNames[ranchId]}: Sin datos`);
+                }
+            });
+
+            // Check if La Coruña and Santa Catalina have the same data
+            if (results.la_coruna && results.santa_catalina) {
+                const sameCount = results.la_coruna.totalSalidas === results.santa_catalina.totalSalidas;
+                const sameSamples = results.la_coruna.sampleSaleNumbers === results.santa_catalina.sampleSaleNumbers;
+
+                console.log('\n🔎 COMPARACIÓN La Coruña vs Santa Catalina:');
+                if (sameCount && sameSamples) {
+                    console.log('   ⚠️ ¡POSIBLE PROBLEMA! Ambas fincas tienen datos idénticos');
+                    console.log('   Esto podría indicar que los datos se duplicaron incorrectamente');
+                } else {
+                    console.log('   ✅ Los datos parecen ser diferentes (correcto)');
+                }
+            }
+
+            return results;
+        };
 
         function loadData() {
             const ranch = RANCHES[currentRanch];
@@ -12842,24 +13067,36 @@
 
         // Get days since last weight for an animal
         function getDaysSinceLastWeight(numero, ranchId) {
+            // Returns days since last ACTUAL weight measurement (not GDP-calculated "Esperado")
+            // Valid weight sources:
+            // 1. pesoUpdates entries (dictated estimates or actual measurements)
+            // 2. Initial peso at entry (if animal has actual peso value recorded)
             const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
             if (!ranchData) return null;
 
             const updates = ranchData.pesoUpdates || [];
             const animalUpdates = updates.filter(u => u.numero === numero);
-            if (animalUpdates.length === 0) {
-                // Check entry date
-                const animal = ranchData.entradas?.find(a => a.numero === numero);
-                if (animal && animal.fecha) {
-                    const days = Math.floor((new Date() - new Date(animal.fecha)) / (1000 * 60 * 60 * 24));
-                    return days;
-                }
-                return null;
+
+            if (animalUpdates.length > 0) {
+                // Has weight updates - use the most recent one
+                const lastUpdate = animalUpdates.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+                const days = Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24));
+                return days;
             }
 
-            const lastUpdate = animalUpdates.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
-            const days = Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24));
-            return days;
+            // No pesoUpdates - check if animal has actual initial peso at entry
+            const animal = ranchData.entradas?.find(a => a.numero === numero);
+            if (animal && animal.peso && animal.peso > 0) {
+                // Has actual initial peso - use entry date
+                const entryDate = animal.fechaEntrada || animal.fecha;
+                if (entryDate) {
+                    const days = Math.floor((new Date() - new Date(entryDate)) / (1000 * 60 * 60 * 24));
+                    return days;
+                }
+            }
+
+            // No actual weight data - return null
+            return null;
         }
 
         // Get animal issues/alerts
@@ -12964,7 +13201,9 @@
                 info.animales.forEach(animal => {
                     const daysSinceWeight = getDaysSinceLastWeight(animal.numero, ranchId);
                     const issues = getAnimalIssues(animal.numero, ranchId);
-                    const needsWeighing = daysSinceWeight !== null && daysSinceWeight > 100;
+                    // Red dot if: no weight data (null) OR over 100 days since last weight
+                    // Green dot only if: actual/dictated weight within 100 days
+                    const needsWeighing = daysSinceWeight === null || daysSinceWeight > 100;
 
                     const extendedAnimal = {
                         ...animal,
@@ -12995,7 +13234,9 @@
 
                 // Weight status dot: green if weighed within 100 days, red if over 100 days
                 const weightDotColor = a.needsWeighing ? '#EF4444' : '#22C55E';
-                const weightDotTitle = a.needsWeighing ? `Sin pesar hace ${a.daysSinceWeight || '?'} días` : `Pesado hace ${a.daysSinceWeight || 0} días`;
+                const weightDotTitle = a.needsWeighing
+                    ? (a.daysSinceWeight !== null ? `Sin pesar hace ${a.daysSinceWeight} días` : 'Sin datos de peso')
+                    : `Pesado hace ${a.daysSinceWeight || 0} días`;
 
                 return `
                     <div class="fs-animal-card ${alertClass}" data-numero="${a.numero}" data-ranch="${a.ranchId}"
@@ -13025,7 +13266,7 @@
                         ${alertAnimals.map(a => `
                             <div class="fs-alert-item" style="border-left: 4px solid ${a.needsWeighing ? '#EF4444' : '#F59E0B'};">
                                 <div class="fs-alert-animal">#${a.numero} - ${a.ranchName}</div>
-                                ${a.needsWeighing ? `<div class="fs-alert-msg">⚖️ Sin pesar hace ${a.daysSinceWeight} días</div>` : ''}
+                                ${a.needsWeighing ? `<div class="fs-alert-msg">⚖️ ${a.daysSinceWeight !== null ? `Sin pesar hace ${a.daysSinceWeight} días` : 'Sin datos de peso'}</div>` : ''}
                                 ${a.issues.map(i => `<div class="fs-alert-msg">⚠️ ${i.issue}</div>`).join('')}
                                 <button class="fs-alert-action" onclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')">Ver Perfil</button>
                             </div>
@@ -14435,9 +14676,9 @@
                             <span class="profile-item-value">${animal.peso} kg</span>
                         </div>
                         <div class="profile-item">
-                            <span class="profile-item-label">${hasManualWeight ? 'Peso Actual (Registrado)' : 'Peso Actual (Est.)'}</span>
+                            <span class="profile-item-label">${hasManualWeight ? 'Peso Actual (Registrado)' : 'Peso Esperado (GDP)'}</span>
                             <span class="profile-item-value large" style="${pesoStyle}">${Math.round(pesoActual)} kg</span>
-                            ${hasManualWeight ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">Est. por defecto: ${Math.round(pesoEstimadoDefault)} kg</div>` : ''}
+                            ${hasManualWeight ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">Esperado por GDP: ${Math.round(pesoEstimadoDefault)} kg</div>` : ''}
                         </div>
                         <div class="profile-item">
                             <span class="profile-item-label">Ganancia Total</span>
