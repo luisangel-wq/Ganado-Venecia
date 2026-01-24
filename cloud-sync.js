@@ -1,12 +1,12 @@
 /**
- * CLOUD SYNC MODULE v2.0
- * Automatic synchronization with Firebase - NOW WITH IMMEDIATE SYNC
+ * CLOUD SYNC MODULE v3.0 - CLOUD-FIRST ARCHITECTURE
+ * Firebase is the source of truth - local storage is just a cache
  *
- * KEY CHANGES:
- * - Syncs IMMEDIATELY after every data change (debounced 2 seconds)
- * - Shows visible sync status indicator
- * - Queues changes when offline for later sync
- * - Warns before page close if unsync'd changes
+ * KEY FEATURES:
+ * - CLOUD-FIRST: Always loads from Firebase on startup
+ * - REAL-TIME: Firebase listeners for live updates from other devices
+ * - IMMEDIATE UPLOAD: All changes sync to cloud within 2 seconds
+ * - OFFLINE SUPPORT: Queues changes when offline
  */
 
 class CloudSync {
@@ -20,14 +20,18 @@ class CloudSync {
         this.syncInterval = null;
         this.isInitialized = false;
 
-        // NEW: Debounce timer for immediate sync
+        // Debounce timer for immediate sync
         this.syncDebounceTimer = null;
         this.pendingChanges = false;
         this.lastChangeTime = null;
 
-        // NEW: Offline queue
+        // Offline queue
         this.offlineQueue = [];
         this.isOnline = navigator.onLine;
+
+        // Real-time listener reference
+        this.realtimeListener = null;
+        this.suppressNextUpdate = false; // Prevent echo when we upload
 
         // Define RANCHES structure as fallback
         this.RANCHES_FALLBACK = {
@@ -76,7 +80,8 @@ class CloudSync {
     }
 
     /**
-     * Initialize Firebase and setup sync
+     * Initialize Firebase and setup sync - CLOUD-FIRST
+     * Always downloads from cloud first, then enables real-time listeners
      */
     async initialize(firebaseConfig) {
         try {
@@ -104,27 +109,31 @@ class CloudSync {
             this.isInitialized = true;
             this.lastSync = localStorage.getItem('cloudSync_lastSync') || null;
 
-            console.log('Cloud sync initialized with user ID:', this.userId);
+            console.log('☁️ Cloud-First Sync v3.0 initializing with user ID:', this.userId);
 
-            // Check if new device
-            const localAnimalCount = this.countLocalAnimals();
-            const isNewDevice = localAnimalCount === 0;
+            // CLOUD-FIRST: Always download from cloud on startup
+            console.log('☁️ CLOUD-FIRST: Downloading latest data from Firebase...');
+            this.updateSyncIndicator('syncing', 'Descargando...');
 
-            if (isNewDevice) {
-                console.log('📱 NEW DEVICE - Downloading from cloud...');
-                this.updateSyncIndicator('syncing', 'Descargando...');
-                await this.forceDownloadFromCloud();
+            const cloudData = await this.downloadFromCloud();
+
+            if (cloudData) {
+                // Cloud has data - use it as source of truth
+                console.log('✅ Cloud data loaded successfully');
+                await this.applyCloudDataSilent(cloudData);
             } else {
-                // Initial sync to cloud
-                console.log('📤 Initial sync to cloud...');
-                this.updateSyncIndicator('syncing', 'Sincronizando...');
+                // No cloud data yet - upload local data
+                console.log('📤 No cloud data found - uploading local data...');
                 await this.syncToCloud();
             }
 
-            // Set up periodic two-way sync every 60 seconds (backup, not primary)
+            // Setup REAL-TIME listener for live updates
+            this.setupRealtimeListener();
+
+            // Set up periodic backup sync every 60 seconds
             this.syncInterval = setInterval(() => {
                 if (!this.pendingChanges) {
-                    this.twoWaySync();
+                    this.syncToCloud();
                 }
             }, 60000);
 
@@ -135,6 +144,103 @@ class CloudSync {
             this.updateSyncIndicator('error', 'Error de conexión');
             return false;
         }
+    }
+
+    /**
+     * Download data from cloud (without applying)
+     */
+    async downloadFromCloud() {
+        try {
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            return snapshot.val();
+        } catch (error) {
+            console.error('Error downloading from cloud:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Apply cloud data silently (without reload) - for initial load
+     */
+    async applyCloudDataSilent(cloudData) {
+        if (!cloudData || !cloudData.ranches) return;
+
+        const RANCHES = this.getRanches();
+
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            if (ranch) {
+                try {
+                    localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
+                    console.log(`✅ Loaded: ${ranch.name}`);
+                } catch (e) {
+                    console.error(`Error saving data for ${ranchId}:`, e);
+                }
+            }
+        });
+
+        if (cloudData.photos) {
+            Object.keys(cloudData.photos).forEach(ranchId => {
+                const photosKey = 'animalPhotos_' + ranchId;
+                try {
+                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
+                } catch (e) {
+                    console.error(`Error saving photos for ${ranchId}:`, e);
+                }
+            });
+        }
+
+        this.lastSync = cloudData.lastModified;
+        localStorage.setItem('cloudSync_lastSync', this.lastSync);
+
+        // Reload data in UI if available
+        if (typeof loadData === 'function') loadData();
+        if (typeof updateAllViews === 'function') updateAllViews();
+    }
+
+    /**
+     * Setup REAL-TIME listener for live updates from other devices
+     */
+    setupRealtimeListener() {
+        if (this.realtimeListener) {
+            // Already listening
+            return;
+        }
+
+        console.log('👂 Setting up real-time Firebase listener...');
+
+        this.realtimeListener = this.db.ref(`users/${this.userId}`).on('value', (snapshot) => {
+            // Skip if we just uploaded (to prevent echo)
+            if (this.suppressNextUpdate) {
+                this.suppressNextUpdate = false;
+                return;
+            }
+
+            const cloudData = snapshot.val();
+            if (!cloudData) return;
+
+            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
+            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
+            const cloudDeviceId = cloudData.deviceId;
+            const myDeviceId = this.getDeviceId();
+
+            // Only apply if:
+            // 1. Data is from another device
+            // 2. Cloud timestamp is newer than our last sync
+            // 3. We don't have pending local changes
+            if (cloudDeviceId !== myDeviceId && cloudTime > localTime && !this.pendingChanges) {
+                console.log('🔄 Real-time update from another device!');
+                this.applyCloudDataSilent(cloudData);
+
+                if (typeof showToast === 'function') {
+                    showToast('☁️ Actualización de otro dispositivo', 'info');
+                }
+            }
+        }, (error) => {
+            console.error('Real-time listener error:', error);
+        });
+
+        console.log('✅ Real-time listener active');
     }
 
     /**
@@ -353,16 +459,19 @@ class CloudSync {
     }
 
     /**
-     * Sync all ranch data to cloud - NOW MUCH FASTER
+     * Sync all ranch data to cloud - CLOUD-FIRST PRIMARY METHOD
      */
     async syncToCloud() {
         if (!this.enabled || this.syncInProgress) return false;
 
         try {
             this.syncInProgress = true;
-            this.updateSyncIndicator('syncing', 'Sincronizando...');
+            this.updateSyncIndicator('syncing', 'Guardando en nube...');
 
             const allData = this.collectAllData();
+
+            // Suppress real-time listener to prevent echo
+            this.suppressNextUpdate = true;
 
             // Upload to Firebase
             await this.db.ref(`users/${this.userId}`).set(allData);
@@ -371,13 +480,14 @@ class CloudSync {
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
             this.pendingChanges = false;
 
-            console.log('✅ Synced to cloud at', this.lastSync);
-            this.updateSyncIndicator('synced', 'Sincronizado');
+            console.log('☁️ Saved to cloud at', this.lastSync);
+            this.updateSyncIndicator('synced', 'Guardado ☁️');
 
             return true;
         } catch (error) {
             console.error('Error syncing to cloud:', error);
             this.updateSyncIndicator('error', 'Error');
+            this.suppressNextUpdate = false;
 
             // Queue for later if network error
             if (!this.isOnline || error.code === 'NETWORK_ERROR') {
@@ -459,71 +569,14 @@ class CloudSync {
     }
 
     /**
-     * TWO-WAY SYNC: Check cloud for changes AND upload local changes
-     * CRITICAL: NEVER download if there are pending local changes!
+     * TWO-WAY SYNC: Simplified for cloud-first architecture
+     * Real-time listener handles downloads, this just ensures upload
      */
     async twoWaySync() {
         if (!this.enabled || this.syncInProgress || !this.isOnline) return;
 
-        // CRITICAL: If we have pending changes, ALWAYS upload first - never download!
-        if (this.pendingChanges) {
-            console.log('📤 Pending local changes - uploading first (NOT downloading)');
-            await this.syncToCloud();
-            return;
-        }
-
-        try {
-            this.syncInProgress = true;
-
-            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
-            const cloudData = snapshot.val();
-
-            if (!cloudData) {
-                this.syncInProgress = false;
-                await this.syncToCloud();
-                return;
-            }
-
-            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
-            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
-            const cloudDeviceId = cloudData.deviceId;
-            const myDeviceId = this.getDeviceId();
-
-            // Only download if:
-            // 1. Cloud data is from ANOTHER device
-            // 2. Cloud timestamp is newer
-            // 3. We have NO pending local changes
-            if (cloudDeviceId !== myDeviceId && cloudTime > localTime && !this.pendingChanges) {
-                // Double-check: compare actual data to see if cloud has more info
-                const cloudTotal = this.countAnimalsInData(cloudData);
-                const localTotal = this.countLocalAnimals();
-                const cloudPotrerosTotal = this.countPotreroAssignments(cloudData);
-                const localPotrerosTotal = this.countLocalPotreroAssignments();
-
-                console.log(`📊 Comparing: Cloud(${cloudTotal} animals, ${cloudPotrerosTotal} assignments) vs Local(${localTotal} animals, ${localPotrerosTotal} assignments)`);
-
-                // Only download if cloud has MORE data (not less or equal)
-                if (cloudTotal > localTotal || cloudPotrerosTotal > localPotrerosTotal) {
-                    console.log('⬇️ Cloud has more data - downloading...');
-                    await this.applyCloudDataSmart(cloudData);
-
-                    if (typeof showToast === 'function') {
-                        showToast('☁️ Nuevos datos de otro dispositivo', 'success');
-                    }
-                } else {
-                    console.log('📤 Local data is same or better - uploading...');
-                    this.syncInProgress = false;
-                    await this.syncToCloud();
-                }
-            } else {
-                this.syncInProgress = false;
-                await this.syncToCloud();
-            }
-        } catch (error) {
-            console.error('Two-way sync error:', error);
-        } finally {
-            this.syncInProgress = false;
-        }
+        // Simply upload to ensure cloud has latest data
+        await this.syncToCloud();
     }
 
     /**
@@ -658,13 +711,19 @@ class CloudSync {
     }
 
     /**
-     * Disable cloud sync
+     * Disable cloud sync and cleanup listeners
      */
     disable() {
         this.enabled = false;
         if (this.syncInterval) clearInterval(this.syncInterval);
         if (this.syncDebounceTimer) clearTimeout(this.syncDebounceTimer);
-        if (this.db) this.db.ref(`users/${this.userId}`).off();
+
+        // Remove real-time listener
+        if (this.db && this.realtimeListener) {
+            this.db.ref(`users/${this.userId}`).off('value', this.realtimeListener);
+            this.realtimeListener = null;
+        }
+
         this.updateSyncIndicator('offline', 'Desactivado');
     }
 
@@ -698,9 +757,9 @@ window.cloudSync = new CloudSync();
 // FAMILY SYNC CODE
 const FAMILY_SYNC_ID = 'user_1767286295709_gwj75h9dp';
 
-// Auto-initialize with family sync
+// Auto-initialize with family sync - CLOUD-FIRST
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔄 Cloud Sync v2.0: Initializing...');
+    console.log('☁️ Cloud Sync v3.0 CLOUD-FIRST: Initializing...');
 
     // Set shared family ID
     const currentUserId = localStorage.getItem('cloudSync_userId');
@@ -711,10 +770,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (typeof firebaseConfig !== 'undefined') {
         try {
+            // Small delay to ensure Firebase SDK is loaded
             setTimeout(async () => {
                 const success = await cloudSync.initialize(firebaseConfig);
                 if (success) {
-                    console.log('✅ Cloud sync initialized!');
+                    console.log('✅ Cloud-First sync active!');
+                    console.log('   📥 Data loaded from Firebase');
+                    console.log('   👂 Real-time listener active');
                     localStorage.setItem('cloudSync_enabled', 'true');
                 }
             }, 500);
