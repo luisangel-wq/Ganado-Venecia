@@ -12790,10 +12790,6 @@
         // Initialize PhotoCache
         PhotoCache.init().catch(e => console.warn('PhotoCache init failed:', e));
 
-        // Voice recording for notes
-        let mediaRecorder = null;
-        let audioChunks = [];
-
         // Speech recognition for dictation (use different name to avoid conflict)
         const PotreroSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let potreroRecognition = null;
