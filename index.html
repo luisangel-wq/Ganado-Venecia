@@ -11962,10 +11962,15 @@
             });
 
             // Update potrero states in source ranch data
+            console.log('📍 Updating potrero states:', { desdePotreroInfo, desdeRanch, desdePotreroId, haciaPotreroInfo, haciaRanch, haciaPotreroId });
+
             if (desdePotreroInfo && desdeRanch) {
                 const sourceRanchData = getRanchData(desdeRanch);
+                console.log('📦 Source ranch data loaded:', sourceRanchData ? 'yes' : 'no');
                 if (sourceRanchData) {
-                    const potreroDesde = sourceRanchData.potreros?.find(p => p.id === desdePotreroId);
+                    // Find potrero with type-safe comparison
+                    const potreroDesde = sourceRanchData.potreros?.find(p => Number(p.id) === Number(desdePotreroId));
+                    console.log('🔍 Found source potrero:', potreroDesde?.nombre, 'id:', desdePotreroId);
                     if (potreroDesde) {
                         potreroDesde.ultimaSalida = fecha;
                         // Check if potrero is now empty - must check ALL shared ranches
@@ -11973,14 +11978,23 @@
                         SHARED_POTRERO_RANCHES.forEach(ranchId => {
                             const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
                             if (ranchData && ranchData.animalPotreros) {
-                                remaining += Object.values(ranchData.animalPotreros).filter(pId =>
-                                    pId === desdeValue || pId === desdePotreroId ||
-                                    pId === `${desdeRanch}_${desdePotreroId}`
-                                ).length;
+                                const count = Object.values(ranchData.animalPotreros).filter(pId => {
+                                    // Use potreroIdMatches logic for consistency
+                                    if (typeof pId === 'string' && pId.includes('_')) {
+                                        return pId === desdeValue || pId === `${desdeRanch}_${desdePotreroId}`;
+                                    } else {
+                                        const numericPId = typeof pId === 'number' ? pId : parseInt(pId);
+                                        return !isNaN(numericPId) && numericPId === Number(desdePotreroId);
+                                    }
+                                }).length;
+                                remaining += count;
+                                console.log(`  📊 ${ranchId}: ${count} animals remaining in source potrero`);
                             }
                         });
+                        console.log('📊 Total remaining in source potrero:', remaining);
                         if (remaining === 0) {
                             potreroDesde.estado = 'descanso';
+                            console.log('✅ Source potrero set to descanso');
                         }
                         saveRanchData(desdeRanch, sourceRanchData);
                     }
@@ -11990,12 +12004,16 @@
             // Update destination potrero state
             if (haciaPotreroInfo && haciaRanch) {
                 const destRanchData = getRanchData(haciaRanch);
+                console.log('📦 Dest ranch data loaded:', destRanchData ? 'yes' : 'no');
                 if (destRanchData) {
-                    const potreroHacia = destRanchData.potreros?.find(p => p.id === haciaPotreroId);
+                    // Find potrero with type-safe comparison
+                    const potreroHacia = destRanchData.potreros?.find(p => Number(p.id) === Number(haciaPotreroId));
+                    console.log('🔍 Found dest potrero:', potreroHacia?.nombre, 'id:', haciaPotreroId);
                     if (potreroHacia) {
                         potreroHacia.ultimaEntrada = fecha;
                         potreroHacia.estado = 'ocupado';
                         saveRanchData(haciaRanch, destRanchData);
+                        console.log('✅ Dest potrero set to ocupado');
                     }
                 }
             }
@@ -12006,6 +12024,9 @@
             showToast(`${selectedMoverAnimals.size} animales movidos a ${destino}`, 'success');
 
             hideMoverAnimalesForm();
+
+            // Refresh the potrero view to show updated states
+            updatePotrerosView();
         }
 
         // Helper function to get ranch data
@@ -12082,10 +12103,17 @@
 
                 // Build breakdown text for tooltip/display
                 let breakdownText = '';
+                let animalNumbersTooltip = '';
                 Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
                     if (breakdownText) breakdownText += ' + ';
                     breakdownText += `${info.count} ${info.ranchName}`;
+
+                    // Add animal numbers to tooltip
+                    if (animalNumbersTooltip) animalNumbersTooltip += '\n';
+                    animalNumbersTooltip += `${info.ranchName}: `;
+                    animalNumbersTooltip += info.animales.map(a => '#' + a.numero).join(', ');
                 });
+                if (!animalNumbersTooltip) animalNumbersTooltip = 'Sin animales';
 
                 // Calculate days resting or occupied
                 let diasEstado = null;
@@ -12115,7 +12143,7 @@
                 const potreroKey = `${p.sourceRanch}_${p.id}`;
 
                 return `
-                    <div class="potrero-card ${p.estado}" onclick="showPotreroAnimales('${potreroKey}')" style="cursor: pointer;">
+                    <div class="potrero-card ${p.estado}" onclick="showPotreroAnimales('${potreroKey}')" style="cursor: pointer;" title="${animalNumbersTooltip}">
                         <div class="potrero-card-header">
                             <div class="potrero-card-title">🌿 ${p.nombre}</div>
                             <span class="potrero-card-status ${p.estado}">${statusLabels[p.estado]}</span>
@@ -12124,7 +12152,7 @@
                         <div class="potrero-card-stats">
                             <div class="potrero-stat">📏 ${p.area ? p.area + ' ha' : 'Sin área'}</div>
                             <div class="potrero-stat">🌾 ${p.tipoPasto}</div>
-                            <div class="potrero-stat" style="cursor: pointer;" title="${breakdownText || 'Sin animales'}">
+                            <div class="potrero-stat" style="cursor: pointer;" title="${animalNumbersTooltip}">
                                 🐄 <strong>${animalesCount}</strong>${p.capacidad ? '/' + p.capacidad : ''} cabezas
                                 ${breakdownText ? `<br><small style="color: #6b7280; font-size: 0.7rem;">${breakdownText}</small>` : ''}
                             </div>
