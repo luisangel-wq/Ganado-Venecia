@@ -11729,27 +11729,76 @@
         function updateAnimalesEnPotrero() {
             const desdeValue = document.getElementById('moverDesde').value;
             const container = document.getElementById('moverAnimalSelector');
-            const inventario = getInventario();
 
-            let animalesFiltrados;
+            let animalesFiltrados = [];
+
             if (desdeValue === '') {
-                // Animals without assigned potrero
+                // Animals without assigned potrero - only from current ranch
+                const inventario = getInventario();
                 animalesFiltrados = inventario.filter(a => !data.animalPotreros[a.numero]);
             } else {
-                // Parse the combined ID (format: "ranchId_potreroId")
-                const parts = desdeValue.split('_');
-                const sourceRanch = parts[0];
-                const potreroId = parseInt(parts.slice(1).join('_')); // Handle IDs that might have underscores
+                // Find the selected potrero object to use with potreroIdMatches()
+                const allPotreros = getAllSharedPotreros();
+                const selectedPotrero = allPotreros.find(p => `${p.sourceRanch}_${p.id}` === desdeValue);
 
-                // Animals in selected potrero (check both old format and new format)
-                animalesFiltrados = inventario.filter(a => {
-                    const assignedPotrero = data.animalPotreros[a.numero];
-                    // Support both old format (just ID) and new format (ranch_id)
-                    return assignedPotrero === potreroId ||
-                           assignedPotrero === desdeValue ||
-                           assignedPotrero === `${sourceRanch}_${potreroId}`;
+                console.log('🔍 Searching for animals in potrero:', { desdeValue, selectedPotrero });
+
+                if (!selectedPotrero) {
+                    console.error('Could not find potrero for value:', desdeValue);
+                    container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--gray);">No hay animales en esta ubicación</div>';
+                    return;
+                }
+
+                // Get animals from ALL shared ranches that are in this potrero
+                // This matches the logic in countAnimalesInPotreroAllRanches()
+                SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                    const ranch = RANCHES[ranchId];
+                    const ranchDataStr = localStorage.getItem(ranch.storageKey);
+                    if (!ranchDataStr) {
+                        console.log(`  ❌ No data for ranch ${ranchId}`);
+                        return;
+                    }
+
+                    try {
+                        const ranchData = JSON.parse(ranchDataStr);
+                        const animalPotreros = ranchData.animalPotreros || {};
+                        const entradas = ranchData.entradas || [];
+
+                        console.log(`  📦 Ranch ${ranchId}: ${Object.keys(animalPotreros).length} animal assignments`);
+
+                        // Log sample assignments to see the format
+                        const sampleAssignments = Object.entries(animalPotreros).slice(0, 3);
+                        console.log(`  📋 Sample assignments:`, sampleAssignments);
+
+                        // Find animals from this ranch in the selected potrero
+                        Object.entries(animalPotreros).forEach(([numero, assignedId]) => {
+                            // Use the same matching logic as countAnimalesInPotreroAllRanches
+                            const matches = potreroIdMatches(assignedId, selectedPotrero);
+
+                            if (matches) {
+                                // Find animal info and check it's not sold
+                                const animal = entradas.find(a => a.numero === numero);
+                                if (animal) {
+                                    // Check if animal is sold
+                                    const salidas = ranchData.salidas || [];
+                                    const isSold = salidas.some(s => s.numero === numero ||
+                                        (s.animales && s.animales.includes(numero)));
+                                    if (!isSold) {
+                                        animalesFiltrados.push({
+                                            ...animal,
+                                            sourceRanch: ranchId  // Track which ranch the animal is from
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.error(`Error loading animals from ${ranchId}:`, e);
+                    }
                 });
             }
+
+            console.log(`🐄 Total animals found: ${animalesFiltrados.length}`);
 
             if (animalesFiltrados.length === 0) {
                 container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--gray);">No hay animales en esta ubicación</div>';
@@ -11757,7 +11806,7 @@
             }
 
             container.innerHTML = animalesFiltrados.map(a =>
-                `<div class="animal-chip" data-numero="${a.numero}" onclick="toggleMoverAnimal('${a.numero}')">${a.numero}</div>`
+                `<div class="animal-chip" data-numero="${a.numero}" data-source-ranch="${a.sourceRanch || currentRanch}" onclick="toggleMoverAnimal('${a.numero}')">${a.numero}</div>`
             ).join('');
 
             selectedMoverAnimals.clear();
@@ -11818,23 +11867,44 @@
             const fecha = document.getElementById('moverFecha').value;
 
             // Parse the combined IDs (format: "ranchId_potreroId")
+            // Ranch IDs can contain underscores (e.g., "santa_catalina_3")
             const allPotreros = getAllSharedPotreros();
+
+            // Helper to parse potrero ID with underscore-containing ranch IDs
+            function parsePotreroValue(value) {
+                if (!value || !value.includes('_')) return { ranchId: null, potreroId: null };
+
+                // Check against known ranch IDs first
+                for (const ranchId of SHARED_POTRERO_RANCHES) {
+                    if (value.startsWith(ranchId + '_')) {
+                        return {
+                            ranchId: ranchId,
+                            potreroId: parseInt(value.substring(ranchId.length + 1))
+                        };
+                    }
+                }
+
+                // Fallback: use last underscore as separator
+                const lastUnderscoreIdx = value.lastIndexOf('_');
+                return {
+                    ranchId: value.substring(0, lastUnderscoreIdx),
+                    potreroId: parseInt(value.substring(lastUnderscoreIdx + 1))
+                };
+            }
 
             // Find destination potrero info
             let haciaRanch, haciaPotreroId, haciaPotreroInfo;
-            if (haciaValue.includes('_')) {
-                const parts = haciaValue.split('_');
-                haciaRanch = parts[0];
-                haciaPotreroId = parseInt(parts.slice(1).join('_'));
-                haciaPotreroInfo = allPotreros.find(p => p.sourceRanch === haciaRanch && p.id === haciaPotreroId);
-            }
+            const haciaParsed = parsePotreroValue(haciaValue);
+            haciaRanch = haciaParsed.ranchId;
+            haciaPotreroId = haciaParsed.potreroId;
+            haciaPotreroInfo = allPotreros.find(p => p.sourceRanch === haciaRanch && p.id === haciaPotreroId);
 
             // Find source potrero info
             let desdeRanch, desdePotreroId, desdePotreroInfo;
-            if (desdeValue && desdeValue.includes('_')) {
-                const parts = desdeValue.split('_');
-                desdeRanch = parts[0];
-                desdePotreroId = parseInt(parts.slice(1).join('_'));
+            if (desdeValue) {
+                const desdeParsed = parsePotreroValue(desdeValue);
+                desdeRanch = desdeParsed.ranchId;
+                desdePotreroId = desdeParsed.potreroId;
                 desdePotreroInfo = allPotreros.find(p => p.sourceRanch === desdeRanch && p.id === desdePotreroId);
             }
 
@@ -11860,8 +11930,35 @@
             data.rotaciones.push(rotacion);
 
             // Update animal assignments with the full ID (for cross-ranch tracking)
-            selectedMoverAnimals.forEach(numero => {
-                data.animalPotreros[numero] = haciaValue;
+            // Group animals by their source ranch so we update the correct ranch's data
+            const animalsByRanch = {};
+            document.querySelectorAll('#moverAnimalSelector .animal-chip.selected').forEach(chip => {
+                const numero = chip.dataset.numero;
+                const sourceRanch = chip.dataset.sourceRanch || currentRanch;
+                if (!animalsByRanch[sourceRanch]) {
+                    animalsByRanch[sourceRanch] = [];
+                }
+                animalsByRanch[sourceRanch].push(numero);
+            });
+
+            // Update animalPotreros in each source ranch's data
+            Object.entries(animalsByRanch).forEach(([ranchId, animales]) => {
+                if (ranchId === currentRanch) {
+                    // Current ranch - update directly
+                    animales.forEach(numero => {
+                        data.animalPotreros[numero] = haciaValue;
+                    });
+                } else {
+                    // Different ranch - load, update, save
+                    const ranchData = getRanchData(ranchId);
+                    if (ranchData) {
+                        if (!ranchData.animalPotreros) ranchData.animalPotreros = {};
+                        animales.forEach(numero => {
+                            ranchData.animalPotreros[numero] = haciaValue;
+                        });
+                        saveRanchData(ranchId, ranchData);
+                    }
+                }
             });
 
             // Update potrero states in source ranch data
@@ -11871,10 +11968,17 @@
                     const potreroDesde = sourceRanchData.potreros?.find(p => p.id === desdePotreroId);
                     if (potreroDesde) {
                         potreroDesde.ultimaSalida = fecha;
-                        // Check if potrero is now empty
-                        const remaining = Object.values(data.animalPotreros).filter(pId =>
-                            pId === desdeValue || pId === desdePotreroId
-                        ).length;
+                        // Check if potrero is now empty - must check ALL shared ranches
+                        let remaining = 0;
+                        SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                            const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+                            if (ranchData && ranchData.animalPotreros) {
+                                remaining += Object.values(ranchData.animalPotreros).filter(pId =>
+                                    pId === desdeValue || pId === desdePotreroId ||
+                                    pId === `${desdeRanch}_${desdePotreroId}`
+                                ).length;
+                            }
+                        });
                         if (remaining === 0) {
                             potreroDesde.estado = 'descanso';
                         }
