@@ -13074,8 +13074,11 @@
             const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
             if (!ranchData) return null;
 
+            // Normalize numero for comparison (handle string/number mismatch)
+            const numStr = String(numero);
+
             const updates = ranchData.pesoUpdates || [];
-            const animalUpdates = updates.filter(u => u.numero === numero);
+            const animalUpdates = updates.filter(u => String(u.numero) === numStr);
 
             if (animalUpdates.length > 0) {
                 // Has weight updates - use the most recent one
@@ -13085,7 +13088,7 @@
             }
 
             // No pesoUpdates - check if animal has actual initial peso at entry
-            const animal = ranchData.entradas?.find(a => a.numero === numero);
+            const animal = ranchData.entradas?.find(a => String(a.numero) === numStr);
             if (animal && animal.peso && animal.peso > 0) {
                 // Has actual initial peso - use entry date
                 const entryDate = animal.fechaEntrada || animal.fecha;
@@ -13201,9 +13204,9 @@
                 info.animales.forEach(animal => {
                     const daysSinceWeight = getDaysSinceLastWeight(animal.numero, ranchId);
                     const issues = getAnimalIssues(animal.numero, ranchId);
-                    // Red dot if: no weight data (null) OR over 100 days since last weight
-                    // Green dot only if: actual/dictated weight within 100 days
-                    const needsWeighing = daysSinceWeight === null || daysSinceWeight > 100;
+                    // Red dot if: no weight data (null) OR over 90 days since last weight (~3 months)
+                    // Green dot only if: actual/dictated weight within 90 days (3 months)
+                    const needsWeighing = daysSinceWeight === null || daysSinceWeight > 90;
 
                     const extendedAnimal = {
                         ...animal,
@@ -13240,8 +13243,7 @@
 
                 return `
                     <div class="fs-animal-card ${alertClass}" data-numero="${a.numero}" data-ranch="${a.ranchId}"
-                         onclick="toggleFullScreenAnimal('${a.numero}', '${a.ranchId}')"
-                         ondblclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')"
+                         onclick="showAnimalActionMenu('${a.numero}', '${a.ranchId}', event)"
                          style="background: ${colors.bg}; border: 2px solid ${colors.border}; ${hasIssues ? 'box-shadow: 0 0 0 2px #F59E0B;' : ''}">
                         <div class="fs-animal-header">
                             <span class="fs-animal-number">#${a.numero}</span>
@@ -13354,6 +13356,89 @@
                         .fs-legend { display: flex; gap: 1rem; padding: 0.5rem 1rem; background: white; border-bottom: 1px solid #E5E7EB; font-size: 0.75rem; }
                         .fs-legend-item { display: flex; align-items: center; gap: 0.3rem; }
                         .fs-legend-color { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
+
+                        /* Animal Action Menu - Beautiful popup on click */
+                        .animal-action-menu {
+                            position: fixed;
+                            top: 50%; left: 50%;
+                            transform: translate(-50%, -50%);
+                            background: white;
+                            border-radius: 16px;
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                            z-index: 3000;
+                            width: 90%;
+                            max-width: 320px;
+                            animation: aamSlideIn 0.2s ease-out;
+                        }
+                        @keyframes aamSlideIn {
+                            from { opacity: 0; transform: translate(-50%, -45%); }
+                            to { opacity: 1; transform: translate(-50%, -50%); }
+                        }
+                        .aam-header {
+                            background: linear-gradient(135deg, #059669, #10b981);
+                            color: white;
+                            padding: 1.25rem 1rem;
+                            border-radius: 16px 16px 0 0;
+                            position: relative;
+                            text-align: center;
+                        }
+                        .aam-title { font-size: 1.75rem; font-weight: 700; }
+                        .aam-subtitle { font-size: 0.9rem; opacity: 0.9; margin-top: 0.25rem; }
+                        .aam-close {
+                            position: absolute; top: 0.75rem; right: 0.75rem;
+                            background: rgba(255,255,255,0.2); border: none;
+                            color: white; font-size: 1.5rem; cursor: pointer;
+                            width: 36px; height: 36px; border-radius: 50%;
+                            display: flex; align-items: center; justify-content: center;
+                        }
+                        .aam-close:hover { background: rgba(255,255,255,0.3); }
+                        .aam-actions {
+                            display: grid;
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 0.5rem;
+                            padding: 1rem;
+                        }
+                        .aam-btn {
+                            display: flex; flex-direction: column;
+                            align-items: center; justify-content: center;
+                            padding: 1rem 0.5rem;
+                            border: none; border-radius: 12px;
+                            cursor: pointer; transition: all 0.2s;
+                            background: #F3F4F6;
+                        }
+                        .aam-btn:hover { transform: scale(1.05); }
+                        .aam-btn:active { transform: scale(0.98); }
+                        .aam-icon { font-size: 1.75rem; margin-bottom: 0.3rem; }
+                        .aam-label { font-size: 0.75rem; font-weight: 600; color: #374151; }
+                        .aam-ver { background: #E5E7EB; }
+                        .aam-ver:hover { background: #D1D5DB; }
+                        .aam-pesar { background: #DBEAFE; }
+                        .aam-pesar:hover { background: #BFDBFE; }
+                        .aam-foto { background: #EDE9FE; }
+                        .aam-foto:hover { background: #DDD6FE; }
+                        .aam-nota { background: #FEF3C7; }
+                        .aam-nota:hover { background: #FDE68A; }
+                        .aam-mover { background: #D1FAE5; }
+                        .aam-mover:hover { background: #A7F3D0; }
+                        .aam-select-option {
+                            padding: 0 1rem 1rem;
+                        }
+                        .aam-select-btn {
+                            width: 100%;
+                            padding: 0.75rem;
+                            background: transparent;
+                            border: 2px dashed #D1D5DB;
+                            border-radius: 8px;
+                            color: #6B7280;
+                            font-size: 0.85rem;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        }
+                        .aam-select-btn:hover {
+                            border-color: #3B82F6;
+                            color: #3B82F6;
+                            background: #EFF6FF;
+                        }
                     </style>
 
                     <div class="fs-header">
@@ -13394,7 +13479,7 @@
                         </div>
                         <div class="fs-legend-item">
                             <span class="fs-legend-color" style="background: #FEE2E2; border-color: #EF4444;"></span>
-                            <span>Sin pesar >100 días</span>
+                            <span>Sin pesar >90 días</span>
                         </div>
                     </div>
 
@@ -13436,7 +13521,76 @@
             updatePotrerosView();
         }
 
-        function toggleFullScreenAnimal(numero, ranchId) {
+        // Show action menu when clicking on an animal
+        function showAnimalActionMenu(numero, ranchId, event) {
+            event.stopPropagation();
+
+            // Remove any existing action menu
+            document.getElementById('animalActionMenu')?.remove();
+
+            // Get animal data for display
+            const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+            const animal = ranchData?.entradas?.find(a => String(a.numero) === String(numero));
+            const ranchName = RANCHES[ranchId]?.name || ranchId;
+
+            const menuHtml = `
+                <div id="animalActionMenu" class="animal-action-menu" onclick="event.stopPropagation()">
+                    <div class="aam-header">
+                        <div class="aam-title">#${numero}</div>
+                        <div class="aam-subtitle">${animal?.peso || '?'}kg · ${ranchName}</div>
+                        <button class="aam-close" onclick="closeAnimalActionMenu()">×</button>
+                    </div>
+                    <div class="aam-actions">
+                        <button class="aam-btn aam-ver" onclick="closeAnimalActionMenu(); showAnimalProfileCrossRanch('${numero}', '${ranchId}')">
+                            <span class="aam-icon">👁️</span>
+                            <span class="aam-label">Ver Perfil</span>
+                        </button>
+                        <button class="aam-btn aam-pesar" onclick="closeAnimalActionMenu(); weighSingleAnimal('${numero}', '${ranchId}')">
+                            <span class="aam-icon">⚖️</span>
+                            <span class="aam-label">Pesar</span>
+                        </button>
+                        <button class="aam-btn aam-foto" onclick="closeAnimalActionMenu(); photoSingleAnimal('${numero}', '${ranchId}')">
+                            <span class="aam-icon">📷</span>
+                            <span class="aam-label">Foto</span>
+                        </button>
+                        <button class="aam-btn aam-nota" onclick="closeAnimalActionMenu(); noteSingleAnimal('${numero}', '${ranchId}')">
+                            <span class="aam-icon">🎤</span>
+                            <span class="aam-label">Nota</span>
+                        </button>
+                        <button class="aam-btn aam-mover" onclick="closeAnimalActionMenu(); moveSingleAnimal('${numero}', '${ranchId}')">
+                            <span class="aam-icon">🔄</span>
+                            <span class="aam-label">Mover</span>
+                        </button>
+                    </div>
+                    <div class="aam-select-option">
+                        <button class="aam-select-btn" onclick="closeAnimalActionMenu(); toggleAnimalSelection('${numero}', '${ranchId}')">
+                            ☑️ Seleccionar para acción en grupo
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', menuHtml);
+
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', closeAnimalActionMenuOnOutsideClick);
+            }, 100);
+        }
+
+        function closeAnimalActionMenu() {
+            document.getElementById('animalActionMenu')?.remove();
+            document.removeEventListener('click', closeAnimalActionMenuOnOutsideClick);
+        }
+
+        function closeAnimalActionMenuOnOutsideClick(e) {
+            if (!e.target.closest('#animalActionMenu')) {
+                closeAnimalActionMenu();
+            }
+        }
+
+        // Toggle selection for group actions (kept for bulk operations)
+        function toggleAnimalSelection(numero, ranchId) {
             const key = `${ranchId}_${numero}`;
             const card = document.querySelector(`.fs-animal-card[data-numero="${numero}"][data-ranch="${ranchId}"]`);
 
@@ -13449,6 +13603,36 @@
             }
 
             updateFullScreenSelectionBar();
+        }
+
+        // Legacy function for compatibility
+        function toggleFullScreenAnimal(numero, ranchId) {
+            toggleAnimalSelection(numero, ranchId);
+        }
+
+        // Single animal actions
+        function weighSingleAnimal(numero, ranchId) {
+            fullScreenSelectedAnimals.clear();
+            fullScreenSelectedAnimals.add(`${ranchId}_${numero}`);
+            weighFullScreenSelected();
+        }
+
+        function photoSingleAnimal(numero, ranchId) {
+            fullScreenSelectedAnimals.clear();
+            fullScreenSelectedAnimals.add(`${ranchId}_${numero}`);
+            photoFullScreenSelected();
+        }
+
+        function noteSingleAnimal(numero, ranchId) {
+            fullScreenSelectedAnimals.clear();
+            fullScreenSelectedAnimals.add(`${ranchId}_${numero}`);
+            noteFullScreenSelected();
+        }
+
+        function moveSingleAnimal(numero, ranchId) {
+            fullScreenSelectedAnimals.clear();
+            fullScreenSelectedAnimals.add(`${ranchId}_${numero}`);
+            moveFullScreenSelected();
         }
 
         function selectAllFullScreen() {
