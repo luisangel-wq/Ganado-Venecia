@@ -3633,7 +3633,7 @@
                     </div>
                     
                     <!-- Potreros Grid -->
-                    <div id="potrerosGrid" class="summary-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                    <div id="potrerosGrid" class="summary-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem;">
                         <div class="text-center" style="grid-column: 1/-1; padding: 2rem; color: var(--gray);">
                             No hay potreros registrados. Haga clic en "Agregar Potrero" para comenzar.
                         </div>
@@ -12048,7 +12048,29 @@
             if (!ranch) return;
             localStorage.setItem(ranch.storageKey, JSON.stringify(ranchData));
         }
-        
+
+        // Show animal profile regardless of which ranch the animal belongs to
+        function showAnimalProfileCrossRanch(numero, animalRanchId) {
+            // If animal is in current ranch, just show profile
+            if (animalRanchId === currentRanch) {
+                showAnimalProfile(numero);
+                return;
+            }
+
+            // Switch to the animal's ranch and then show profile
+            const ranchName = RANCHES[animalRanchId]?.name || animalRanchId;
+            if (confirm(`El animal #${numero} pertenece a ${ranchName}. ¿Desea cambiar a esa finca para ver el perfil completo?`)) {
+                // Close any open full-screen views
+                closePotreroFullScreen();
+                // Switch ranch
+                switchRanch(animalRanchId);
+                // Show profile after a short delay for data to load
+                setTimeout(() => {
+                    showAnimalProfile(numero);
+                }, 300);
+            }
+        }
+
         function updatePotrerosView() {
             // First, sync potrero states with actual animal counts
             syncPotreroStates();
@@ -12122,168 +12144,125 @@
             document.getElementById('potrerosListos').textContent = listos;
         }
 
+        // Color mapping for potrero name groups
+        function getPotreroGroupColor(nombre) {
+            const normalizedName = nombre.toLowerCase().trim();
+
+            // Extract base name (e.g., "Rincon 1" -> "rincon", "Mangos 3" -> "mangos")
+            const baseName = normalizedName.replace(/\s*\d+\s*$/, '').trim();
+
+            const colorGroups = {
+                'rincon': { bg: '#DCFCE7', border: '#22C55E', text: '#166534', name: 'Verde' },           // Green
+                'mangos': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E', name: 'Amarillo' },        // Amber
+                'guayabos': { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF', name: 'Azul' },          // Blue
+                'casa': { bg: '#FCE7F3', border: '#EC4899', text: '#9D174D', name: 'Rosa' },              // Pink
+                'corral': { bg: '#E0E7FF', border: '#6366F1', text: '#3730A3', name: 'Indigo' },          // Indigo
+                'monte': { bg: '#D1FAE5', border: '#10B981', text: '#065F46', name: 'Esmeralda' },        // Emerald
+                'quebrada': { bg: '#CFFAFE', border: '#06B6D4', text: '#155E75', name: 'Cyan' },          // Cyan
+                'laguna': { bg: '#E0F2FE', border: '#0EA5E9', text: '#0369A1', name: 'Sky' },             // Sky
+                'cerro': { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B', name: 'Rojo' },             // Red
+                'llano': { bg: '#FEF9C3', border: '#EAB308', text: '#854D0E', name: 'Yellow' },           // Yellow
+                'potrero': { bg: '#F3E8FF', border: '#A855F7', text: '#6B21A8', name: 'Purple' },         // Purple
+                'default': { bg: '#F3F4F6', border: '#6B7280', text: '#374151', name: 'Gris' }            // Gray
+            };
+
+            // Find matching color group
+            for (const [key, colors] of Object.entries(colorGroups)) {
+                if (baseName.includes(key) || key.includes(baseName)) {
+                    return colors;
+                }
+            }
+
+            // Generate a consistent color based on the name hash for unknown groups
+            const hash = baseName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const colorKeys = Object.keys(colorGroups).filter(k => k !== 'default');
+            const colorKey = colorKeys[hash % colorKeys.length];
+            return colorGroups[colorKey];
+        }
+
         function updatePotrerosGrid() {
             const container = document.getElementById('potrerosGrid');
             // Use shared potreros for La Coruña and Santa Catalina
-            const potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
+            let potreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
 
             if (potreros.length === 0) {
                 container.innerHTML = '<div class="text-center" style="grid-column: 1/-1; padding: 2rem; color: var(--gray);">No hay potreros registrados. Haga clic en "Agregar Potrero" para comenzar.</div>';
                 return;
             }
 
-            // Show info banner if using shared potreros
+            // Sort potreros alphabetically
+            potreros = [...potreros].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+            // Status icons and colors
+            const statusConfig = {
+                'disponible': { icon: '🌱', label: 'Disponible', color: '#22C55E', bg: '#DCFCE7' },
+                'ocupado': { icon: '🐄', label: 'Ocupado', color: '#F59E0B', bg: '#FEF3C7' },
+                'descanso': { icon: '💤', label: 'Descanso', color: '#8B5CF6', bg: '#EDE9FE' },
+                'mantenimiento': { icon: '🔧', label: 'Mantenimiento', color: '#6B7280', bg: '#F3F4F6' }
+            };
+
             let html = '';
+
+            // Show info banner if using shared potreros
             if (usesSharedPotreros()) {
-                html += '<div style="grid-column: 1/-1; background: #dbeafe; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;"><span style="font-size: 1.2rem;">🔄</span> <span>Potreros compartidos entre <strong>La Coruña</strong> y <strong>Santa Catalina</strong> - El ganado se mueve entre ambas fincas</span></div>';
+                html += `<div style="grid-column: 1/-1; background: #dbeafe; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; color: #1e40af; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;">
+                    <span>🔄</span> <span>Potreros compartidos <strong>La Coruña</strong> + <strong>Santa Catalina</strong></span>
+                </div>`;
             }
 
-            const today = new Date();
-
+            // Create compact potrero boxes
             html += potreros.map(p => {
-                // Count ALL animals in this potrero from ALL shared ranches
                 const animalesInfo = countAnimalesInPotreroAllRanches(p);
                 const animalesCount = animalesInfo.total;
-
-                // Build breakdown text
-                let breakdownText = '';
-                Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
-                    if (breakdownText) breakdownText += ' + ';
-                    breakdownText += `${info.count} ${info.ranchName}`;
-                });
-
-                // Build animal boxes HTML with ranch colors
-                let animalBoxesHtml = '';
-                const ranchColors = {
-                    'la_coruna': { bg: '#FEF08A', border: '#CA8A04', text: '#713F12' },      // Bright Yellow (matches button)
-                    'santa_catalina': { bg: '#FDBA74', border: '#C2410C', text: '#7C2D12' }  // Deep Orange (more distinct)
-                };
-
-                Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
-                    const colors = ranchColors[ranchId] || { bg: '#E5E7EB', border: '#9CA3AF', text: '#374151' };
-                    info.animales.forEach(animal => {
-                        animalBoxesHtml += `
-                            <div class="animal-box"
-                                 data-numero="${animal.numero}"
-                                 data-ranch="${ranchId}"
-                                 data-potrero="${p.sourceRanch}_${p.id}"
-                                 onclick="event.stopPropagation(); toggleAnimalInPotrero('${animal.numero}', '${ranchId}', '${p.sourceRanch}_${p.id}')"
-                                 style="background: ${colors.bg}; border: 2px solid ${colors.border}; color: ${colors.text};
-                                        padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
-                                        cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;
-                                        transition: all 0.2s; user-select: none;">
-                                <span>${animal.numero}</span>
-                                <span style="font-size: 0.7rem; opacity: 0.7;">${animal.peso || '?'}kg</span>
-                            </div>
-                        `;
-                    });
-                });
-
-                // Calculate days resting or occupied
-                let diasEstado = null;
-                if (p.estado === 'descanso' && p.ultimaSalida) {
-                    diasEstado = Math.floor((today - new Date(p.ultimaSalida)) / (1000 * 60 * 60 * 24));
-                } else if (p.estado === 'ocupado' && p.ultimaEntrada) {
-                    diasEstado = Math.floor((today - new Date(p.ultimaEntrada)) / (1000 * 60 * 60 * 24));
-                }
-
-                const statusLabels = {
-                    'disponible': '🌱 Disponible',
-                    'ocupado': '🐄 Ocupado',
-                    'descanso': '💤 Descanso',
-                    'mantenimiento': '🔧 Mantenimiento'
-                };
-
-                const waterLabels = {
-                    'quebrada': '🌊 Quebrada',
-                    'bebedero': '🚰 Bebedero',
-                    'jagüey': '💧 Jagüey',
-                    'pozo': '🕳️ Pozo',
-                    'ninguna': '❌ Sin agua'
-                };
-
-                // Show which ranch this potrero belongs to (for shared potreros)
-                const ranchLabel = p.sourceRanch ? RANCHES[p.sourceRanch]?.name : null;
                 const potreroKey = `${p.sourceRanch}_${p.id}`;
+                const groupColor = getPotreroGroupColor(p.nombre);
+                const status = statusConfig[p.estado] || statusConfig['disponible'];
 
                 return `
-                    <div class="potrero-card ${p.estado}" data-potrero-key="${potreroKey}">
-                        <div class="potrero-card-header">
-                            <div class="potrero-card-title">🌿 ${p.nombre}</div>
-                            <span class="potrero-card-status ${p.estado}">${statusLabels[p.estado]}</span>
-                        </div>
-                        ${ranchLabel ? `<div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.5rem;">📍 ${ranchLabel}</div>` : ''}
-                        <div class="potrero-card-stats">
-                            <div class="potrero-stat">📏 ${p.area ? p.area + ' ha' : 'Sin área'}</div>
-                            <div class="potrero-stat">🌾 ${p.tipoPasto}</div>
-                            <div class="potrero-stat">
-                                🐄 <strong>${animalesCount}</strong>${p.capacidad ? '/' + p.capacidad : ''} cabezas
-                            </div>
-                            <div class="potrero-stat">${waterLabels[p.agua] || '❓'}</div>
-                            ${diasEstado !== null ? `<div class="potrero-stat" style="grid-column: 1/-1;">⏱️ ${diasEstado} días ${p.estado === 'descanso' ? 'descansando' : 'ocupado'}</div>` : ''}
+                    <div class="potrero-compact-card"
+                         data-potrero-key="${potreroKey}"
+                         onclick="openPotreroFullScreen('${potreroKey}')"
+                         style="background: ${groupColor.bg}; border: 3px solid ${groupColor.border};
+                                border-radius: 12px; padding: 0.75rem; cursor: pointer;
+                                transition: all 0.2s; position: relative;">
+
+                        <!-- Potrero Name -->
+                        <div style="font-weight: 700; font-size: 1rem; color: ${groupColor.text}; margin-bottom: 0.5rem;">
+                            ${p.nombre}
                         </div>
 
-                        <!-- Animals Section -->
-                        <div class="potrero-animals-section" style="margin: 0.75rem 0; padding: 0.75rem; background: #F9FAFB; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <span style="font-size: 0.8rem; font-weight: 600; color: #374151;">
-                                    🐄 Animales ${breakdownText ? `<span style="font-weight: normal; color: #6b7280;">(${breakdownText})</span>` : ''}
-                                </span>
-                                ${animalesCount > 0 ? `
-                                    <div style="display: flex; gap: 0.25rem;">
-                                        <button onclick="event.stopPropagation(); selectAllInPotrero('${potreroKey}')"
-                                                style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer;">
-                                            Todos
-                                        </button>
-                                        <button onclick="event.stopPropagation(); clearPotreroSelection('${potreroKey}')"
-                                                style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer;">
-                                            Ninguno
-                                        </button>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            <div class="potrero-animal-boxes" data-potrero="${potreroKey}" style="display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 2rem;">
-                                ${animalBoxesHtml || '<span style="color: #9CA3AF; font-size: 0.8rem; font-style: italic;">Sin animales</span>'}
-                            </div>
-
-                            <!-- Selection Actions (hidden until animals selected) -->
-                            <div class="potrero-selection-actions" data-potrero="${potreroKey}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB;">
-                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
-                                    <span class="selection-count" style="font-size: 0.8rem; color: #374151; font-weight: 500;">0 seleccionados</span>
-                                    <button onclick="event.stopPropagation(); moveSelectedFromPotrero('${potreroKey}')"
-                                            class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
-                                        🔄 Mover a...
-                                    </button>
-                                    <button onclick="event.stopPropagation(); weighSelectedFromPotrero('${potreroKey}')"
-                                            class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
-                                        ⚖️ Pesar
-                                    </button>
-                                    <button onclick="event.stopPropagation(); viewSelectedAnimal('${potreroKey}')"
-                                            class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
-                                        👁️ Ver Perfil
-                                    </button>
-                                </div>
-                            </div>
+                        <!-- Status Badge -->
+                        <div style="display: inline-flex; align-items: center; gap: 0.25rem;
+                                    background: ${status.bg}; padding: 0.25rem 0.5rem;
+                                    border-radius: 6px; font-size: 0.75rem; color: ${status.color}; font-weight: 600;">
+                            <span>${status.icon}</span>
+                            <span>${status.label}</span>
                         </div>
 
-                        <!-- Ranch Color Legend -->
-                        <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem;">
-                            <span style="display: flex; align-items: center; gap: 0.25rem;">
-                                <span style="width: 12px; height: 12px; background: #FEF08A; border: 2px solid #CA8A04; border-radius: 3px;"></span>
-                                La Coruña
-                            </span>
-                            <span style="display: flex; align-items: center; gap: 0.25rem;">
-                                <span style="width: 12px; height: 12px; background: #FDBA74; border: 2px solid #C2410C; border-radius: 3px;"></span>
-                                Santa Catalina
-                            </span>
+                        <!-- Animal Count -->
+                        <div style="position: absolute; top: 0.5rem; right: 0.5rem;
+                                    background: white; padding: 0.35rem 0.6rem;
+                                    border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                                    font-weight: 700; font-size: 0.9rem; color: #374151;">
+                            🐄 ${animalesCount}
                         </div>
-
-                        ${p.notas ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">📝 ${p.notas}</div>` : ''}
                     </div>
                 `;
             }).join('');
 
             container.innerHTML = html;
+
+            // Add hover effect
+            document.querySelectorAll('.potrero-compact-card').forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-2px)';
+                    card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = '';
+                    card.style.boxShadow = '';
+                });
+            });
         }
 
         // Track selected animals per potrero
@@ -12954,14 +12933,20 @@
                          style="background: ${colors.bg}; border: 3px solid ${colors.border}; ${a.needsWeighing ? 'box-shadow: 0 0 0 3px #EF4444;' : ''} ${hasIssues ? 'box-shadow: 0 0 0 3px #F59E0B;' : ''}">
                         <div class="fs-animal-header">
                             <span class="fs-animal-number">#${a.numero}</span>
-                            ${a.needsWeighing ? '<span class="fs-alert-badge weight">⚖️ ${a.daysSinceWeight}d</span>' : ''}
-                            ${hasIssues ? '<span class="fs-alert-badge issue">⚠️ ${a.issues.length}</span>' : ''}
+                            ${a.needsWeighing ? `<span class="fs-alert-badge weight">⚖️ ${a.daysSinceWeight}d</span>` : ''}
+                            ${hasIssues ? `<span class="fs-alert-badge issue">⚠️ ${a.issues.length}</span>` : ''}
                         </div>
                         <div class="fs-animal-info">
                             <span>${a.peso || '?'}kg</span>
                             <span>${a.sexo === 'macho' ? '♂️' : '♀️'}</span>
                         </div>
                         <div class="fs-animal-ranch" style="color: ${colors.text};">${colors.name}</div>
+                        <button onclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')"
+                                style="width: 100%; margin-top: 0.5rem; padding: 0.4rem; background: rgba(255,255,255,0.8);
+                                       border: 1px solid ${colors.border}; border-radius: 6px; font-size: 0.75rem;
+                                       cursor: pointer; color: ${colors.text}; font-weight: 600;">
+                            👁️ Ver Perfil
+                        </button>
                     </div>
                 `;
             }).join('');
@@ -12979,7 +12964,7 @@
                                 <div class="fs-alert-animal">#${a.numero} - ${a.ranchName}</div>
                                 ${a.needsWeighing ? `<div class="fs-alert-msg">⚖️ Sin pesar hace ${a.daysSinceWeight} días</div>` : ''}
                                 ${a.issues.map(i => `<div class="fs-alert-msg">⚠️ ${i.issue}</div>`).join('')}
-                                <button class="fs-alert-action" onclick="event.stopPropagation(); openAnimalDetail('${a.numero}', '${a.ranchId}')">Ver</button>
+                                <button class="fs-alert-action" onclick="event.stopPropagation(); showAnimalProfileCrossRanch('${a.numero}', '${a.ranchId}')">Ver Perfil</button>
                             </div>
                         `).join('')}
                     </div>
@@ -13112,10 +13097,11 @@
                     </div>
 
                     <div class="fs-toolbar">
+                        <button class="primary" onclick="showAddAnimalToPotreroModal('${potreroKey}')">➕ Agregar Animal</button>
                         <button onclick="selectAllFullScreen()">☑️ Todos</button>
                         <button onclick="clearFullScreenSelection()">☐ Ninguno</button>
                         <button onclick="filterFullScreenAlerts()">⚠️ Solo Alertas</button>
-                        <button class="primary" onclick="showAddIssueModal()">📝 Reportar Problema</button>
+                        <button onclick="showAddIssueModal()">📝 Reportar Problema</button>
                     </div>
 
                     <div class="fs-content">
@@ -13290,6 +13276,148 @@
             document.getElementById('fsMoveModal')?.remove();
             showToast(`${fullScreenSelectedAnimals.size} animales movidos`, 'success');
             closePotreroFullScreen();
+        }
+
+        // Show modal to add animals to a potrero
+        function showAddAnimalToPotreroModal(potreroKey) {
+            // Get all animals NOT in this potrero
+            const allPotreros = getAllSharedPotreros();
+            const availableAnimals = [];
+
+            // Check animals from all shared ranches
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+                if (!ranchData || !ranchData.entradas) return;
+
+                const ranchInventory = ranchData.entradas.filter(e => {
+                    // Check if animal is sold
+                    const isSold = ranchData.salidas?.some(s => s.numero === e.numero);
+                    if (isSold) return false;
+
+                    // Check if animal is in a potrero
+                    const currentPotrero = ranchData.animalPotreros?.[e.numero];
+                    // Only show animals not in any potrero, or allow re-assignment
+                    return !currentPotrero || currentPotrero !== potreroKey;
+                });
+
+                ranchInventory.forEach(animal => {
+                    const currentPotrero = ranchData.animalPotreros?.[animal.numero];
+                    let currentPotreroName = 'Sin asignar';
+                    if (currentPotrero) {
+                        const p = allPotreros.find(pot => `${pot.sourceRanch}_${pot.id}` === currentPotrero);
+                        currentPotreroName = p?.nombre || 'Desconocido';
+                    }
+                    availableAnimals.push({
+                        numero: animal.numero,
+                        peso: animal.peso,
+                        ranchId,
+                        ranchName: RANCHES[ranchId]?.name || ranchId,
+                        currentPotrero: currentPotreroName
+                    });
+                });
+            });
+
+            // Sort by number
+            availableAnimals.sort((a, b) => String(a.numero).localeCompare(String(b.numero)));
+
+            const ranchColors = {
+                'la_coruna': { bg: '#FEF08A', border: '#CA8A04' },
+                'santa_catalina': { bg: '#FDBA74', border: '#C2410C' }
+            };
+
+            const animalsListHtml = availableAnimals.length === 0
+                ? '<p style="text-align: center; color: #6B7280;">No hay animales disponibles para agregar</p>'
+                : availableAnimals.map(a => {
+                    const colors = ranchColors[a.ranchId] || { bg: '#E5E7EB', border: '#9CA3AF' };
+                    return `
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 6px; cursor: pointer; margin-bottom: 0.25rem;"
+                               onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background=''">
+                            <input type="checkbox" class="add-animal-checkbox" data-numero="${a.numero}" data-ranch="${a.ranchId}">
+                            <span style="background: ${colors.bg}; border: 2px solid ${colors.border}; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">#${a.numero}</span>
+                            <span style="font-size: 0.85rem; color: #6B7280;">${a.peso}kg</span>
+                            <span style="font-size: 0.75rem; color: #9CA3AF; margin-left: auto;">${a.currentPotrero}</span>
+                        </label>
+                    `;
+                }).join('');
+
+            const modalHtml = `
+                <div id="fsAddAnimalModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 450px; width: 100%; max-height: 80vh; display: flex; flex-direction: column;">
+                        <div style="background: #059669; color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <h3 style="margin: 0;">➕ Agregar Animales al Potrero</h3>
+                            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">Seleccione los animales a agregar</p>
+                        </div>
+                        <div style="padding: 1rem; overflow-y: auto; flex: 1;">
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                                <button onclick="document.querySelectorAll('.add-animal-checkbox').forEach(c => c.checked = true)" style="padding: 0.4rem 0.75rem; border: 1px solid #D1D5DB; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Todos</button>
+                                <button onclick="document.querySelectorAll('.add-animal-checkbox').forEach(c => c.checked = false)" style="padding: 0.4rem 0.75rem; border: 1px solid #D1D5DB; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Ninguno</button>
+                            </div>
+                            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #E5E7EB; border-radius: 8px; padding: 0.5rem;">
+                                ${animalsListHtml}
+                            </div>
+                        </div>
+                        <div style="padding: 1rem; border-top: 1px solid #E5E7EB; display: flex; gap: 0.5rem;">
+                            <button onclick="executeAddAnimalsToPotrero('${potreroKey}')" style="flex: 1; padding: 0.75rem; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Agregar Seleccionados</button>
+                            <button onclick="document.getElementById('fsAddAnimalModal').remove()" style="padding: 0.75rem 1rem; background: #E5E7EB; border: none; border-radius: 8px; cursor: pointer;">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function executeAddAnimalsToPotrero(potreroKey) {
+            const checkboxes = document.querySelectorAll('.add-animal-checkbox:checked');
+            if (checkboxes.length === 0) {
+                showToast('Seleccione al menos un animal', 'error');
+                return;
+            }
+
+            const today = new Date().toISOString().split('T')[0];
+
+            // Group animals by ranch
+            const animalsByRanch = {};
+            checkboxes.forEach(cb => {
+                const ranchId = cb.dataset.ranch;
+                const numero = cb.dataset.numero;
+                if (!animalsByRanch[ranchId]) animalsByRanch[ranchId] = [];
+                animalsByRanch[ranchId].push(numero);
+            });
+
+            // Update each ranch's data
+            Object.entries(animalsByRanch).forEach(([ranchId, animales]) => {
+                if (ranchId === currentRanch) {
+                    if (!data.animalPotreros) data.animalPotreros = {};
+                    animales.forEach(n => { data.animalPotreros[n] = potreroKey; });
+                } else {
+                    const ranchData = getRanchData(ranchId);
+                    if (ranchData) {
+                        if (!ranchData.animalPotreros) ranchData.animalPotreros = {};
+                        animales.forEach(n => { ranchData.animalPotreros[n] = potreroKey; });
+                        saveRanchData(ranchId, ranchData);
+                    }
+                }
+            });
+
+            // Record rotation for each added animal
+            const allPotreros = getAllSharedPotreros();
+            const toPotrero = allPotreros.find(p => `${p.sourceRanch}_${p.id}` === potreroKey);
+            data.rotaciones.push({
+                id: Date.now(),
+                fecha: today,
+                desdeId: null,
+                desdeNombre: 'Agregado directamente',
+                haciaId: potreroKey,
+                haciaNombre: toPotrero?.displayName || toPotrero?.nombre,
+                animales: Array.from(checkboxes).map(cb => cb.dataset.numero)
+            });
+
+            saveData();
+            document.getElementById('fsAddAnimalModal')?.remove();
+            showToast(`${checkboxes.length} animales agregados al potrero`, 'success');
+            closePotreroFullScreen();
+            // Reopen to show updated list
+            setTimeout(() => openPotreroFullScreen(potreroKey), 100);
         }
 
         // Weigh selected animals
@@ -13818,7 +13946,7 @@
             }
 
             if (fullScreenSelectedAnimals.size > 1) {
-                showToast('Seleccione solo un animal', 'warning');
+                showToast('Seleccione solo un animal para ver su perfil', 'warning');
                 return;
             }
 
@@ -13826,19 +13954,7 @@
             const [ranchId, numero] = key.split('_');
 
             closePotreroFullScreen();
-
-            if (ranchId !== currentRanch) {
-                showToast(`Cambiando a ${RANCHES[ranchId]?.name}...`, 'info');
-                switchRanch(ranchId);
-            }
-
-            setTimeout(() => {
-                if (typeof showAnimalProfile === 'function') {
-                    showAnimalProfile(numero);
-                } else {
-                    showToast('Perfil no disponible', 'error');
-                }
-            }, 500);
+            showAnimalProfileCrossRanch(numero, ranchId);
         }
 
         // Open animal detail from alert
