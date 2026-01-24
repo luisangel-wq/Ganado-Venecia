@@ -12279,10 +12279,6 @@
                         </div>
 
                         ${p.notas ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">📝 ${p.notas}</div>` : ''}
-                        <div class="potrero-card-footer">
-                            <button class="btn btn-secondary" onclick="event.stopPropagation(); showPotreroForm(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">✏️ Editar</button>
-                            <button class="btn btn-danger" onclick="event.stopPropagation(); deletePotrero(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">🗑️</button>
-                        </div>
                     </div>
                 `;
             }).join('');
