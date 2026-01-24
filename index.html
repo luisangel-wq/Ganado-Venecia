@@ -12145,19 +12145,39 @@
                 const animalesInfo = countAnimalesInPotreroAllRanches(p);
                 const animalesCount = animalesInfo.total;
 
-                // Build breakdown text for tooltip/display
+                // Build breakdown text
                 let breakdownText = '';
-                let animalNumbersTooltip = '';
                 Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
                     if (breakdownText) breakdownText += ' + ';
                     breakdownText += `${info.count} ${info.ranchName}`;
-
-                    // Add animal numbers to tooltip
-                    if (animalNumbersTooltip) animalNumbersTooltip += '\n';
-                    animalNumbersTooltip += `${info.ranchName}: `;
-                    animalNumbersTooltip += info.animales.map(a => '#' + a.numero).join(', ');
                 });
-                if (!animalNumbersTooltip) animalNumbersTooltip = 'Sin animales';
+
+                // Build animal boxes HTML with ranch colors
+                let animalBoxesHtml = '';
+                const ranchColors = {
+                    'la_coruna': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },      // Yellow/Amber
+                    'santa_catalina': { bg: '#FFEDD5', border: '#F97316', text: '#9A3412' }  // Orange
+                };
+
+                Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
+                    const colors = ranchColors[ranchId] || { bg: '#E5E7EB', border: '#9CA3AF', text: '#374151' };
+                    info.animales.forEach(animal => {
+                        animalBoxesHtml += `
+                            <div class="animal-box"
+                                 data-numero="${animal.numero}"
+                                 data-ranch="${ranchId}"
+                                 data-potrero="${p.sourceRanch}_${p.id}"
+                                 onclick="event.stopPropagation(); toggleAnimalInPotrero('${animal.numero}', '${ranchId}', '${p.sourceRanch}_${p.id}')"
+                                 style="background: ${colors.bg}; border: 2px solid ${colors.border}; color: ${colors.text};
+                                        padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+                                        cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;
+                                        transition: all 0.2s; user-select: none;">
+                                <span>${animal.numero}</span>
+                                <span style="font-size: 0.7rem; opacity: 0.7;">${animal.peso || '?'}kg</span>
+                            </div>
+                        `;
+                    });
+                });
 
                 // Calculate days resting or occupied
                 let diasEstado = null;
@@ -12187,7 +12207,7 @@
                 const potreroKey = `${p.sourceRanch}_${p.id}`;
 
                 return `
-                    <div class="potrero-card ${p.estado}" onclick="showPotreroAnimales('${potreroKey}')" style="cursor: pointer;" title="${animalNumbersTooltip}">
+                    <div class="potrero-card ${p.estado}" data-potrero-key="${potreroKey}">
                         <div class="potrero-card-header">
                             <div class="potrero-card-title">🌿 ${p.nombre}</div>
                             <span class="potrero-card-status ${p.estado}">${statusLabels[p.estado]}</span>
@@ -12196,23 +12216,489 @@
                         <div class="potrero-card-stats">
                             <div class="potrero-stat">📏 ${p.area ? p.area + ' ha' : 'Sin área'}</div>
                             <div class="potrero-stat">🌾 ${p.tipoPasto}</div>
-                            <div class="potrero-stat" style="cursor: pointer;" title="${animalNumbersTooltip}">
+                            <div class="potrero-stat">
                                 🐄 <strong>${animalesCount}</strong>${p.capacidad ? '/' + p.capacidad : ''} cabezas
-                                ${breakdownText ? `<br><small style="color: #6b7280; font-size: 0.7rem;">${breakdownText}</small>` : ''}
                             </div>
                             <div class="potrero-stat">${waterLabels[p.agua] || '❓'}</div>
                             ${diasEstado !== null ? `<div class="potrero-stat" style="grid-column: 1/-1;">⏱️ ${diasEstado} días ${p.estado === 'descanso' ? 'descansando' : 'ocupado'}</div>` : ''}
                         </div>
+
+                        <!-- Animals Section -->
+                        <div class="potrero-animals-section" style="margin: 0.75rem 0; padding: 0.75rem; background: #F9FAFB; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="font-size: 0.8rem; font-weight: 600; color: #374151;">
+                                    🐄 Animales ${breakdownText ? `<span style="font-weight: normal; color: #6b7280;">(${breakdownText})</span>` : ''}
+                                </span>
+                                ${animalesCount > 0 ? `
+                                    <div style="display: flex; gap: 0.25rem;">
+                                        <button onclick="event.stopPropagation(); selectAllInPotrero('${potreroKey}')"
+                                                style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer;">
+                                            Todos
+                                        </button>
+                                        <button onclick="event.stopPropagation(); clearPotreroSelection('${potreroKey}')"
+                                                style="font-size: 0.7rem; padding: 0.2rem 0.5rem; background: #E5E7EB; border: none; border-radius: 4px; cursor: pointer;">
+                                            Ninguno
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="potrero-animal-boxes" data-potrero="${potreroKey}" style="display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 2rem;">
+                                ${animalBoxesHtml || '<span style="color: #9CA3AF; font-size: 0.8rem; font-style: italic;">Sin animales</span>'}
+                            </div>
+
+                            <!-- Selection Actions (hidden until animals selected) -->
+                            <div class="potrero-selection-actions" data-potrero="${potreroKey}" style="display: none; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #E5E7EB;">
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                                    <span class="selection-count" style="font-size: 0.8rem; color: #374151; font-weight: 500;">0 seleccionados</span>
+                                    <button onclick="event.stopPropagation(); moveSelectedFromPotrero('${potreroKey}')"
+                                            class="btn btn-primary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                                        🔄 Mover a...
+                                    </button>
+                                    <button onclick="event.stopPropagation(); weighSelectedFromPotrero('${potreroKey}')"
+                                            class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                                        ⚖️ Pesar
+                                    </button>
+                                    <button onclick="event.stopPropagation(); viewSelectedAnimal('${potreroKey}')"
+                                            class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                                        👁️ Ver Perfil
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ranch Color Legend -->
+                        <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem;">
+                            <span style="display: flex; align-items: center; gap: 0.25rem;">
+                                <span style="width: 12px; height: 12px; background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 3px;"></span>
+                                La Coruña
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 0.25rem;">
+                                <span style="width: 12px; height: 12px; background: #FFEDD5; border: 2px solid #F97316; border-radius: 3px;"></span>
+                                Santa Catalina
+                            </span>
+                        </div>
+
                         ${p.notas ? `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.5rem;">📝 ${p.notas}</div>` : ''}
-                        <div class="potrero-card-footer" onclick="event.stopPropagation();">
-                            <button class="btn btn-secondary" onclick="showPotreroForm(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">✏️ Editar</button>
-                            <button class="btn btn-danger" onclick="deletePotrero(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">🗑️</button>
+                        <div class="potrero-card-footer">
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); showPotreroForm(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">✏️ Editar</button>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deletePotrero(${p.id}${p.sourceRanch ? ", '" + p.sourceRanch + "'" : ''})">🗑️</button>
                         </div>
                     </div>
                 `;
             }).join('');
 
             container.innerHTML = html;
+        }
+
+        // Track selected animals per potrero
+        const potreroSelections = {};
+
+        // Toggle animal selection in potrero
+        function toggleAnimalInPotrero(numero, ranchId, potreroKey) {
+            if (!potreroSelections[potreroKey]) {
+                potreroSelections[potreroKey] = new Set();
+            }
+
+            const box = document.querySelector(`.animal-box[data-numero="${numero}"][data-potrero="${potreroKey}"]`);
+            if (!box) return;
+
+            if (potreroSelections[potreroKey].has(numero)) {
+                potreroSelections[potreroKey].delete(numero);
+                box.style.transform = '';
+                box.style.boxShadow = '';
+                box.classList.remove('selected');
+            } else {
+                potreroSelections[potreroKey].add(numero);
+                box.style.transform = 'scale(1.05)';
+                box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                box.classList.add('selected');
+            }
+
+            updatePotreroSelectionUI(potreroKey);
+        }
+
+        // Select all animals in a potrero
+        function selectAllInPotrero(potreroKey) {
+            if (!potreroSelections[potreroKey]) {
+                potreroSelections[potreroKey] = new Set();
+            }
+
+            document.querySelectorAll(`.animal-box[data-potrero="${potreroKey}"]`).forEach(box => {
+                const numero = box.dataset.numero;
+                potreroSelections[potreroKey].add(numero);
+                box.style.transform = 'scale(1.05)';
+                box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                box.classList.add('selected');
+            });
+
+            updatePotreroSelectionUI(potreroKey);
+        }
+
+        // Clear selection in a potrero
+        function clearPotreroSelection(potreroKey) {
+            if (potreroSelections[potreroKey]) {
+                potreroSelections[potreroKey].clear();
+            }
+
+            document.querySelectorAll(`.animal-box[data-potrero="${potreroKey}"]`).forEach(box => {
+                box.style.transform = '';
+                box.style.boxShadow = '';
+                box.classList.remove('selected');
+            });
+
+            updatePotreroSelectionUI(potreroKey);
+        }
+
+        // Update selection UI (show/hide action buttons, update count)
+        function updatePotreroSelectionUI(potreroKey) {
+            const count = potreroSelections[potreroKey]?.size || 0;
+            const actionsDiv = document.querySelector(`.potrero-selection-actions[data-potrero="${potreroKey}"]`);
+            const countSpan = actionsDiv?.querySelector('.selection-count');
+
+            if (actionsDiv) {
+                actionsDiv.style.display = count > 0 ? 'block' : 'none';
+            }
+            if (countSpan) {
+                countSpan.textContent = `${count} seleccionado${count !== 1 ? 's' : ''}`;
+            }
+        }
+
+        // Move selected animals from a potrero
+        function moveSelectedFromPotrero(potreroKey) {
+            const selected = potreroSelections[potreroKey];
+            if (!selected || selected.size === 0) {
+                showToast('Seleccione al menos un animal', 'error');
+                return;
+            }
+
+            // Get all potreros for destination selection
+            const allPotreros = getAllSharedPotreros();
+
+            // Build destination options
+            const options = allPotreros
+                .filter(p => `${p.sourceRanch}_${p.id}` !== potreroKey && p.estado !== 'mantenimiento')
+                .map(p => `<option value="${p.sourceRanch}_${p.id}">${p.displayName} (${p.estado})</option>`)
+                .join('');
+
+            // Show move modal
+            const modalHtml = `
+                <div id="quickMoveModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 400px; width: 100%; max-height: 90vh; overflow-y: auto;">
+                        <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem;">🔄 Mover ${selected.size} Animal${selected.size > 1 ? 'es' : ''}</h3>
+                                <button onclick="closeQuickMoveModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Animales seleccionados:</label>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; max-height: 100px; overflow-y: auto; padding: 0.5rem; background: #F3F4F6; border-radius: 6px;">
+                                    ${Array.from(selected).map(n => `<span style="background: #E5E7EB; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">#${n}</span>`).join('')}
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Mover a:</label>
+                                <select id="quickMoveDestino" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 1rem;">
+                                    <option value="">-- Seleccionar destino --</option>
+                                    ${options}
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Fecha:</label>
+                                <input type="date" id="quickMoveDate" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 1rem;">
+                            </div>
+                            <button onclick="executeQuickMove('${potreroKey}')" style="width: 100%; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                ✅ Confirmar Movimiento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeQuickMoveModal() {
+            document.getElementById('quickMoveModal')?.remove();
+        }
+
+        function executeQuickMove(fromPotreroKey) {
+            const destino = document.getElementById('quickMoveDestino').value;
+            const fecha = document.getElementById('quickMoveDate').value;
+            const selected = potreroSelections[fromPotreroKey];
+
+            if (!destino) {
+                showToast('Seleccione un destino', 'error');
+                return;
+            }
+
+            // Get animal info for each selected animal (need to know which ranch they belong to)
+            const animalsByRanch = {};
+            document.querySelectorAll(`.animal-box[data-potrero="${fromPotreroKey}"].selected`).forEach(box => {
+                const numero = box.dataset.numero;
+                const ranchId = box.dataset.ranch;
+                if (!animalsByRanch[ranchId]) animalsByRanch[ranchId] = [];
+                animalsByRanch[ranchId].push(numero);
+            });
+
+            // Update animalPotreros for each ranch
+            Object.entries(animalsByRanch).forEach(([ranchId, animales]) => {
+                if (ranchId === currentRanch) {
+                    animales.forEach(numero => {
+                        data.animalPotreros[numero] = destino;
+                    });
+                } else {
+                    const ranchData = getRanchData(ranchId);
+                    if (ranchData) {
+                        if (!ranchData.animalPotreros) ranchData.animalPotreros = {};
+                        animales.forEach(numero => {
+                            ranchData.animalPotreros[numero] = destino;
+                        });
+                        saveRanchData(ranchId, ranchData);
+                    }
+                }
+            });
+
+            // Record rotation
+            const allPotreros = getAllSharedPotreros();
+            const fromPotrero = allPotreros.find(p => `${p.sourceRanch}_${p.id}` === fromPotreroKey);
+            const toPotrero = allPotreros.find(p => `${p.sourceRanch}_${p.id}` === destino);
+
+            data.rotaciones.push({
+                id: Date.now(),
+                fecha: fecha,
+                desdeId: fromPotreroKey,
+                desdeNombre: fromPotrero?.displayName || 'Desconocido',
+                haciaId: destino,
+                haciaNombre: toPotrero?.displayName || 'Desconocido',
+                animales: Array.from(selected)
+            });
+
+            saveData();
+            closeQuickMoveModal();
+            clearPotreroSelection(fromPotreroKey);
+            updatePotrerosView();
+
+            showToast(`${selected.size} animales movidos a ${toPotrero?.displayName || 'destino'}`, 'success');
+        }
+
+        // Weigh selected animals
+        function weighSelectedFromPotrero(potreroKey) {
+            const selected = potreroSelections[potreroKey];
+            if (!selected || selected.size === 0) {
+                showToast('Seleccione al menos un animal', 'error');
+                return;
+            }
+
+            if (selected.size === 1) {
+                // Single animal - show weight input modal
+                const numero = Array.from(selected)[0];
+                showQuickWeighModal(numero, potreroKey);
+            } else {
+                // Multiple animals - show batch weigh modal
+                showBatchWeighModal(Array.from(selected), potreroKey);
+            }
+        }
+
+        function showQuickWeighModal(numero, potreroKey) {
+            const modalHtml = `
+                <div id="quickWeighModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 350px; width: 100%;">
+                        <div style="background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem;">⚖️ Pesar Animal #${numero}</h3>
+                                <button onclick="closeQuickWeighModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Nuevo peso (kg):</label>
+                                <input type="number" id="quickWeighInput" placeholder="Ej: 350" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 8px; font-size: 1.2rem; text-align: center;">
+                            </div>
+                            <button onclick="executeQuickWeigh('${numero}', '${potreroKey}')" style="width: 100%; padding: 0.75rem; background: #3B82F6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                ✅ Guardar Peso
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('quickWeighInput').focus();
+        }
+
+        function closeQuickWeighModal() {
+            document.getElementById('quickWeighModal')?.remove();
+        }
+
+        function executeQuickWeigh(numero, potreroKey) {
+            const peso = parseFloat(document.getElementById('quickWeighInput').value);
+            if (!peso || peso <= 0) {
+                showToast('Ingrese un peso válido', 'error');
+                return;
+            }
+
+            // Find the animal and update weight
+            const box = document.querySelector(`.animal-box[data-numero="${numero}"][data-potrero="${potreroKey}"]`);
+            const ranchId = box?.dataset.ranch || currentRanch;
+
+            let animalUpdated = false;
+
+            if (ranchId === currentRanch) {
+                const animal = data.entradas.find(a => a.numero === numero);
+                if (animal) {
+                    const oldPeso = animal.pesoActual || animal.peso;
+                    animal.pesoActual = peso;
+                    if (!data.pesoUpdates) data.pesoUpdates = [];
+                    data.pesoUpdates.push({
+                        id: Date.now(),
+                        numero: numero,
+                        fecha: new Date().toISOString().split('T')[0],
+                        pesoAnterior: oldPeso,
+                        pesoNuevo: peso
+                    });
+                    saveData();
+                    animalUpdated = true;
+                }
+            } else {
+                const ranchData = getRanchData(ranchId);
+                if (ranchData) {
+                    const animal = ranchData.entradas?.find(a => a.numero === numero);
+                    if (animal) {
+                        const oldPeso = animal.pesoActual || animal.peso;
+                        animal.pesoActual = peso;
+                        if (!ranchData.pesoUpdates) ranchData.pesoUpdates = [];
+                        ranchData.pesoUpdates.push({
+                            id: Date.now(),
+                            numero: numero,
+                            fecha: new Date().toISOString().split('T')[0],
+                            pesoAnterior: oldPeso,
+                            pesoNuevo: peso
+                        });
+                        saveRanchData(ranchId, ranchData);
+                        animalUpdated = true;
+                    }
+                }
+            }
+
+            closeQuickWeighModal();
+            clearPotreroSelection(potreroKey);
+            updatePotrerosView();
+
+            if (animalUpdated) {
+                showToast(`Peso actualizado: #${numero} = ${peso}kg`, 'success');
+            }
+        }
+
+        function showBatchWeighModal(numeros, potreroKey) {
+            const inputsHtml = numeros.map(n => `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <span style="min-width: 60px; font-weight: 600;">#${n}</span>
+                    <input type="number" class="batch-weight-input" data-numero="${n}" placeholder="kg" style="flex: 1; padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 6px;">
+                </div>
+            `).join('');
+
+            const modalHtml = `
+                <div id="batchWeighModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 400px; width: 100%; max-height: 80vh; overflow-y: auto;">
+                        <div style="background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; padding: 1rem; border-radius: 12px 12px 0 0; position: sticky; top: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem;">⚖️ Pesar ${numeros.length} Animales</h3>
+                                <button onclick="closeBatchWeighModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            ${inputsHtml}
+                            <button onclick="executeBatchWeigh('${potreroKey}')" style="width: 100%; padding: 0.75rem; background: #3B82F6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 1rem;">
+                                ✅ Guardar Todos los Pesos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeBatchWeighModal() {
+            document.getElementById('batchWeighModal')?.remove();
+        }
+
+        function executeBatchWeigh(potreroKey) {
+            let updated = 0;
+            const today = new Date().toISOString().split('T')[0];
+
+            document.querySelectorAll('.batch-weight-input').forEach(input => {
+                const numero = input.dataset.numero;
+                const peso = parseFloat(input.value);
+                if (!peso || peso <= 0) return;
+
+                const box = document.querySelector(`.animal-box[data-numero="${numero}"][data-potrero="${potreroKey}"]`);
+                const ranchId = box?.dataset.ranch || currentRanch;
+
+                if (ranchId === currentRanch) {
+                    const animal = data.entradas.find(a => a.numero === numero);
+                    if (animal) {
+                        const oldPeso = animal.pesoActual || animal.peso;
+                        animal.pesoActual = peso;
+                        if (!data.pesoUpdates) data.pesoUpdates = [];
+                        data.pesoUpdates.push({ id: Date.now() + updated, numero, fecha: today, pesoAnterior: oldPeso, pesoNuevo: peso });
+                        updated++;
+                    }
+                } else {
+                    const ranchData = getRanchData(ranchId);
+                    if (ranchData) {
+                        const animal = ranchData.entradas?.find(a => a.numero === numero);
+                        if (animal) {
+                            const oldPeso = animal.pesoActual || animal.peso;
+                            animal.pesoActual = peso;
+                            if (!ranchData.pesoUpdates) ranchData.pesoUpdates = [];
+                            ranchData.pesoUpdates.push({ id: Date.now() + updated, numero, fecha: today, pesoAnterior: oldPeso, pesoNuevo: peso });
+                            saveRanchData(ranchId, ranchData);
+                            updated++;
+                        }
+                    }
+                }
+            });
+
+            saveData();
+            closeBatchWeighModal();
+            clearPotreroSelection(potreroKey);
+            updatePotrerosView();
+
+            showToast(`${updated} pesos actualizados`, 'success');
+        }
+
+        // View single animal profile
+        function viewSelectedAnimal(potreroKey) {
+            const selected = potreroSelections[potreroKey];
+            if (!selected || selected.size === 0) {
+                showToast('Seleccione un animal', 'error');
+                return;
+            }
+
+            if (selected.size > 1) {
+                showToast('Seleccione solo un animal para ver perfil', 'warning');
+                return;
+            }
+
+            const numero = Array.from(selected)[0];
+            const box = document.querySelector(`.animal-box[data-numero="${numero}"][data-potrero="${potreroKey}"]`);
+            const ranchId = box?.dataset.ranch || currentRanch;
+
+            // If animal is from a different ranch, we need to switch or show cross-ranch view
+            if (ranchId !== currentRanch) {
+                showToast(`Este animal pertenece a ${RANCHES[ranchId]?.name}. Cambie de finca para ver el perfil completo.`, 'info');
+                return;
+            }
+
+            // Show animal profile (assuming showAnimalProfile function exists)
+            if (typeof showAnimalProfile === 'function') {
+                showAnimalProfile(numero);
+            } else {
+                showToast('Perfil de animal #' + numero, 'info');
+            }
+
+            clearPotreroSelection(potreroKey);
         }
 
         // Show modal with animals in potrero, grouped by ranch
