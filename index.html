@@ -13067,64 +13067,40 @@
 
         // Get days since last weight for an animal
         function getDaysSinceLastWeight(numero, ranchId) {
-            // Returns days since last ACTUAL weight measurement (not GDP-calculated "Esperado")
-            // Valid weight sources:
-            // 1. pesoUpdates entries (dictated estimates or actual measurements)
-            // 2. Initial peso at entry (if animal has actual peso value recorded at purchase)
+            // Returns days since last VERIFIED weight measurement on the farm
             //
-            // RED DOT: No real weight OR > 90 days since real weight
-            // GREEN DOT: Has real weight within 90 days
+            // GREEN DOT: Has pesoUpdates entry within 90 days
+            //   - Actual weighings on the farm
+            //   - Dictated weight estimates recorded on the farm
+            //
+            // RED DOT: No verified weighing within 90 days
+            //   - Initial "peso entrada" at purchase is just a seller's estimate
+            //   - GDP-calculated "peso esperado" is not a real measurement
 
             const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
             if (!ranchData) {
-                console.log(`⚪ #${numero}: No ranch data for ${ranchId}`);
                 return null;
             }
 
             // Normalize numero for comparison (handle string/number mismatch)
             const numStr = String(numero);
 
-            // 1. Check pesoUpdates first (weighings, dictated weights)
+            // ONLY pesoUpdates count as verified weights
             const updates = ranchData.pesoUpdates || [];
             const animalUpdates = updates.filter(u => String(u.numero) === numStr);
 
             if (animalUpdates.length > 0) {
-                // Has weight updates - use the most recent one
+                // Has verified weight updates - use the most recent one
                 const lastUpdate = animalUpdates.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
                 const days = Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24));
-                console.log(`🟢 #${numero}: Has pesoUpdate from ${days} days ago`);
+                console.log(`🟢 #${numero}: Verified weighing ${days} days ago (${lastUpdate.peso}kg)`);
                 return days;
             }
 
-            // 2. Check if animal has REAL initial peso at entry (not calculated pesoActual)
+            // No pesoUpdates = no verified weight = RED DOT
             const animal = ranchData.entradas?.find(a => String(a.numero) === numStr);
-
-            if (!animal) {
-                console.log(`🔴 #${numero}: Not found in entradas`);
-                return null;
-            }
-
-            // Check for real entry weight (peso field, not pesoActual which is calculated)
-            // Real weight is recorded at purchase/entry
-            const realPeso = animal.peso;
-            const calculatedPeso = animal.pesoActual;
-            const entryDate = animal.fechaEntrada || animal.fecha;
-
-            // If animal ONLY has pesoActual but no real peso → RED (no real weight)
-            if ((!realPeso || realPeso === 0) && calculatedPeso) {
-                console.log(`🔴 #${numero}: Only has pesoActual (${calculatedPeso}kg), no real peso`);
-                return null;
-            }
-
-            // Has real peso at entry - check the date
-            if (realPeso && realPeso > 0 && entryDate) {
-                const days = Math.floor((new Date() - new Date(entryDate)) / (1000 * 60 * 60 * 24));
-                console.log(`🟢 #${numero}: Has real peso (${realPeso}kg) from ${days} days ago`);
-                return days;
-            }
-
-            // No real weight data
-            console.log(`🔴 #${numero}: No real peso (peso=${realPeso}, fecha=${entryDate})`);
+            const entryPeso = animal?.peso || 0;
+            console.log(`🔴 #${numero}: No verified weighing (entry peso ${entryPeso}kg is seller estimate)`);
             return null;
         }
 
