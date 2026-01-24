@@ -2110,9 +2110,16 @@
             </div>
             <!-- Cloud Sync Status Indicator -->
             <div id="cloudSyncIndicator" style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;" onclick="showTab('config')" title="Estado de sincronización">
-                <span id="syncIndicatorIcon" style="font-size: 1rem;">☁️</span>
-                <span id="syncIndicatorText" style="color: white;">Conectando...</span>
+                <span style="font-size: 1rem;">☁️</span>
+                <span id="syncStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
+                <span id="syncStatusText" style="color: white;">Conectando...</span>
             </div>
+            <style>
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.5; transform: scale(1.2); }
+                }
+            </style>
         </div>
     </div>
 
@@ -5263,11 +5270,11 @@
             const ranch = RANCHES[currentRanch];
             localStorage.setItem(ranch.storageKey, JSON.stringify(data));
 
-            // 🔄 Trigger immediate cloud sync
+            // 🔄 Trigger immediate cloud sync (debounced 2 seconds)
             if (window.cloudSync && window.cloudSync.enabled) {
-                window.cloudSync.syncToCloud().catch(err => console.error('Cloud sync error:', err));
+                window.cloudSync.scheduleImmediateSync();
             }
-            
+
             updateAllViews();
         }
         

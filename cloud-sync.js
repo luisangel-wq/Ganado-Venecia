@@ -1,12 +1,12 @@
 /**
- * CLOUD SYNC MODULE
- * Automatic synchronization between devices using Firebase
- * 
- * Features:
- * - Real-time sync across all devices
- * - Offline support with automatic sync when online
- * - Simple setup with Firebase
- * - Conflict resolution (last-write-wins)
+ * CLOUD SYNC MODULE v2.0
+ * Automatic synchronization with Firebase - NOW WITH IMMEDIATE SYNC
+ *
+ * KEY CHANGES:
+ * - Syncs IMMEDIATELY after every data change (debounced 2 seconds)
+ * - Shows visible sync status indicator
+ * - Queues changes when offline for later sync
+ * - Warns before page close if unsync'd changes
  */
 
 class CloudSync {
@@ -18,37 +18,61 @@ class CloudSync {
         this.syncInProgress = false;
         this.firebaseConfig = null;
         this.syncInterval = null;
-        
-        // Define RANCHES structure as fallback (in case main app hasn't loaded yet)
+        this.isInitialized = false;
+
+        // NEW: Debounce timer for immediate sync
+        this.syncDebounceTimer = null;
+        this.pendingChanges = false;
+        this.lastChangeTime = null;
+
+        // NEW: Offline queue
+        this.offlineQueue = [];
+        this.isOnline = navigator.onLine;
+
+        // Define RANCHES structure as fallback
         this.RANCHES_FALLBACK = {
-            la_coruna: {
-                id: 'la_coruna',
-                name: 'La Coruña',
-                storageKey: 'ganadoFinca_LaCoruna'
-            },
-            santa_catalina: {
-                id: 'santa_catalina',
-                name: 'Santa Catalina',
-                storageKey: 'ganadoFinca_SantaCatalina'
-            },
-            la_vega: {
-                id: 'la_vega',
-                name: 'La Vega',
-                storageKey: 'ganadoFinca_LaVega'
-            },
-            san_fernando: {
-                id: 'san_fernando',
-                name: 'San Fernando',
-                storageKey: 'ganadoFinca_SanFernando'
-            }
+            la_coruna: { id: 'la_coruna', name: 'La Coruña', storageKey: 'ganadoFinca_LaCoruna' },
+            santa_catalina: { id: 'santa_catalina', name: 'Santa Catalina', storageKey: 'ganadoFinca_SantaCatalina' },
+            la_vega: { id: 'la_vega', name: 'La Vega', storageKey: 'ganadoFinca_LaVega' },
+            san_fernando: { id: 'san_fernando', name: 'San Fernando', storageKey: 'ganadoFinca_SanFernando' }
         };
+
+        // Setup online/offline listeners
+        this.setupNetworkListeners();
     }
-    
+
     /**
      * Get RANCHES object (from global scope or fallback)
      */
     getRanches() {
         return (typeof RANCHES !== 'undefined') ? RANCHES : this.RANCHES_FALLBACK;
+    }
+
+    /**
+     * Setup network status listeners
+     */
+    setupNetworkListeners() {
+        window.addEventListener('online', () => {
+            console.log('📶 Back online - syncing pending changes...');
+            this.isOnline = true;
+            this.updateSyncIndicator('syncing', 'Reconectando...');
+            this.flushOfflineQueue();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📴 Offline - changes will be queued');
+            this.isOnline = false;
+            this.updateSyncIndicator('offline', 'Sin conexión');
+        });
+
+        // Warn before page close if there are pending changes
+        window.addEventListener('beforeunload', (e) => {
+            if (this.pendingChanges && this.enabled) {
+                e.preventDefault();
+                e.returnValue = 'Hay cambios sin guardar. ¿Desea salir?';
+                return e.returnValue;
+            }
+        });
     }
 
     /**
@@ -58,13 +82,11 @@ class CloudSync {
         try {
             this.firebaseConfig = firebaseConfig;
 
-            // Check if Firebase is loaded
             if (typeof firebase === 'undefined') {
                 console.error('Firebase SDK not loaded');
                 return false;
             }
 
-            // Initialize Firebase
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
             }
@@ -80,44 +102,197 @@ class CloudSync {
 
             this.enabled = true;
             this.isInitialized = true;
-
-            // CRITICAL: Load lastSync from localStorage before any comparisons
             this.lastSync = localStorage.getItem('cloudSync_lastSync') || null;
 
             console.log('Cloud sync initialized with user ID:', this.userId);
-            console.log('Last sync time from storage:', this.lastSync);
 
-            // Check if this is a new device (no local data)
+            // Check if new device
             const localAnimalCount = this.countLocalAnimals();
             const isNewDevice = localAnimalCount === 0;
 
             if (isNewDevice) {
-                console.log('📱 NEW DEVICE DETECTED - Will download data from cloud');
-                // Force download from cloud for new devices
+                console.log('📱 NEW DEVICE - Downloading from cloud...');
+                this.updateSyncIndicator('syncing', 'Descargando...');
                 await this.forceDownloadFromCloud();
             } else {
-                // Device has local data - just upload to cloud on init
-                // Don't download on init to avoid loops - user can manually download if needed
-                console.log(`📊 Local: ${localAnimalCount} animals`);
-                console.log('📤 Syncing local data to cloud...');
+                // Initial sync to cloud
+                console.log('📤 Initial sync to cloud...');
+                this.updateSyncIndicator('syncing', 'Sincronizando...');
                 await this.syncToCloud();
-                console.log('✅ Local data synced to cloud');
             }
 
-            // DISABLED: Real-time listeners were causing infinite loops
-            // this.setupListeners();
-
-            // TWO-WAY Auto-sync every 30 seconds (both upload AND download)
-            console.log('⏰ Starting TWO-WAY auto-sync interval (every 30 seconds)');
+            // Set up periodic two-way sync every 60 seconds (backup, not primary)
             this.syncInterval = setInterval(() => {
-                this.twoWaySync();
-            }, 30000);
+                if (!this.pendingChanges) {
+                    this.twoWaySync();
+                }
+            }, 60000);
 
+            this.updateSyncIndicator('synced', 'Sincronizado');
             return true;
         } catch (error) {
             console.error('Error initializing cloud sync:', error);
+            this.updateSyncIndicator('error', 'Error de conexión');
             return false;
         }
+    }
+
+    /**
+     * UPDATE SYNC STATUS INDICATOR
+     * Shows visual feedback on sync state
+     */
+    updateSyncIndicator(status, message) {
+        const indicator = document.getElementById('cloudSyncIndicator');
+        const statusDot = document.getElementById('syncStatusDot');
+        const statusText = document.getElementById('syncStatusText');
+
+        if (!indicator) return;
+
+        const colors = {
+            'syncing': '#f59e0b',    // Yellow - in progress
+            'synced': '#10b981',      // Green - success
+            'error': '#ef4444',       // Red - error
+            'offline': '#6b7280',     // Gray - offline
+            'pending': '#3b82f6'      // Blue - pending changes
+        };
+
+        const icons = {
+            'syncing': '🔄',
+            'synced': '☁️',
+            'error': '⚠️',
+            'offline': '📴',
+            'pending': '💾'
+        };
+
+        if (statusDot) {
+            statusDot.style.background = colors[status] || colors['synced'];
+            statusDot.style.animation = status === 'syncing' ? 'pulse 1s infinite' : 'none';
+        }
+
+        if (statusText) {
+            statusText.textContent = message || status;
+        }
+
+        // Also update the icon in header if exists
+        const headerIcon = indicator.querySelector('span:first-child');
+        if (headerIcon) {
+            headerIcon.textContent = icons[status] || '☁️';
+        }
+
+        console.log(`📊 Sync status: ${status} - ${message}`);
+    }
+
+    /**
+     * IMMEDIATE SYNC - Called right after saveData()
+     * Uses debouncing to avoid too many rapid syncs
+     */
+    scheduleImmediateSync() {
+        if (!this.enabled) return;
+
+        this.pendingChanges = true;
+        this.lastChangeTime = Date.now();
+        this.updateSyncIndicator('pending', 'Guardando...');
+
+        // Clear existing timer
+        if (this.syncDebounceTimer) {
+            clearTimeout(this.syncDebounceTimer);
+        }
+
+        // Sync after 2 seconds of no changes
+        this.syncDebounceTimer = setTimeout(async () => {
+            if (this.isOnline) {
+                await this.syncToCloud();
+            } else {
+                // Queue for later
+                this.queueOfflineSync();
+            }
+        }, 2000);
+    }
+
+    /**
+     * Queue sync for when back online
+     */
+    queueOfflineSync() {
+        console.log('📴 Queuing changes for offline sync');
+        this.offlineQueue.push({
+            timestamp: Date.now(),
+            data: this.collectAllData()
+        });
+        // Keep only latest 5 queued syncs
+        if (this.offlineQueue.length > 5) {
+            this.offlineQueue.shift();
+        }
+        this.updateSyncIndicator('offline', 'Guardado local');
+    }
+
+    /**
+     * Flush offline queue when back online
+     */
+    async flushOfflineQueue() {
+        if (this.offlineQueue.length === 0) {
+            // No queue, just do a normal sync
+            await this.syncToCloud();
+            return;
+        }
+
+        console.log(`📤 Flushing ${this.offlineQueue.length} queued syncs...`);
+
+        // Upload the latest data (most recent queue item)
+        const latest = this.offlineQueue[this.offlineQueue.length - 1];
+        if (latest && latest.data) {
+            try {
+                await this.db.ref(`users/${this.userId}`).set(latest.data);
+                this.lastSync = latest.data.lastModified;
+                localStorage.setItem('cloudSync_lastSync', this.lastSync);
+                this.offlineQueue = [];
+                this.pendingChanges = false;
+                this.updateSyncIndicator('synced', 'Sincronizado');
+
+                if (typeof showToast === 'function') {
+                    showToast('☁️ Cambios guardados en la nube', 'success');
+                }
+            } catch (error) {
+                console.error('Error flushing offline queue:', error);
+                this.updateSyncIndicator('error', 'Error al sincronizar');
+            }
+        }
+    }
+
+    /**
+     * Collect all ranch data for sync
+     */
+    collectAllData() {
+        const RANCHES = this.getRanches();
+        const allData = {
+            ranches: {},
+            photos: {},
+            lastModified: new Date().toISOString(),
+            deviceId: this.getDeviceId()
+        };
+
+        Object.keys(RANCHES).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            const ranchData = localStorage.getItem(ranch.storageKey);
+            if (ranchData) {
+                try {
+                    allData.ranches[ranchId] = JSON.parse(ranchData);
+                } catch (e) {
+                    console.error(`Error parsing data for ranch ${ranchId}:`, e);
+                }
+            }
+
+            const photosKey = 'animalPhotos_' + ranchId;
+            const photos = localStorage.getItem(photosKey);
+            if (photos) {
+                try {
+                    allData.photos[ranchId] = JSON.parse(photos);
+                } catch (e) {
+                    console.error(`Error parsing photos for ranch ${ranchId}:`, e);
+                }
+            }
+        });
+
+        return allData;
     }
 
     /**
@@ -127,37 +302,34 @@ class CloudSync {
         if (!this.enabled) return;
 
         try {
-            console.log('⬇️ Downloading data from cloud...');
             const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
             const cloudData = snapshot.val();
 
             if (!cloudData || !cloudData.ranches) {
                 console.log('No data in cloud yet');
+                this.updateSyncIndicator('synced', 'Sincronizado');
                 return false;
             }
 
             const RANCHES = this.getRanches();
 
-            // Apply ranch data without validation (trust cloud data for new devices)
             Object.keys(cloudData.ranches).forEach(ranchId => {
                 const ranch = RANCHES[ranchId];
                 if (ranch) {
                     try {
                         localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
-                        console.log(`✅ Downloaded data for: ${ranch.name}`);
+                        console.log(`✅ Downloaded: ${ranch.name}`);
                     } catch (e) {
                         console.error(`Error saving data for ${ranchId}:`, e);
                     }
                 }
             });
 
-            // Apply photos
             if (cloudData.photos) {
                 Object.keys(cloudData.photos).forEach(ranchId => {
                     const photosKey = 'animalPhotos_' + ranchId;
                     try {
                         localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
-                        console.log(`✅ Downloaded photos for: ${ranchId}`);
                     } catch (e) {
                         console.error(`Error saving photos for ${ranchId}:`, e);
                     }
@@ -167,137 +339,51 @@ class CloudSync {
             this.lastSync = cloudData.lastModified;
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
 
-            // Reload the page to show new data
-            console.log('🔄 Data downloaded! Reloading page...');
             if (typeof showToast === 'function') {
-                showToast('☁️ Datos descargados de la nube. Recargando...', 'success');
+                showToast('☁️ Datos descargados. Recargando...', 'success');
             }
 
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-
+            setTimeout(() => window.location.reload(), 1500);
             return true;
         } catch (error) {
             console.error('Error downloading from cloud:', error);
+            this.updateSyncIndicator('error', 'Error de descarga');
             return false;
         }
     }
 
     /**
-     * Setup real-time listeners for cloud changes
-     */
-    setupListeners() {
-        if (!this.enabled || !this.db) return;
-
-        const userRef = this.db.ref(`users/${this.userId}`);
-        let lastProcessedTime = 0; // Debounce to prevent rapid re-syncs
-        let isFirstLoad = true; // Skip the first trigger which is the initial load
-
-        userRef.on('value', (snapshot) => {
-            // Skip the first load - we handle that in initialize()
-            if (isFirstLoad) {
-                isFirstLoad = false;
-                const cloudData = snapshot.val();
-                if (cloudData && cloudData.lastModified) {
-                    // Just update our lastSync to current cloud time
-                    this.lastSync = cloudData.lastModified;
-                    localStorage.setItem('cloudSync_lastSync', this.lastSync);
-                }
-                return;
-            }
-
-            if (this.syncInProgress) return; // Avoid infinite loops
-
-            const cloudData = snapshot.val();
-            if (cloudData && cloudData.lastModified) {
-                const cloudTime = new Date(cloudData.lastModified).getTime();
-
-                // Debounce: don't process same timestamp twice
-                if (cloudTime === lastProcessedTime) {
-                    return;
-                }
-
-                // Check if the change came from a different device
-                const cloudDeviceId = cloudData.deviceId;
-                const myDeviceId = this.getDeviceId();
-                const isFromOtherDevice = cloudDeviceId && cloudDeviceId !== myDeviceId;
-
-                // Only sync if it's from another device
-                if (isFromOtherDevice) {
-                    lastProcessedTime = cloudTime;
-                    console.log(`☁️ Change from device ${cloudDeviceId} - syncing...`);
-                    this.syncFromCloudSilent(cloudData);
-                } else {
-                    // It's our own change - just update lastSync
-                    this.lastSync = cloudData.lastModified;
-                    localStorage.setItem('cloudSync_lastSync', this.lastSync);
-                }
-            }
-        });
-    }
-
-    /**
-     * Sync all ranch data to cloud
+     * Sync all ranch data to cloud - NOW MUCH FASTER
      */
     async syncToCloud() {
-        if (!this.enabled || this.syncInProgress) return;
+        if (!this.enabled || this.syncInProgress) return false;
 
         try {
             this.syncInProgress = true;
-            
-            const RANCHES = this.getRanches();
-            
-            const allData = {
-                ranches: {},
-                photos: {},
-                lastModified: new Date().toISOString(),
-                deviceId: this.getDeviceId()
-            };
+            this.updateSyncIndicator('syncing', 'Sincronizando...');
 
-            // Collect all ranch data
-            Object.keys(RANCHES).forEach(ranchId => {
-                const ranch = RANCHES[ranchId];
-                const ranchData = localStorage.getItem(ranch.storageKey);
-                if (ranchData) {
-                    try {
-                        allData.ranches[ranchId] = JSON.parse(ranchData);
-                    } catch (e) {
-                        console.error(`Error parsing data for ranch ${ranchId}:`, e);
-                    }
-                }
-
-                // Collect photos
-                const photosKey = 'animalPhotos_' + ranchId;
-                const photos = localStorage.getItem(photosKey);
-                if (photos) {
-                    try {
-                        allData.photos[ranchId] = JSON.parse(photos);
-                    } catch (e) {
-                        console.error(`Error parsing photos for ranch ${ranchId}:`, e);
-                    }
-                }
-            });
+            const allData = this.collectAllData();
 
             // Upload to Firebase
             await this.db.ref(`users/${this.userId}`).set(allData);
-            
+
             this.lastSync = allData.lastModified;
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
+            this.pendingChanges = false;
 
-            console.log('✅ Data synced to cloud successfully at', this.lastSync);
-
-            // Update UI status if available
-            if (typeof updateSyncStatus === 'function') {
-                updateSyncStatus();
-            }
+            console.log('✅ Synced to cloud at', this.lastSync);
+            this.updateSyncIndicator('synced', 'Sincronizado');
 
             return true;
         } catch (error) {
             console.error('Error syncing to cloud:', error);
-            if (error.code === 'PERMISSION_DENIED') {
-                console.error('Firebase permission denied - check database rules');
+            this.updateSyncIndicator('error', 'Error');
+
+            // Queue for later if network error
+            if (!this.isOnline || error.code === 'NETWORK_ERROR') {
+                this.queueOfflineSync();
             }
+
             return false;
         } finally {
             this.syncInProgress = false;
@@ -311,26 +397,21 @@ class CloudSync {
         if (!this.enabled) return;
 
         try {
-            console.log('⬇️ USER REQUESTED: Downloading data from cloud...');
+            this.updateSyncIndicator('syncing', 'Descargando...');
+
             const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
             const cloudData = snapshot.val();
 
             if (!cloudData) {
-                console.log('No cloud data found, will upload local data');
                 await this.syncToCloud();
                 return;
             }
 
-            // Log what we're getting
-            const cloudCount = this.countAnimalsInData(cloudData);
-            const localCount = this.countLocalAnimals();
-            console.log(`📊 Cloud has ${cloudCount} animals, Local has ${localCount} animals`);
-
-            // FORCE apply - user explicitly requested download
             await this.forceApplyCloudData(cloudData);
             return true;
         } catch (error) {
             console.error('Error syncing from cloud:', error);
+            this.updateSyncIndicator('error', 'Error de descarga');
             return false;
         }
     }
@@ -339,24 +420,16 @@ class CloudSync {
      * Force apply cloud data (user explicitly requested)
      */
     async forceApplyCloudData(cloudData) {
-        if (!cloudData || !cloudData.ranches) {
-            console.log('No ranch data in cloud');
-            return;
-        }
+        if (!cloudData || !cloudData.ranches) return;
 
         const RANCHES = this.getRanches();
         let changesCount = 0;
 
-        // Apply ALL ranch data from cloud
         Object.keys(cloudData.ranches).forEach(ranchId => {
             const ranch = RANCHES[ranchId];
             if (ranch) {
                 try {
-                    const cloudRanchData = cloudData.ranches[ranchId];
-                    const cloudCount = cloudRanchData?.entradas?.length || 0;
-
-                    localStorage.setItem(ranch.storageKey, JSON.stringify(cloudRanchData));
-                    console.log(`✅ Downloaded ${ranch.name}: ${cloudCount} animals`);
+                    localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
                     changesCount++;
                 } catch (e) {
                     console.error(`Error saving ${ranchId}:`, e);
@@ -364,132 +437,105 @@ class CloudSync {
             }
         });
 
-        // Apply ALL photos from cloud
         if (cloudData.photos) {
             Object.keys(cloudData.photos).forEach(ranchId => {
                 const photosKey = 'animalPhotos_' + ranchId;
                 try {
-                    const photoCount = Object.keys(cloudData.photos[ranchId] || {}).length;
                     localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
-                    console.log(`✅ Downloaded photos for ${ranchId}: ${photoCount} photos`);
                 } catch (e) {
                     console.error(`Error saving photos for ${ranchId}:`, e);
                 }
             });
         }
 
-        // Update lastSync
         this.lastSync = cloudData.lastModified;
         localStorage.setItem('cloudSync_lastSync', this.lastSync);
 
-        // Show success and RELOAD page to show new data
         if (typeof showToast === 'function') {
-            showToast(`☁️ Descargado: ${changesCount} fincas actualizadas. Recargando...`, 'success');
+            showToast(`☁️ Descargado: ${changesCount} fincas. Recargando...`, 'success');
         }
 
-        console.log('🔄 Reloading page to show downloaded data...');
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
+        setTimeout(() => window.location.reload(), 1500);
     }
 
     /**
-     * Silent sync from cloud (triggered by listeners)
+     * TWO-WAY SYNC: Check cloud for changes AND upload local changes
      */
-    syncFromCloudSilent(cloudData) {
-        // Apply data to localStorage first
-        this.applySyncData(cloudData, false);
+    async twoWaySync() {
+        if (!this.enabled || this.syncInProgress || !this.isOnline) return;
 
-        // Show notification
-        if (typeof showToast === 'function') {
-            showToast('☁️ Datos sincronizados desde otro dispositivo', 'success');
-        }
+        try {
+            this.syncInProgress = true;
 
-        // Update UI without page reload to avoid loops
-        if (typeof loadData === 'function') {
-            loadData();
-        }
-        if (typeof updateAllViews === 'function') {
-            updateAllViews();
-        }
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            const cloudData = snapshot.val();
 
-        console.log('✅ Sync from other device complete - UI updated');
+            if (!cloudData) {
+                this.syncInProgress = false;
+                await this.syncToCloud();
+                return;
+            }
+
+            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
+            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
+            const cloudDeviceId = cloudData.deviceId;
+            const myDeviceId = this.getDeviceId();
+
+            if (cloudDeviceId !== myDeviceId && cloudTime > localTime) {
+                console.log('⬇️ Newer data from another device - downloading...');
+                await this.applyCloudDataSmart(cloudData);
+
+                if (typeof showToast === 'function') {
+                    showToast('☁️ Nuevos datos de otro dispositivo', 'success');
+                }
+            } else {
+                this.syncInProgress = false;
+                await this.syncToCloud();
+            }
+        } catch (error) {
+            console.error('Two-way sync error:', error);
+        } finally {
+            this.syncInProgress = false;
+        }
     }
 
     /**
-     * Apply synced data to local storage
+     * Smart apply of cloud data
      */
-    applySyncData(cloudData, showNotification = true) {
-        if (!cloudData) return;
+    async applyCloudDataSmart(cloudData) {
+        if (!cloudData || !cloudData.ranches) return;
 
         const RANCHES = this.getRanches();
-        let changesCount = 0;
+        let changesApplied = false;
 
-        // DATA VALIDATION: Check if cloud data is suspicious (empty or too small)
-        const cloudAnimalCount = this.countAnimalsInData(cloudData);
-        const localAnimalCount = this.countLocalAnimals();
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            if (ranch) {
+                try {
+                    const cloudRanchData = cloudData.ranches[ranchId];
+                    const localRanchDataStr = localStorage.getItem(ranch.storageKey);
+                    const localRanchData = localRanchDataStr ? JSON.parse(localRanchDataStr) : null;
 
-        // Prevent overwriting good data with empty/minimal data
-        if (localAnimalCount > 10 && cloudAnimalCount < localAnimalCount * 0.5) {
-            console.warn('⚠️ SYNC BLOCKED: Cloud data appears incomplete');
-            console.warn(`Local has ${localAnimalCount} animals, cloud has ${cloudAnimalCount}`);
+                    const cloudCount = cloudRanchData?.entradas?.length || 0;
+                    const localCount = localRanchData?.entradas?.length || 0;
 
-            if (showNotification && typeof showToast === 'function') {
-                showToast('⚠️ Sincronización bloqueada: Los datos en la nube parecen incompletos. Use Backup/Restore manual.', 'warning');
-            }
-
-            // Optionally ask user what to do
-            if (showNotification && confirm(
-                `ADVERTENCIA: Sincronización bloqueada\n\n` +
-                `Datos locales: ${localAnimalCount} animales\n` +
-                `Datos en la nube: ${cloudAnimalCount} animales\n\n` +
-                `Los datos de la nube parecen estar incompletos o vacíos.\n\n` +
-                `¿Desea SOBRESCRIBIR la nube con sus datos locales?\n` +
-                `(Recomendado si sus datos locales son correctos)`
-            )) {
-                // Upload local data to cloud instead
-                this.syncToCloud();
-            }
-
-            return; // Don't apply cloud data
-        }
-
-        // Restore ranch data
-        if (cloudData.ranches) {
-            Object.keys(cloudData.ranches).forEach(ranchId => {
-                const ranch = RANCHES[ranchId];
-                if (ranch) {
-                    try {
-                        const newData = JSON.stringify(cloudData.ranches[ranchId]);
-                        const oldData = localStorage.getItem(ranch.storageKey);
-
-                        if (newData !== oldData) {
-                            localStorage.setItem(ranch.storageKey, newData);
-                            changesCount++;
-                            console.log(`Synced data for ranch: ${ranch.name}`);
-                        }
-                    } catch (e) {
-                        console.error(`Error applying sync data for ranch ${ranchId}:`, e);
+                    if (cloudCount >= localCount) {
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(cloudRanchData));
+                        changesApplied = true;
                     }
+                } catch (e) {
+                    console.error(`Error applying sync for ${ranchId}:`, e);
                 }
-            });
-        }
+            }
+        });
 
-        // Restore photos
         if (cloudData.photos) {
             Object.keys(cloudData.photos).forEach(ranchId => {
                 const photosKey = 'animalPhotos_' + ranchId;
                 try {
-                    const newPhotos = JSON.stringify(cloudData.photos[ranchId]);
-                    const oldPhotos = localStorage.getItem(photosKey);
-
-                    if (newPhotos !== oldPhotos) {
-                        localStorage.setItem(photosKey, newPhotos);
-                        changesCount++;
-                        console.log(`Synced photos for ranch: ${ranchId}`);
-                    }
+                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
                 } catch (e) {
-                    console.error(`Error applying sync photos for ranch ${ranchId}:`, e);
+                    console.error(`Error applying photos for ${ranchId}:`, e);
                 }
             });
         }
@@ -497,42 +543,10 @@ class CloudSync {
         this.lastSync = cloudData.lastModified;
         localStorage.setItem('cloudSync_lastSync', this.lastSync);
 
-        if (changesCount > 0) {
-            console.log(`✅ Synced ${changesCount} changes from cloud`);
-
-            // CRITICAL: Reload the data variable from localStorage before updating views
-            // The 'data' variable in index.html needs to be refreshed with the new localStorage data
-            if (typeof loadData === 'function') {
-                console.log('🔄 Reloading data from localStorage...');
-                loadData(); // This reloads the in-memory 'data' variable
-            }
-
-            // Now update the UI with the fresh data
-            if (typeof updateAllViews === 'function') {
-                console.log('🔄 Updating UI with new data...');
-                updateAllViews();
-            }
-
-            // Show subtle notification (only if not silent sync)
-            if (showNotification && typeof showToast === 'function') {
-                showToast(`☁️ ${changesCount} cambio(s) sincronizado(s)`, 'success');
-            }
-        }
-    }
-
-    /**
-     * Get animal count from cloud (without downloading all data)
-     */
-    async getCloudAnimalCount() {
-        if (!this.enabled || !this.db) return 0;
-
-        try {
-            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
-            const cloudData = snapshot.val();
-            return this.countAnimalsInData(cloudData);
-        } catch (error) {
-            console.error('Error getting cloud animal count:', error);
-            return 0;
+        if (changesApplied) {
+            if (typeof loadData === 'function') loadData();
+            if (typeof updateAllViews === 'function') updateAllViews();
+            this.updateSyncIndicator('synced', 'Sincronizado');
         }
     }
 
@@ -541,18 +555,11 @@ class CloudSync {
      */
     countAnimalsInData(cloudData) {
         if (!cloudData || !cloudData.ranches) return 0;
-
         let count = 0;
         Object.keys(cloudData.ranches).forEach(ranchId => {
             const ranchData = cloudData.ranches[ranchId];
-            // Check both 'entradas' (app uses this) and 'cattle' (legacy)
-            if (ranchData && ranchData.entradas && Array.isArray(ranchData.entradas)) {
-                count += ranchData.entradas.length;
-            } else if (ranchData && ranchData.cattle && Array.isArray(ranchData.cattle)) {
-                count += ranchData.cattle.length;
-            }
+            if (ranchData?.entradas?.length) count += ranchData.entradas.length;
         });
-
         return count;
     }
 
@@ -562,25 +569,16 @@ class CloudSync {
     countLocalAnimals() {
         const RANCHES = this.getRanches();
         let count = 0;
-
         Object.keys(RANCHES).forEach(ranchId => {
             const ranch = RANCHES[ranchId];
             const ranchData = localStorage.getItem(ranch.storageKey);
             if (ranchData) {
                 try {
                     const data = JSON.parse(ranchData);
-                    // Check both 'entradas' (app uses this) and 'cattle' (legacy)
-                    if (data && data.entradas && Array.isArray(data.entradas)) {
-                        count += data.entradas.length;
-                    } else if (data && data.cattle && Array.isArray(data.cattle)) {
-                        count += data.cattle.length;
-                    }
-                } catch (e) {
-                    console.error(`Error counting animals for ranch ${ranchId}:`, e);
-                }
+                    if (data?.entradas?.length) count += data.entradas.length;
+                } catch (e) {}
             }
         });
-
         return count;
     }
 
@@ -601,13 +599,10 @@ class CloudSync {
      */
     disable() {
         this.enabled = false;
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-        }
-        if (this.db) {
-            this.db.ref(`users/${this.userId}`).off();
-        }
-        console.log('Cloud sync disabled');
+        if (this.syncInterval) clearInterval(this.syncInterval);
+        if (this.syncDebounceTimer) clearTimeout(this.syncDebounceTimer);
+        if (this.db) this.db.ref(`users/${this.userId}`).off();
+        this.updateSyncIndicator('offline', 'Desactivado');
     }
 
     /**
@@ -618,7 +613,9 @@ class CloudSync {
             enabled: this.enabled,
             userId: this.userId,
             lastSync: this.lastSync,
-            deviceId: this.getDeviceId()
+            deviceId: this.getDeviceId(),
+            pendingChanges: this.pendingChanges,
+            isOnline: this.isOnline
         };
     }
 
@@ -626,202 +623,42 @@ class CloudSync {
      * Force immediate sync
      */
     async forceSync() {
-        if (!this.enabled) {
-            console.error('Cloud sync is not enabled');
-            return false;
-        }
-
-        console.log('Force syncing...');
+        if (!this.enabled) return false;
         await this.syncToCloud();
-        await this.syncFromCloud();
         return true;
-    }
-
-    /**
-     * Trigger automatic sync after data changes
-     * Call this whenever local data is modified
-     */
-    async triggerAutoSync() {
-        if (!this.enabled) return;
-
-        console.log('📤 Data changed - syncing to cloud...');
-        await this.syncToCloud();
-    }
-
-    /**
-     * TWO-WAY SYNC: Check cloud for changes AND upload local changes
-     * This enables real-time collaboration between family members
-     */
-    async twoWaySync() {
-        if (!this.enabled || this.syncInProgress) {
-            console.log('⏰ Two-way sync skipped (disabled or in progress)');
-            return;
-        }
-
-        try {
-            this.syncInProgress = true;
-            console.log('🔄 Two-way sync starting...');
-
-            // Step 1: Get cloud data
-            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
-            const cloudData = snapshot.val();
-
-            if (!cloudData) {
-                // No cloud data - just upload local
-                console.log('📤 No cloud data - uploading local data...');
-                this.syncInProgress = false;
-                await this.syncToCloud();
-                return;
-            }
-
-            // Step 2: Compare timestamps
-            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
-            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
-            const cloudDeviceId = cloudData.deviceId;
-            const myDeviceId = this.getDeviceId();
-
-            // Step 3: Decide what to do
-            if (cloudDeviceId !== myDeviceId && cloudTime > localTime) {
-                // Cloud has newer data from ANOTHER device - download it!
-                console.log('⬇️ Cloud has newer data from another device - downloading...');
-                console.log(`   Cloud time: ${cloudData.lastModified}`);
-                console.log(`   Local time: ${this.lastSync}`);
-                console.log(`   Cloud device: ${cloudDeviceId}`);
-                console.log(`   My device: ${myDeviceId}`);
-
-                // Apply the cloud data
-                await this.applyCloudDataSmart(cloudData);
-
-                // Show notification
-                if (typeof showToast === 'function') {
-                    showToast('☁️ Nuevos datos sincronizados de otro dispositivo', 'success');
-                }
-            } else {
-                // Local is newer or same - upload to cloud
-                console.log('📤 Uploading local data to cloud...');
-                this.syncInProgress = false;
-                await this.syncToCloud();
-                return;
-            }
-
-            console.log('✅ Two-way sync complete');
-        } catch (error) {
-            console.error('❌ Two-way sync error:', error);
-        } finally {
-            this.syncInProgress = false;
-        }
-    }
-
-    /**
-     * Smart apply of cloud data - merges instead of replacing when possible
-     */
-    async applyCloudDataSmart(cloudData) {
-        if (!cloudData || !cloudData.ranches) return;
-
-        const RANCHES = this.getRanches();
-        let changesApplied = false;
-
-        // Apply ranch data
-        Object.keys(cloudData.ranches).forEach(ranchId => {
-            const ranch = RANCHES[ranchId];
-            if (ranch) {
-                try {
-                    const cloudRanchData = cloudData.ranches[ranchId];
-                    const localRanchDataStr = localStorage.getItem(ranch.storageKey);
-                    const localRanchData = localRanchDataStr ? JSON.parse(localRanchDataStr) : null;
-
-                    // Count animals in each
-                    const cloudCount = cloudRanchData?.entradas?.length || 0;
-                    const localCount = localRanchData?.entradas?.length || 0;
-
-                    console.log(`   ${ranch.name}: Cloud=${cloudCount}, Local=${localCount}`);
-
-                    // Smart merge: if cloud has more animals, use cloud data
-                    // This handles the case where another device added animals
-                    if (cloudCount > localCount || cloudCount >= localCount) {
-                        localStorage.setItem(ranch.storageKey, JSON.stringify(cloudRanchData));
-                        console.log(`   ✅ Updated ${ranch.name} from cloud`);
-                        changesApplied = true;
-                    }
-                } catch (e) {
-                    console.error(`Error applying smart sync for ${ranchId}:`, e);
-                }
-            }
-        });
-
-        // Apply photos
-        if (cloudData.photos) {
-            Object.keys(cloudData.photos).forEach(ranchId => {
-                const photosKey = 'animalPhotos_' + ranchId;
-                try {
-                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
-                } catch (e) {
-                    console.error(`Error applying photos for ${ranchId}:`, e);
-                }
-            });
-        }
-
-        // Update lastSync
-        this.lastSync = cloudData.lastModified;
-        localStorage.setItem('cloudSync_lastSync', this.lastSync);
-
-        // Reload UI if changes were applied
-        if (changesApplied) {
-            console.log('🔄 Reloading data and updating UI...');
-
-            // Reload data from localStorage
-            if (typeof loadData === 'function') {
-                loadData();
-            }
-
-            // Update UI
-            if (typeof updateAllViews === 'function') {
-                updateAllViews();
-            }
-        }
     }
 }
 
 // Create global instance
 window.cloudSync = new CloudSync();
 
-// FAMILY SYNC CODE - Shared user ID for all family members
+// FAMILY SYNC CODE
 const FAMILY_SYNC_ID = 'user_1767286295709_gwj75h9dp';
 
 // Auto-initialize with family sync
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔄 Cloud Sync: Initializing family sync...');
+    console.log('🔄 Cloud Sync v2.0: Initializing...');
 
-    // Set the shared family ID for everyone
+    // Set shared family ID
     const currentUserId = localStorage.getItem('cloudSync_userId');
     if (currentUserId !== FAMILY_SYNC_ID) {
-        console.log('📱 Setting shared family sync ID:', FAMILY_SYNC_ID);
         localStorage.setItem('cloudSync_userId', FAMILY_SYNC_ID);
         cloudSync.userId = FAMILY_SYNC_ID;
     }
 
-    // Check if Firebase config is available
     if (typeof firebaseConfig !== 'undefined') {
         try {
-            // Small delay to ensure page is fully loaded
             setTimeout(async () => {
                 const success = await cloudSync.initialize(firebaseConfig);
                 if (success) {
-                    console.log('✅ Family sync initialized successfully!');
+                    console.log('✅ Cloud sync initialized!');
                     localStorage.setItem('cloudSync_enabled', 'true');
-
-                    // Update sync status in UI
-                    if (typeof updateSyncStatus === 'function') {
-                        updateSyncStatus();
-                    }
-                } else {
-                    console.error('❌ Failed to initialize family sync');
                 }
-            }, 1000);
+            }, 500);
         } catch (error) {
-            console.error('Error initializing family sync:', error);
+            console.error('Error initializing cloud sync:', error);
         }
     } else {
-        console.warn('⚠️ Firebase config not found - sync disabled');
+        console.warn('⚠️ Firebase config not found');
     }
 });
