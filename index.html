@@ -12113,8 +12113,19 @@
 
         // Show animal profile regardless of which ranch the animal belongs to
         function showAnimalProfileCrossRanch(numero, animalRanchId) {
+            // Store potrero key to return to after closing animal profile (if one is open)
+            if (currentFullScreenPotrero && !returnToPotreroAfterProfile) {
+                returnToPotreroAfterProfile = currentFullScreenPotrero.key;
+            }
+
             // If animal is in current ranch, just show profile
             if (animalRanchId === currentRanch) {
+                // Close potrero view but we'll return to it when profile closes
+                if (document.getElementById('potreroFullScreen')) {
+                    document.getElementById('potreroFullScreen').remove();
+                    currentFullScreenPotrero = null;
+                    fullScreenSelectedAnimals.clear();
+                }
                 showAnimalProfile(numero);
                 return;
             }
@@ -12123,8 +12134,12 @@
             const ranchName = RANCHES[animalRanchId]?.name || animalRanchId;
             showToast(`Cambiando a ${ranchName}...`, 'info');
 
-            // Close any open full-screen views
-            closePotreroFullScreen();
+            // Close any open full-screen views (but don't clear returnToPotreroAfterProfile)
+            if (document.getElementById('potreroFullScreen')) {
+                document.getElementById('potreroFullScreen').remove();
+                currentFullScreenPotrero = null;
+                fullScreenSelectedAnimals.clear();
+            }
 
             // Switch ranch and show profile after data loads
             switchRanch(animalRanchId);
@@ -12910,6 +12925,7 @@
         // Current potrero in full screen view
         let currentFullScreenPotrero = null;
         let fullScreenSelectedAnimals = new Set();
+        let returnToPotreroAfterProfile = null;  // Store potrero key to return to after closing animal profile
 
         // Open full screen potrero view
         function showPotreroAnimales(potreroKey) {
@@ -14014,6 +14030,9 @@
             // Use parseAnimalKey to correctly handle ranch IDs with underscores (e.g., santa_catalina)
             const { ranchId, numero } = parseAnimalKey(key);
 
+            // Store potrero key to return to after closing animal profile
+            returnToPotreroAfterProfile = currentFullScreenPotrero ? currentFullScreenPotrero.key : null;
+
             closePotreroFullScreen();
             showAnimalProfileCrossRanch(numero, ranchId);
         }
@@ -14575,6 +14594,13 @@
         
         function closeAnimalProfile() {
             document.getElementById('animalProfileModal').style.display = 'none';
+
+            // Return to the potrero that was open before viewing this animal
+            if (returnToPotreroAfterProfile) {
+                const potreroKey = returnToPotreroAfterProfile;
+                returnToPotreroAfterProfile = null;  // Clear it
+                setTimeout(() => openPotreroFullScreen(potreroKey), 100);
+            }
         }
 
         // Generate offspring/reproductive history section for animal profile
