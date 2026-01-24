@@ -460,9 +460,17 @@ class CloudSync {
 
     /**
      * TWO-WAY SYNC: Check cloud for changes AND upload local changes
+     * CRITICAL: NEVER download if there are pending local changes!
      */
     async twoWaySync() {
         if (!this.enabled || this.syncInProgress || !this.isOnline) return;
+
+        // CRITICAL: If we have pending changes, ALWAYS upload first - never download!
+        if (this.pendingChanges) {
+            console.log('📤 Pending local changes - uploading first (NOT downloading)');
+            await this.syncToCloud();
+            return;
+        }
 
         try {
             this.syncInProgress = true;
@@ -481,12 +489,31 @@ class CloudSync {
             const cloudDeviceId = cloudData.deviceId;
             const myDeviceId = this.getDeviceId();
 
-            if (cloudDeviceId !== myDeviceId && cloudTime > localTime) {
-                console.log('⬇️ Newer data from another device - downloading...');
-                await this.applyCloudDataSmart(cloudData);
+            // Only download if:
+            // 1. Cloud data is from ANOTHER device
+            // 2. Cloud timestamp is newer
+            // 3. We have NO pending local changes
+            if (cloudDeviceId !== myDeviceId && cloudTime > localTime && !this.pendingChanges) {
+                // Double-check: compare actual data to see if cloud has more info
+                const cloudTotal = this.countAnimalsInData(cloudData);
+                const localTotal = this.countLocalAnimals();
+                const cloudPotrerosTotal = this.countPotreroAssignments(cloudData);
+                const localPotrerosTotal = this.countLocalPotreroAssignments();
 
-                if (typeof showToast === 'function') {
-                    showToast('☁️ Nuevos datos de otro dispositivo', 'success');
+                console.log(`📊 Comparing: Cloud(${cloudTotal} animals, ${cloudPotrerosTotal} assignments) vs Local(${localTotal} animals, ${localPotrerosTotal} assignments)`);
+
+                // Only download if cloud has MORE data (not less or equal)
+                if (cloudTotal > localTotal || cloudPotrerosTotal > localPotrerosTotal) {
+                    console.log('⬇️ Cloud has more data - downloading...');
+                    await this.applyCloudDataSmart(cloudData);
+
+                    if (typeof showToast === 'function') {
+                        showToast('☁️ Nuevos datos de otro dispositivo', 'success');
+                    }
+                } else {
+                    console.log('📤 Local data is same or better - uploading...');
+                    this.syncInProgress = false;
+                    await this.syncToCloud();
                 }
             } else {
                 this.syncInProgress = false;
@@ -497,6 +524,42 @@ class CloudSync {
         } finally {
             this.syncInProgress = false;
         }
+    }
+
+    /**
+     * Count potrero assignments in cloud data
+     */
+    countPotreroAssignments(cloudData) {
+        if (!cloudData || !cloudData.ranches) return 0;
+        let count = 0;
+        Object.keys(cloudData.ranches).forEach(ranchId => {
+            const ranchData = cloudData.ranches[ranchId];
+            if (ranchData?.animalPotreros) {
+                count += Object.keys(ranchData.animalPotreros).length;
+            }
+        });
+        return count;
+    }
+
+    /**
+     * Count local potrero assignments
+     */
+    countLocalPotreroAssignments() {
+        const RANCHES = this.getRanches();
+        let count = 0;
+        Object.keys(RANCHES).forEach(ranchId => {
+            const ranch = RANCHES[ranchId];
+            const ranchData = localStorage.getItem(ranch.storageKey);
+            if (ranchData) {
+                try {
+                    const data = JSON.parse(ranchData);
+                    if (data?.animalPotreros) {
+                        count += Object.keys(data.animalPotreros).length;
+                    }
+                } catch (e) {}
+            }
+        });
+        return count;
     }
 
     /**
