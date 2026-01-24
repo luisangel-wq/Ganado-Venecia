@@ -2108,13 +2108,47 @@
                     <span class="ranch-name">San Fernando</span>
                 </button>
             </div>
-            <!-- Cloud Sync Status Indicator -->
-            <div id="cloudSyncIndicator" style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; cursor: pointer;" onclick="showTab('config')" title="Estado de sincronización">
-                <span style="font-size: 1rem;">☁️</span>
-                <span id="syncStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
-                <span id="syncStatusText" style="color: white;">Conectando...</span>
+            <!-- Cloud Sync Status Indicator - Compact on mobile, full on desktop -->
+            <div id="cloudSyncIndicator" class="sync-indicator" onclick="showTab('config')" title="Estado de sincronización">
+                <span class="sync-icon">☁️</span>
+                <span id="syncStatusDot" class="sync-dot"></span>
+                <span id="syncStatusText" class="sync-text">Conectando...</span>
             </div>
             <style>
+                .sync-indicator {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(255,255,255,0.15);
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    cursor: pointer;
+                }
+                .sync-dot {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    background: #f59e0b;
+                    flex-shrink: 0;
+                }
+                .sync-icon { font-size: 1rem; }
+                .sync-text { color: white; }
+
+                /* Mobile: Only show the dot */
+                @media (max-width: 768px) {
+                    .sync-indicator {
+                        padding: 4px;
+                        background: transparent;
+                        gap: 0;
+                    }
+                    .sync-icon, .sync-text { display: none; }
+                    .sync-dot {
+                        width: 12px;
+                        height: 12px;
+                    }
+                }
+
                 @keyframes pulse {
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.5; transform: scale(1.2); }
@@ -15569,7 +15603,7 @@
 
                                 // Trigger automatic sync if enabled
                                 if (window.cloudSync && window.cloudSync.enabled) {
-                                    cloudSync.triggerAutoSync();
+                                    cloudSync.scheduleImmediateSync();
                                 }
                             } catch (saveError) {
                                 // Handle storage quota exceeded
@@ -18334,7 +18368,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Trigger cloud sync
             if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
-                cloudSync.triggerAutoSync();
+                cloudSync.scheduleImmediateSync();
             }
         }
 
@@ -18546,7 +18580,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                     const gdpReal = diasDesdeUltimo > 0 ? (ganancia / diasDesdeUltimo).toFixed(2) : 0;
 
-                    // Add weight update
+                    // Add weight update to history
                     data.pesoUpdates.push({
                         id: Date.now() + Math.random(),
                         numero: d.chapeta,
@@ -18558,6 +18592,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                         gdpReal: parseFloat(gdpReal),
                         observaciones: d.observaciones || 'Actualizado por dictado de voz'
                     });
+
+                    // IMPORTANT: Also update animal's current peso directly!
+                    animal.peso = pesoNuevo;
+                    console.log(`✅ Animal ${d.chapeta}: peso updated to ${pesoNuevo}kg`);
 
                     // Update animal condition if provided
                     if (d.condicion) {
@@ -18590,7 +18628,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Trigger cloud sync
             if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
-                cloudSync.triggerAutoSync();
+                cloudSync.scheduleImmediateSync();
             }
         }
         // ==================== END PROGRESO DICTATION ====================
@@ -19393,7 +19431,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                 // Trigger cloud sync
                 if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
-                    cloudSync.triggerAutoSync();
+                    cloudSync.scheduleImmediateSync();
                 }
             }
         }
