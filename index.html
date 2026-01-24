@@ -14009,7 +14009,8 @@
             }
 
             const key = Array.from(fullScreenSelectedAnimals)[0];
-            const [ranchId, numero] = key.split('_');
+            // Use parseAnimalKey to correctly handle ranch IDs with underscores (e.g., santa_catalina)
+            const { ranchId, numero } = parseAnimalKey(key);
 
             closePotreroFullScreen();
             showAnimalProfileCrossRanch(numero, ranchId);
@@ -18514,6 +18515,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <textarea onchange="updateProgresoDictation(${d.id}, 'observaciones', this.value)"
                                   style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px; min-height: 50px; resize: vertical;">${d.observaciones}</textarea>
                     </div>
+
+                    <!-- Individual Save Button -->
+                    <button onclick="saveSingleProgresoDictation(${d.id})"
+                            style="width: 100%; margin-top: 0.75rem; padding: 0.6rem; background: ${d.chapeta && d.peso ? '#10b981' : '#9ca3af'}; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: ${d.chapeta && d.peso ? 'pointer' : 'not-allowed'}; font-size: 0.9rem;"
+                            ${d.chapeta && d.peso ? '' : 'disabled'}>
+                        💾 Guardar Este Animal
+                    </button>
                 </div>
             `}).join('');
         }
@@ -18529,6 +18537,85 @@ document.addEventListener('DOMContentLoaded', async function() {
         function removeProgresoDictation(id) {
             pendingProgresoDictations = pendingProgresoDictations.filter(d => d.id !== id);
             updateProgresoDictationsUI();
+        }
+
+        // Save a single dictation entry
+        function saveSingleProgresoDictation(id) {
+            const d = pendingProgresoDictations.find(dict => dict.id === id);
+            if (!d || !d.chapeta || !d.peso) {
+                showToast('⚠️ Necesita chapeta y peso para guardar', 'warning');
+                return;
+            }
+
+            try {
+                const animal = data.entradas.find(e => String(e.numero) === String(d.chapeta));
+                if (!animal) {
+                    showToast(`⚠️ Animal ${d.chapeta} no encontrado`, 'error');
+                    return;
+                }
+
+                // Get previous weight
+                const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(d.chapeta)).sort((a, b) => {
+                    const dateCompare = new Date(b.fecha) - new Date(a.fecha);
+                    if (dateCompare !== 0) return dateCompare;
+                    return (b.id || 0) - (a.id || 0);
+                }) : [];
+                const lastUpdate = animalUpdates.length > 0 ? animalUpdates[0] : null;
+                const pesoAnterior = lastUpdate ? lastUpdate.pesoNuevo : animal.peso;
+
+                const pesoNuevo = parseFloat(d.peso);
+                const ganancia = pesoNuevo - pesoAnterior;
+
+                // Calculate days
+                const diasDesdeUltimo = lastUpdate
+                    ? Math.max(1, Math.floor((new Date() - new Date(lastUpdate.fecha)) / (1000 * 60 * 60 * 24)))
+                    : getDiasEnFinca(animal.fechaEntrada);
+
+                const gdpReal = diasDesdeUltimo > 0 ? (ganancia / diasDesdeUltimo).toFixed(2) : 0;
+
+                // Add weight update to history
+                if (!data.pesoUpdates) data.pesoUpdates = [];
+                data.pesoUpdates.push({
+                    id: Date.now() + Math.random(),
+                    numero: d.chapeta,
+                    fecha: new Date().toISOString().split('T')[0],
+                    pesoAnterior: pesoAnterior,
+                    pesoNuevo: pesoNuevo,
+                    ganancia: ganancia,
+                    dias: diasDesdeUltimo,
+                    gdpReal: parseFloat(gdpReal),
+                    observaciones: d.observaciones || 'Actualizado por dictado de voz'
+                });
+
+                // Update animal's current peso
+                animal.peso = pesoNuevo;
+                console.log(`✅ Animal ${d.chapeta}: peso updated to ${pesoNuevo}kg`);
+
+                // Update animal condition if provided
+                if (d.condicion) {
+                    animal.condicionGeneral = d.condicion;
+                }
+
+                // Save data
+                saveData();
+
+                // Remove this dictation from pending
+                pendingProgresoDictations = pendingProgresoDictations.filter(dict => dict.id !== id);
+                updateProgresoDictationsUI();
+
+                // Update views
+                updateAllViews();
+
+                showToast(`✅ Animal ${d.chapeta}: ${pesoNuevo}kg guardado`, 'success');
+
+                // Trigger cloud sync
+                if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                    cloudSync.scheduleImmediateSync();
+                }
+            } catch (error) {
+                console.error('Error saving dictation:', error);
+                showToast('❌ Error al guardar', 'error');
+            }
         }
 
         function clearProgresoDictations() {
