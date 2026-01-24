@@ -12050,9 +12050,53 @@
         }
         
         function updatePotrerosView() {
+            // First, sync potrero states with actual animal counts
+            syncPotreroStates();
             updatePotrerosStats();
             updatePotrerosGrid();
             updateRotacionHistorial();
+        }
+
+        // Sync potrero states based on actual animal counts
+        // This fixes any inconsistencies between estado and actual animals
+        function syncPotreroStates() {
+            if (!usesSharedPotreros()) return;
+
+            let hasChanges = false;
+
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranchData = ranchId === currentRanch ? data : getRanchData(ranchId);
+                if (!ranchData || !ranchData.potreros) return;
+
+                ranchData.potreros.forEach(potrero => {
+                    // Create a potrero object with sourceRanch for counting
+                    const potreroWithSource = { ...potrero, sourceRanch: ranchId };
+                    const animalesInfo = countAnimalesInPotreroAllRanches(potreroWithSource);
+                    const hasAnimals = animalesInfo.total > 0;
+
+                    // Update state if inconsistent
+                    if (hasAnimals && potrero.estado === 'descanso') {
+                        console.log(`🔄 Fixing ${potrero.nombre}: descanso → ocupado (has ${animalesInfo.total} animals)`);
+                        potrero.estado = 'ocupado';
+                        if (!potrero.ultimaEntrada) potrero.ultimaEntrada = new Date().toISOString().split('T')[0];
+                        hasChanges = true;
+                    } else if (!hasAnimals && potrero.estado === 'ocupado') {
+                        console.log(`🔄 Fixing ${potrero.nombre}: ocupado → descanso (empty)`);
+                        potrero.estado = 'descanso';
+                        if (!potrero.ultimaSalida) potrero.ultimaSalida = new Date().toISOString().split('T')[0];
+                        hasChanges = true;
+                    }
+                });
+
+                // Save if changes were made
+                if (hasChanges) {
+                    if (ranchId === currentRanch) {
+                        saveData();
+                    } else {
+                        saveRanchData(ranchId, ranchData);
+                    }
+                }
+            });
         }
         
         function updatePotrerosStats() {
