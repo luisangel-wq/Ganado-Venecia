@@ -12155,8 +12155,8 @@
                 // Build animal boxes HTML with ranch colors
                 let animalBoxesHtml = '';
                 const ranchColors = {
-                    'la_coruna': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' },      // Yellow/Amber
-                    'santa_catalina': { bg: '#FFEDD5', border: '#F97316', text: '#9A3412' }  // Orange
+                    'la_coruna': { bg: '#FEF08A', border: '#CA8A04', text: '#713F12' },      // Bright Yellow (matches button)
+                    'santa_catalina': { bg: '#FDBA74', border: '#C2410C', text: '#7C2D12' }  // Deep Orange (more distinct)
                 };
 
                 Object.entries(animalesInfo.byRanch).forEach(([ranchId, info]) => {
@@ -12269,11 +12269,11 @@
                         <!-- Ranch Color Legend -->
                         <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.7rem;">
                             <span style="display: flex; align-items: center; gap: 0.25rem;">
-                                <span style="width: 12px; height: 12px; background: #FEF3C7; border: 2px solid #F59E0B; border-radius: 3px;"></span>
+                                <span style="width: 12px; height: 12px; background: #FEF08A; border: 2px solid #CA8A04; border-radius: 3px;"></span>
                                 La Coruña
                             </span>
                             <span style="display: flex; align-items: center; gap: 0.25rem;">
-                                <span style="width: 12px; height: 12px; background: #FFEDD5; border: 2px solid #F97316; border-radius: 3px;"></span>
+                                <span style="width: 12px; height: 12px; background: #FDBA74; border: 2px solid #C2410C; border-radius: 3px;"></span>
                                 Santa Catalina
                             </span>
                         </div>
@@ -12943,8 +12943,8 @@
 
             // Build the full screen view
             const ranchColors = {
-                'la_coruna': { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E', name: 'La Coruña' },
-                'santa_catalina': { bg: '#FFEDD5', border: '#F97316', text: '#9A3412', name: 'Santa Catalina' }
+                'la_coruna': { bg: '#FEF08A', border: '#CA8A04', text: '#713F12', name: 'La Coruña' },
+                'santa_catalina': { bg: '#FDBA74', border: '#C2410C', text: '#7C2D12', name: 'Santa Catalina' }
             };
 
             const animalsHtml = allAnimals.map(a => {
@@ -13102,11 +13102,11 @@
 
                     <div class="fs-legend">
                         <div class="fs-legend-item">
-                            <span class="fs-legend-color" style="background: #FEF3C7; border-color: #F59E0B;"></span>
+                            <span class="fs-legend-color" style="background: #FEF08A; border-color: #CA8A04;"></span>
                             <span>La Coruña</span>
                         </div>
                         <div class="fs-legend-item">
-                            <span class="fs-legend-color" style="background: #FFEDD5; border-color: #F97316;"></span>
+                            <span class="fs-legend-color" style="background: #FDBA74; border-color: #C2410C;"></span>
                             <span>Santa Catalina</span>
                         </div>
                         <div class="fs-legend-item">
