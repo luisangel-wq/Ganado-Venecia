@@ -4807,7 +4807,42 @@
                 showToast('Error al cambiar de finca. Recargue la página.', 'error');
             }
         }
-        
+
+        function showRanchSelector() {
+            const otherRanches = Object.entries(RANCHES).filter(([id]) => id !== currentRanch);
+            const ranchButtons = otherRanches.map(([id, ranch]) => `
+                <button onclick="switchRanch('${id}'); closeRanchSelectorModal();" style="display: flex; align-items: center; gap: 0.75rem; width: 100%; padding: 1rem; background: white; border: 2px solid #E5E7EB; border-radius: 10px; cursor: pointer; margin-bottom: 0.5rem; transition: all 0.2s;" onmouseover="this.style.borderColor='${ranch.color || '#2E7D32'}'; this.style.background='#f9fafb';" onmouseout="this.style.borderColor='#E5E7EB'; this.style.background='white';">
+                    <span style="font-size: 1.5rem;">${ranch.icon}</span>
+                    <span style="font-weight: 600; color: #374151;">${ranch.name}</span>
+                </button>
+            `).join('');
+
+            const modalHtml = `
+                <div id="ranchSelectorModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+                    <div style="background: white; border-radius: 12px; max-width: 350px; width: 100%;">
+                        <div style="background: linear-gradient(135deg, #2E7D32, #1b5e20); color: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem;">🏠 Seleccionar Finca</h3>
+                                <button onclick="closeRanchSelectorModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                            </div>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            <p style="margin: 0 0 1rem 0; color: #6B7280; font-size: 0.9rem;">¿A cuál finca deseas ir?</p>
+                            ${ranchButtons}
+                            <button onclick="closeRanchSelectorModal()" style="width: 100%; padding: 0.75rem; background: #E5E7EB; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeRanchSelectorModal() {
+            document.getElementById('ranchSelectorModal')?.remove();
+        }
+
         function applyRanchTheme() {
             const ranch = RANCHES[currentRanch];
 
@@ -6293,13 +6328,19 @@
             });
             
             saveData();
-            
+
             const totalKg = currentLote.animales.reduce((sum, a) => sum + a.peso, 0);
             const totalCosto = currentLote.animales.reduce((sum, a) => sum + a.costoTotal, 0);
-            
+
             showToast(`✅ Lote ${currentLote.numero} guardado: ${currentLote.animales.length} animales, ${formatNumber(totalKg)} kg, ${formatCurrency(totalCosto)}`, 'success');
-            
+
+            // Reset lote before hiding form so switchRanch won't ask about unsaved work
+            currentLote = { numero: null, vendedor: null, precioKilo: null, fecha: null, cantidadEsperada: 0, animales: [] };
+
             hideEventForm('compra');
+
+            // Show ranch selector directly
+            showRanchSelector();
         }
         
         function cancelarLote() {
