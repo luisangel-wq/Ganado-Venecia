@@ -14792,15 +14792,31 @@
 
         function showAnimalProfile(numero) {
             // Look in ALL animals (entradas), not just inventory
-            const animal = data.entradas.find(a => a.numero === numero || String(a.numero) === String(numero));
+            let animal = data.entradas.find(a => a.numero == numero || String(a.numero) === String(numero));
+
+            // Check if animal is sold
+            const isSold = isAnimalSold(numero);
+            const saleRecord = data.salidas.find(s => s.numero == numero || String(s.numero) === String(numero));
+
+            // If animal not in entradas but has a sale record, create minimal animal from sale data
+            if (!animal && saleRecord) {
+                animal = {
+                    numero: saleRecord.numero,
+                    peso: saleRecord.pesoEntrada || saleRecord.peso, // Use entry weight if available, otherwise sale weight
+                    fechaEntrada: saleRecord.fechaEntrada || saleRecord.fechaSalida,
+                    sexo: saleRecord.sexo || 'N/A',
+                    raza: saleRecord.raza || 'N/A',
+                    lote: saleRecord.lote || '-',
+                    vendedor: saleRecord.vendedorOriginal || '-',
+                    precioKilo: saleRecord.precioKiloCompra || 0,
+                    costoTotal: saleRecord.costoCompra || 0
+                };
+            }
+
             if (!animal) {
                 showToast('Animal no encontrado', 'error');
                 return;
             }
-
-            // Check if animal is sold
-            const isSold = isAnimalSold(numero);
-            const saleRecord = isSold ? data.salidas.find(s => s.numero === numero || String(s.numero) === String(numero)) : null;
 
             const modal = document.getElementById('animalProfileModal');
             const body = document.getElementById('animalProfileBody');
