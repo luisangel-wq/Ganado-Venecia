@@ -19178,14 +19178,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     ganancia: ganancia,
                     dias: diasDesdeUltimo,
                     gdpReal: parseFloat(gdpReal),
-                    observaciones: d.observaciones || 'Peso estimado por dictado de voz',
+                    observaciones: d.observaciones || 'Peso registrado por dictado de voz',
                     estimado: true  // Mark as estimated weight (not measured on scale)
                 });
 
-                // Update animal's current peso
-                animal.peso = pesoNuevo;
-                animal.pesoEstimado = true;  // Flag that current peso is estimated
-                console.log(`✅ Animal ${d.chapeta}: peso ESTIMADO updated to ${pesoNuevo}kg`);
+                // DO NOT modify animal.peso - that's the entry weight and should never change
+                // The new weight is stored in pesoUpdates and will be used for calculations
+                console.log(`✅ Animal ${d.chapeta}: peso registrado ${pesoNuevo}kg (entrada: ${animal.peso}kg)`);
 
                 // Update animal condition if provided
                 if (d.condicion) {
@@ -19276,14 +19275,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                         ganancia: ganancia,
                         dias: diasDesdeUltimo,
                         gdpReal: parseFloat(gdpReal),
-                        observaciones: d.observaciones || 'Peso estimado por dictado de voz',
+                        observaciones: d.observaciones || 'Peso registrado por dictado de voz',
                         estimado: true  // Mark as estimated weight (not measured on scale)
                     });
 
-                    // IMPORTANT: Also update animal's current peso directly!
-                    animal.peso = pesoNuevo;
-                    animal.pesoEstimado = true;  // Flag that current peso is estimated
-                    console.log(`✅ Animal ${d.chapeta}: peso ESTIMADO updated to ${pesoNuevo}kg`);
+                    // DO NOT modify animal.peso - that's the entry weight and should never change
+                    // The new weight is stored in pesoUpdates and will be used for calculations
+                    console.log(`✅ Animal ${d.chapeta}: peso registrado ${pesoNuevo}kg (entrada: ${animal.peso}kg)`);
 
                     // Update animal condition if provided
                     if (d.condicion) {
