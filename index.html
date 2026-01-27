@@ -14791,22 +14791,27 @@
         }
 
         function showAnimalProfile(numero) {
-            const animal = getInventario().find(a => a.numero === numero);
+            // Look in ALL animals (entradas), not just inventory
+            const animal = data.entradas.find(a => a.numero === numero || String(a.numero) === String(numero));
             if (!animal) {
                 showToast('Animal no encontrado', 'error');
                 return;
             }
 
+            // Check if animal is sold
+            const isSold = isAnimalSold(numero);
+            const saleRecord = isSold ? data.salidas.find(s => s.numero === numero || String(s.numero) === String(numero)) : null;
+
             const modal = document.getElementById('animalProfileModal');
             const body = document.getElementById('animalProfileBody');
             const title = document.getElementById('animalProfileTitle');
 
-            title.textContent = `🐂 Animal #${numero}`;
+            title.textContent = isSold ? `🐂 Animal #${numero} (VENDIDO)` : `🐂 Animal #${numero}`;
 
-            // Calculate current estimated weight
-            const today = new Date();
+            // Calculate days - use sale date for sold animals, today for active
+            const endDate = isSold && saleRecord ? new Date(saleRecord.fechaSalida) : new Date();
             const entryDate = new Date(animal.fechaEntrada);
-            const days = Math.floor((today - entryDate) / (1000 * 60 * 60 * 24));
+            const days = Math.floor((endDate - entryDate) / (1000 * 60 * 60 * 24));
             const gdp = data.config.gdp || 0.31;
             const pesoEstimadoDefault = animal.peso + (days * gdp);
 
@@ -14910,6 +14915,7 @@
                 <div class="profile-section" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <span>⚖️ Peso y Crecimiento</span>
+                        ${!isSold ? `
                         <div style="display: flex; gap: 0.5rem;">
                             ${animalUpdates.length > 0 ? `
                             <button onclick="clearAnimalPesoHistory('${numero}')" style="background: #dc2626; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;" title="Borrar historial de pesajes">
@@ -14920,6 +14926,7 @@
                                 ⚖️ Actualizar Peso
                             </button>
                         </div>
+                        ` : ''}
                     </div>
                     <div class="profile-grid">
                         <div class="profile-item">
@@ -14927,17 +14934,17 @@
                             <span class="profile-item-value">${animal.peso} kg</span>
                         </div>
                         <div class="profile-item">
-                            <span class="profile-item-label">${hasManualWeight ? 'Peso Actual (Registrado)' : 'Peso Esperado (GDP)'}</span>
-                            <span class="profile-item-value large" style="${pesoStyle}">${Math.round(pesoActual)} kg</span>
-                            ${hasManualWeight ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">Esperado por GDP: ${Math.round(pesoEstimadoDefault)} kg</div>` : ''}
+                            <span class="profile-item-label">${isSold ? 'Peso Salida' : (hasManualWeight ? 'Peso Actual (Registrado)' : 'Peso Esperado (GDP)')}</span>
+                            <span class="profile-item-value large" style="${pesoStyle}">${isSold && saleRecord ? saleRecord.peso : Math.round(pesoActual)} kg</span>
+                            ${!isSold && hasManualWeight ? `<div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">Esperado por GDP: ${Math.round(pesoEstimadoDefault)} kg</div>` : ''}
                         </div>
                         <div class="profile-item">
                             <span class="profile-item-label">Ganancia Total</span>
-                            <span class="profile-item-value" style="color: var(--success);">+${Math.round(gananciaTotal)} kg</span>
+                            <span class="profile-item-value" style="color: var(--success);">+${isSold && saleRecord ? (saleRecord.peso - animal.peso) : Math.round(gananciaTotal)} kg</span>
                         </div>
                         <div class="profile-item">
                             <span class="profile-item-label">GDP (Ganancia/día)</span>
-                            <span class="profile-item-value">${calculatedGDP.toFixed(2)} kg/día</span>
+                            <span class="profile-item-value">${isSold && saleRecord && saleRecord.gananciaDay ? saleRecord.gananciaDay.toFixed(2) : calculatedGDP.toFixed(2)} kg/día</span>
                         </div>
                     </div>
 
@@ -14945,13 +14952,50 @@
                     ${generateWeightHistoryTable(animal, animalUpdates, gdp)}
                 </div>
 
+                ${isSold && saleRecord ? `
+                <!-- Sale Information Section (only for sold animals) -->
+                <div class="profile-section" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #f59e0b;">
+                    <div class="profile-section-title">
+                        <span>💵 Información de Venta</span>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-item">
+                            <span class="profile-item-label">Fecha de Venta</span>
+                            <span class="profile-item-value">${formatDate(saleRecord.fechaSalida)}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-item-label">Comprador</span>
+                            <span class="profile-item-value">${saleRecord.comprador}${saleRecord.causa ? ' (' + saleRecord.causa + ')' : ''}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-item-label">Peso de Venta</span>
+                            <span class="profile-item-value large">${saleRecord.peso} kg</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-item-label">Precio/Kg Venta</span>
+                            <span class="profile-item-value">${formatCurrency(saleRecord.precioKiloVenta || 0)}/kg</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-item-label">Valor Total Venta</span>
+                            <span class="profile-item-value large" style="color: #16a34a;">${formatCurrency(saleRecord.costoVenta || (saleRecord.peso * saleRecord.precioKiloVenta) || 0)}</span>
+                        </div>
+                        <div class="profile-item">
+                            <span class="profile-item-label">GDP Real</span>
+                            <span class="profile-item-value">${saleRecord.gananciaDay ? saleRecord.gananciaDay.toFixed(3) : '-'} kg/día</span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
                 <!-- Financial Section -->
                 <div class="profile-section" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>💰 Información Financiera</span>
+                        <span>💰 Información Financiera (Compra)</span>
+                        ${!isSold ? `
                         <button onclick="showEditFinancialModal('${numero}')" style="background: #f59e0b; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
                             ✏️ Editar
                         </button>
+                        ` : ''}
                     </div>
                     <div class="profile-grid">
                         <div class="profile-item">
@@ -14962,6 +15006,14 @@
                             <span class="profile-item-label">Precio/Kg Compra</span>
                             <span class="profile-item-value">${formatCurrency(animal.precioKilo || 0)}/kg</span>
                         </div>
+                        ${isSold && saleRecord ? `
+                        <div class="profile-item">
+                            <span class="profile-item-label">Ganancia/Pérdida</span>
+                            <span class="profile-item-value large" style="color: ${(saleRecord.costoVenta || 0) - (animal.costoTotal || (animal.peso * animal.precioKilo) || 0) >= 0 ? '#16a34a' : '#dc2626'};">
+                                ${formatCurrency((saleRecord.costoVenta || 0) - (animal.costoTotal || (animal.peso * animal.precioKilo) || 0))}
+                            </span>
+                        </div>
+                        ` : `
                         <div class="profile-item">
                             <span class="profile-item-label">Valor Actual (Est.)</span>
                             <span class="profile-item-value large">${formatCurrency(valorActual)}</span>
@@ -14970,10 +15022,12 @@
                             <span class="profile-item-label">Precio Venta/Kg</span>
                             <span class="profile-item-value">${formatCurrency(data.config.precioVenta)}/kg</span>
                         </div>
+                        `}
                     </div>
                 </div>
-                
-                <!-- Location Section -->
+
+                ${!isSold ? `
+                <!-- Location Section (only for active animals) -->
                 <div class="profile-section">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <span>📍 Ubicación</span>
@@ -14988,14 +15042,17 @@
                         </div>
                     </div>
                 </div>
+                ` : ''}
 
                 <!-- Condicion General Section -->
                 <div class="profile-section" style="background: linear-gradient(135deg, #ede9fe, #ddd6fe);">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <span>📊 Condición General</span>
+                        ${!isSold ? `
                         <button onclick="startVoiceDictationForAnimal('${numero}')" style="background: #7c3aed; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
                             🎤 Dictar Observación
                         </button>
+                        ` : ''}
                     </div>
                     <div class="profile-grid">
                         <div class="profile-item" style="grid-column: 1/-1;">
@@ -15003,6 +15060,7 @@
                             <span class="profile-item-value" id="animalCondicion_${numero}">${animal.condicionGeneral || 'Sin observaciones'}</span>
                         </div>
                     </div>
+                    ${!isSold ? `
                     <div style="margin-top: 0.75rem;">
                         <select id="condicionSelect_${numero}" onchange="updateAnimalCondicion('${numero}', this.value)" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
                             <option value="">Seleccionar condición...</option>
@@ -15015,6 +15073,7 @@
                             <option value="Recuperándose" ${animal.condicionGeneral === 'Recuperándose' ? 'selected' : ''}>Recuperándose</option>
                         </select>
                     </div>
+                    ` : ''}
                 </div>
 
                 <!-- Health Status -->
