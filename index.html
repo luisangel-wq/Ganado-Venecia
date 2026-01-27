@@ -3756,6 +3756,15 @@
                                 ➕ Registrar Peso
                             </button>
                         </div>
+                        <div style="flex: 1; min-width: 200px; background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 10px; padding: 1rem; border: 2px solid #dc2626;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <span style="font-size: 1.2rem;">🗑️</span>
+                                <h4 style="margin: 0; font-size: 0.9rem; color: #991b1b;">Limpiar Historial</h4>
+                            </div>
+                            <button class="btn" onclick="clearAllPesoHistory()" style="width: 100%; background: #dc2626; color: white; padding: 0.5rem; font-size: 0.85rem;">
+                                🗑️ Borrar Todo
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Pending Progreso Dictations -->
@@ -14893,9 +14902,16 @@
                 <div class="profile-section" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
                     <div class="profile-section-title" style="display: flex; justify-content: space-between; align-items: center;">
                         <span>⚖️ Peso y Crecimiento</span>
-                        <button onclick="closeAnimalProfile(); showQuickWeightUpdate('${numero}')" style="background: #16a34a; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
-                            ⚖️ Actualizar Peso
-                        </button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            ${animalUpdates.length > 0 ? `
+                            <button onclick="clearAnimalPesoHistory('${numero}')" style="background: #dc2626; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;" title="Borrar historial de pesajes">
+                                🗑️ Limpiar Historial
+                            </button>
+                            ` : ''}
+                            <button onclick="closeAnimalProfile(); showQuickWeightUpdate('${numero}')" style="background: #16a34a; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer;">
+                                ⚖️ Actualizar Peso
+                            </button>
+                        </div>
                     </div>
                     <div class="profile-grid">
                         <div class="profile-item">
@@ -15207,6 +15223,88 @@
             }
 
             return html;
+        }
+
+        // Clear ALL peso history for ALL animals
+        function clearAllPesoHistory() {
+            const totalUpdates = data.pesoUpdates ? data.pesoUpdates.length : 0;
+
+            if (totalUpdates === 0) {
+                showToast('No hay historial de pesajes para borrar', 'info');
+                return;
+            }
+
+            if (!confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Está seguro de borrar TODO el historial de pesajes?\n\nSe eliminarán ${totalUpdates} registro(s) de TODOS los animales.\n\nLos pesos de entrada NO se eliminarán.\n\nEsta acción NO se puede deshacer.`)) {
+                return;
+            }
+
+            // Double confirmation for safety
+            if (!confirm(`¿CONFIRMAR BORRADO?\n\nEsta acción eliminará permanentemente ${totalUpdates} registros de peso.`)) {
+                return;
+            }
+
+            // Clear all peso updates
+            data.pesoUpdates = [];
+
+            // Clear pesoActual from all animals
+            data.entradas.forEach(animal => {
+                if (animal.pesoActual) delete animal.pesoActual;
+                if (animal.pesoEstimado) delete animal.pesoEstimado;
+            });
+
+            saveData();
+            updateAllViews();
+            updateProgresoView();
+
+            showToast(`✅ Historial de pesajes eliminado (${totalUpdates} registros)`, 'success');
+
+            // Trigger cloud sync
+            if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                cloudSync.scheduleImmediateSync();
+            }
+        }
+
+        // Clear all peso history for a specific animal
+        function clearAnimalPesoHistory(numero) {
+            const animal = data.entradas.find(a => String(a.numero) === String(numero));
+            if (!animal) {
+                showToast('Animal no encontrado', 'error');
+                return;
+            }
+
+            const animalUpdates = data.pesoUpdates ? data.pesoUpdates.filter(u => String(u.numero) === String(numero)) : [];
+
+            if (animalUpdates.length === 0) {
+                showToast('Este animal no tiene historial de pesajes', 'info');
+                return;
+            }
+
+            if (!confirm(`¿Está seguro de borrar TODO el historial de pesajes del animal #${numero}?\n\nSe eliminarán ${animalUpdates.length} registro(s).\n\nEl peso de entrada (${animal.peso} kg) NO se eliminará.`)) {
+                return;
+            }
+
+            // Remove all peso updates for this animal
+            data.pesoUpdates = data.pesoUpdates.filter(u => String(u.numero) !== String(numero));
+
+            // Clear pesoActual if it exists (reset to entry weight)
+            if (animal.pesoActual) {
+                delete animal.pesoActual;
+            }
+            if (animal.pesoEstimado) {
+                delete animal.pesoEstimado;
+            }
+
+            saveData();
+
+            showToast(`✅ Historial de pesajes del animal #${numero} eliminado`, 'success');
+
+            // Refresh the profile view
+            showAnimalProfile(numero);
+
+            // Trigger cloud sync
+            if (typeof cloudSync !== 'undefined' && cloudSync.enabled) {
+                cloudSync.scheduleImmediateSync();
+            }
         }
 
         // Quick weight update from animal profile
