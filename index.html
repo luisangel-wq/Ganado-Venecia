@@ -3752,9 +3752,26 @@
                                 <span style="font-size: 1.2rem;">⚖️</span>
                                 <h4 style="margin: 0; font-size: 0.9rem; color: #065f46;">Registro Manual</h4>
                             </div>
-                            <button class="btn btn-primary" onclick="document.getElementById('pesoFormContainer').style.display='block'; populatePesoAnimalSelector(); document.getElementById('pesoFecha').value=new Date().toISOString().split('T')[0]; document.getElementById('pesoFormContainer').scrollIntoView({behavior:'smooth'});" style="width: 100%; background: #10b981; padding: 0.5rem; font-size: 0.85rem;">
+                            <button class="btn btn-primary" id="btnRegistrarPeso" style="width: 100%; background: #10b981; padding: 0.5rem; font-size: 0.85rem;">
                                 ➕ Registrar Peso
                             </button>
+                            <script>
+                            document.getElementById('btnRegistrarPeso').addEventListener('click', function() {
+                                try {
+                                    var container = document.getElementById('pesoFormContainer');
+                                    if (!container) { alert('Error: pesoFormContainer not found'); return; }
+                                    container.style.display = 'block';
+                                    if (typeof populatePesoAnimalSelector === 'function') {
+                                        populatePesoAnimalSelector();
+                                    }
+                                    var fechaInput = document.getElementById('pesoFecha');
+                                    if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+                                    container.scrollIntoView({behavior: 'smooth'});
+                                } catch(e) {
+                                    alert('Error: ' + e.message);
+                                }
+                            });
+                            </script>
                         </div>
                     </div>
 
