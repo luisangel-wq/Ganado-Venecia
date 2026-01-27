@@ -19165,6 +19165,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
                     const gdpReal = diasDesdeUltimo > 0 ? (ganancia / diasDesdeUltimo).toFixed(2) : 0;
 
+                    // Initialize array if needed
+                    if (!data.pesoUpdates) data.pesoUpdates = [];
+
                     // Add weight update to history (marked as ESTIMATED from dictation)
                     data.pesoUpdates.push({
                         id: Date.now() + Math.random(),
@@ -19206,6 +19209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Update views
             updateAllViews();
+            updateProgresoView(); // Update the progress history table
 
             if (errorCount > 0) {
                 showToast(`✅ ${savedCount} guardados, ⚠️ ${errorCount} errores (animales no encontrados)`, 'warning');
