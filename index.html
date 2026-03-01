@@ -11287,7 +11287,7 @@
                             ${previewFotos.slice(0, 3).map(foto => `
                                 <img src="${foto.dataUrl}"
                                      style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;"
-                                     onclick="viewPhoto('${foto.dataUrl}', '${getPhotoTypeLabel(foto.type)} - #${sesion.numero}')"
+                                     onclick="viewSessionPhotos(${sesion.id})"
                                      title="${getPhotoTypeLabel(foto.type)}">
                             `).join('')}
                             ${previewFotos.length > 3 ? `<span style="font-size: 0.8rem; color: var(--gray);">+${previewFotos.length - 3}</span>` : ''}
@@ -12575,6 +12575,13 @@
                 const groupColor = getPotreroGroupColor(p.nombre);
                 const status = statusConfig[p.estado] || statusConfig['disponible'];
 
+                // Calculate days since last entry
+                let diasEntrada = '';
+                if (p.ultimaEntrada) {
+                    const dias = Math.floor((new Date() - new Date(p.ultimaEntrada)) / (1000 * 60 * 60 * 24));
+                    diasEntrada = `${dias}d`;
+                }
+
                 return `
                     <div class="potrero-tiny-card"
                          data-potrero-key="${potreroKey}"
@@ -12590,10 +12597,13 @@
                                 ${p.nombre}
                             </span>
                         </div>
-                        <span style="background: white; padding: 0.15rem 0.35rem; border-radius: 4px;
-                                     font-weight: 700; font-size: 0.65rem; color: #374151; flex-shrink: 0;">
-                            ${animalesCount}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">
+                            ${diasEntrada ? `<span style="font-size: 0.55rem; color: ${groupColor.text}; opacity: 0.7;" title="Última entrada: ${formatDate(p.ultimaEntrada)}">${diasEntrada}</span>` : ''}
+                            <span style="background: white; padding: 0.15rem 0.35rem; border-radius: 4px;
+                                         font-weight: 700; font-size: 0.65rem; color: #374151;">
+                                ${animalesCount}
+                            </span>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -13526,6 +13536,18 @@
                             <div class="fs-stat-value">${potrero.area || '?'}</div>
                             <div class="fs-stat-label">Hectáreas</div>
                         </div>
+                        <div class="fs-stat">
+                            <div class="fs-stat-value" style="font-size: 0.95rem;">${potrero.ultimaEntrada ? formatDate(potrero.ultimaEntrada) : '-'}</div>
+                            <div class="fs-stat-label">📥 Últ. Entrada</div>
+                        </div>
+                        <div class="fs-stat">
+                            <div class="fs-stat-value" style="font-size: 0.95rem;">${potrero.ultimaSalida ? formatDate(potrero.ultimaSalida) : '-'}</div>
+                            <div class="fs-stat-label">📤 Últ. Salida</div>
+                        </div>
+                        ${potrero.ultimaEntrada ? `<div class="fs-stat">
+                            <div class="fs-stat-value">${Math.floor((new Date() - new Date(potrero.ultimaEntrada)) / (1000 * 60 * 60 * 24))}</div>
+                            <div class="fs-stat-label">Días en potrero</div>
+                        </div>` : ''}
                     </div>
 
                     <div class="fs-legend">
@@ -15138,14 +15160,17 @@
                     ` : ''}
                     ${fotoSesiones.length > 0 ? `
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.5rem;">
-                            ${fotoSesiones.slice(0, 6).map(f => `
-                                <div style="text-align: center; padding: 0.5rem; background: #f5f5f5; border-radius: 8px;">
-                                    <div style="font-size: 1.5rem;">📷</div>
+                            ${fotoSesiones.slice(0, 6).map(f => {
+                                const hasPhotos = f.fotos && f.fotos.length > 0;
+                                const firstPhotoUrl = hasPhotos ? getSessionPhotoDataUrl(f.fotos[0], f) : null;
+                                return `
+                                <div style="text-align: center; padding: 0.5rem; background: #f5f5f5; border-radius: 8px; ${hasPhotos ? 'cursor: pointer;' : ''}" ${hasPhotos ? `onclick="viewSessionPhotos(${f.id})"` : ''}>
+                                    ${firstPhotoUrl ? `<img src="${firstPhotoUrl}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px;">` : `<div style="font-size: 1.5rem;">📷</div>`}
                                     <div style="font-size: 0.8rem;">${formatDate(f.fecha)}</div>
                                     <div style="font-size: 0.75rem; color: var(--gray);">BCS: ${f.bcs}</div>
                                     ${f.pesoBascula ? `<div style="font-size: 0.75rem; color: var(--success);">${f.pesoBascula} kg</div>` : ''}
-                                </div>
-                            `).join('')}
+                                </div>`;
+                            }).join('')}
                         </div>
                         ${fotoSesiones.length > 6 ? `<div style="text-align: center; margin-top: 0.5rem; color: var(--gray);">+${fotoSesiones.length - 6} más sesiones</div>` : ''}
                     ` : '<div style="color: var(--gray);">Sin sesiones fotográficas</div>'}
@@ -15577,11 +15602,85 @@
 
         function savePotreroChange(numero) {
             const newPotreroId = document.getElementById('newPotreroSelect').value;
+            const oldPotreroId = data.animalPotreros[numero] || null;
+            const fecha = new Date().toISOString().split('T')[0];
 
+            // Don't do anything if the potrero hasn't changed
+            if (newPotreroId === (oldPotreroId || '')) {
+                document.getElementById('changePotreroModal').remove();
+                return;
+            }
+
+            // Get all shared potreros for lookups
+            const allPotreros = getAllSharedPotreros();
+            const fromPotrero = oldPotreroId ? findPotreroByAssignedId(allPotreros, oldPotreroId) : null;
+            const toPotrero = newPotreroId ? allPotreros.find(p => `${p.sourceRanch}_${p.id}` === newPotreroId) : null;
+
+            // Update the assignment
             if (newPotreroId) {
                 data.animalPotreros[numero] = newPotreroId;
             } else {
                 delete data.animalPotreros[numero];
+            }
+
+            // Record rotation history
+            const rotacion = {
+                id: Date.now(),
+                fecha: fecha,
+                desdeId: oldPotreroId,
+                desdeNombre: fromPotrero ? (fromPotrero.displayName || fromPotrero.nombre) : 'Sin asignar',
+                haciaId: newPotreroId || null,
+                haciaNombre: toPotrero ? (toPotrero.displayName || toPotrero.nombre) : 'Sin asignar',
+                animales: [String(numero)],
+                diasEnAnterior: null
+            };
+
+            // Calculate days in previous potrero
+            if (fromPotrero && fromPotrero.ultimaEntrada) {
+                const entrada = new Date(fromPotrero.ultimaEntrada);
+                const hoy = new Date(fecha);
+                rotacion.diasEnAnterior = Math.floor((hoy - entrada) / (1000 * 60 * 60 * 24));
+            }
+
+            if (!data.rotaciones) data.rotaciones = [];
+            data.rotaciones.push(rotacion);
+
+            // Update source potrero timestamps and state
+            if (fromPotrero) {
+                const sourceRanchData = getRanchData(fromPotrero.sourceRanch);
+                if (sourceRanchData) {
+                    const potreroDesde = sourceRanchData.potreros?.find(p => Number(p.id) === Number(fromPotrero.id));
+                    if (potreroDesde) {
+                        potreroDesde.ultimaSalida = fecha;
+                        // Check if potrero is now empty across all shared ranches
+                        let remaining = 0;
+                        SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                            const rData = ranchId === currentRanch ? data : getRanchData(ranchId);
+                            if (rData && rData.animalPotreros) {
+                                remaining += Object.values(rData.animalPotreros).filter(pId =>
+                                    potreroIdMatches(pId, fromPotrero)
+                                ).length;
+                            }
+                        });
+                        if (remaining === 0) {
+                            potreroDesde.estado = 'descanso';
+                        }
+                        saveRanchData(fromPotrero.sourceRanch, sourceRanchData);
+                    }
+                }
+            }
+
+            // Update destination potrero timestamps and state
+            if (toPotrero) {
+                const destRanchData = getRanchData(toPotrero.sourceRanch);
+                if (destRanchData) {
+                    const potreroHacia = destRanchData.potreros?.find(p => Number(p.id) === Number(toPotrero.id));
+                    if (potreroHacia) {
+                        potreroHacia.ultimaEntrada = fecha;
+                        potreroHacia.estado = 'ocupado';
+                        saveRanchData(toPotrero.sourceRanch, destRanchData);
+                    }
+                }
             }
 
             saveData();
@@ -15595,8 +15694,7 @@
 
             updateAllViews();
 
-            const potrero = data.potreros.find(p => p.id === newPotreroId);
-            showToast(`✅ Animal #${numero} ${potrero ? 'movido a ' + potrero.nombre : 'sin potrero asignado'}`, 'success');
+            showToast(`✅ Animal #${numero} ${toPotrero ? 'movido a ' + (toPotrero.displayName || toPotrero.nombre) : 'sin potrero asignado'}`, 'success');
         }
 
         // Edit financial information modal
