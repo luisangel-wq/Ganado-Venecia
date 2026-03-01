@@ -2300,6 +2300,68 @@
         
         <!-- Tab: Eventos -->
         <div id="tab-eventos" class="tab-content">
+
+            <!-- Recent Activity Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header" style="background: linear-gradient(135deg, #1E40AF, #3B82F6); cursor: pointer;" onclick="toggleRecentActivityPanel()">
+                    <span>📋 Actividad Reciente — Control de Calidad</span>
+                    <span id="recentActivityToggle" style="font-size: 1.2rem;">▼</span>
+                </div>
+                <div id="recentActivityPanel" class="card-body" style="display: block;">
+                    <!-- Filters -->
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #DCFCE7; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="compra"> 🛒 Compras
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #FEF9C3; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="nacimiento"> 🐣 Nacimientos
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #DBEAFE; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="venta"> 💵 Ventas
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #FEE2E2; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="muerte"> ✝️ Muertes
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #D1FAE5; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="rotacion"> 🔄 Rotaciones
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #EDE9FE; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="peso"> ⚖️ Pesajes
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; background: #FCE7F3; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer;">
+                                <input type="checkbox" checked onchange="updateFullRecentActivity()" class="ra-filter" data-type="salud"> 🏥 Salud
+                            </label>
+                        </div>
+                        <select id="raDateFilter" onchange="updateFullRecentActivity()" class="form-select" style="width: auto; font-size: 0.85rem; padding: 0.3rem 0.5rem;">
+                            <option value="7">Últimos 7 días</option>
+                            <option value="30" selected>Últimos 30 días</option>
+                            <option value="90">Últimos 90 días</option>
+                            <option value="365">Último año</option>
+                            <option value="0">Todo</option>
+                        </select>
+                    </div>
+                    <!-- Summary counts -->
+                    <div id="raCountsSummary" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.8rem;"></div>
+                    <!-- Table -->
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr style="position: sticky; top: 0; background: white; z-index: 1;">
+                                    <th style="width: 90px;">Fecha</th>
+                                    <th style="width: 110px;">Tipo</th>
+                                    <th style="width: 80px;">Chapeta</th>
+                                    <th>Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullRecentActivity">
+                                <tr><td colspan="4" class="text-center">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <h2 style="margin-bottom: 1.5rem; color: var(--dark);">Registrar Nuevo Evento</h2>
             
             <div class="event-cards">
@@ -4282,6 +4344,15 @@
                         </div>
 
                         <div id="backupUploadStatus" style="margin-top: 1rem; display: none;"></div>
+
+                        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #BFDBFE;">
+                            <button class="btn" onclick="showBackupBrowser()" style="background: #7C3AED; color: white;">
+                                📂 Ver Backups Automáticos
+                            </button>
+                            <p style="margin: 0.5rem 0 0 0; color: #1e3a8a; font-size: 0.8rem;">
+                                Se crean automáticamente antes de cada restauración. Permite restaurar secciones específicas (ej: solo potreros).
+                            </p>
+                        </div>
                     </div>
 
                     <!-- User ID Management Section -->
@@ -5625,6 +5696,10 @@
                     // Update historical GDP display when config tab is shown
                     if (tabId === 'config') {
                         updateHistoricalGDPDisplay();
+                    }
+                    // Update recent activity when eventos tab is shown
+                    if (tabId === 'eventos') {
+                        updateFullRecentActivity();
                     }
                 });
             });
@@ -6973,7 +7048,7 @@
             // If it's a transfer, create purchase entries in destination ranch
             if (esTransferencia && fincaDestino) {
                 const destinoRanch = RANCHES[fincaDestino];
-                const destinoData = JSON.parse(localStorage.getItem(destinoRanch.storageKey) || '{"entradas":[],"salidas":[],"config":{}}');
+                const destinoData = JSON.parse(localStorage.getItem(destinoRanch.storageKey) || '{"entradas":[],"salidas":[],"config":{},"potreros":[],"rotaciones":[],"animalPotreros":{},"saludEventos":[],"pesoUpdates":[],"weatherHistory":[],"fotoSesiones":[]}');
                 
                 if (!destinoData.entradas) destinoData.entradas = [];
                 
@@ -7450,6 +7525,155 @@
             }
         }
         
+        function toggleRecentActivityPanel() {
+            const panel = document.getElementById('recentActivityPanel');
+            const toggle = document.getElementById('recentActivityToggle');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                toggle.textContent = '▼';
+                updateFullRecentActivity();
+            } else {
+                panel.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        function updateFullRecentActivity() {
+            const activities = [];
+
+            // Get active type filters
+            const activeTypes = new Set();
+            document.querySelectorAll('.ra-filter:checked').forEach(cb => activeTypes.add(cb.dataset.type));
+
+            // Get date filter
+            const daysFilter = parseInt(document.getElementById('raDateFilter')?.value || '30');
+            const cutoffDate = daysFilter > 0 ? new Date(Date.now() - daysFilter * 24 * 60 * 60 * 1000) : null;
+
+            // Compras & Nacimientos
+            if (activeTypes.has('compra') || activeTypes.has('nacimiento')) {
+                (data.entradas || []).forEach(e => {
+                    const isNacimiento = !!e.numeroVaca;
+                    const tipo = isNacimiento ? 'nacimiento' : 'compra';
+                    if (!activeTypes.has(tipo)) return;
+                    activities.push({
+                        fecha: e.fechaEntrada,
+                        tipo: tipo,
+                        tipoLabel: isNacimiento ? '🐣 Nacimiento' : '🛒 Compra',
+                        tipoBg: isNacimiento ? '#FEF9C3' : '#DCFCE7',
+                        chapeta: e.numero,
+                        detalle: isNacimiento
+                            ? `Madre: #${e.numeroVaca} | ${e.sexo || ''} | ${e.raza || ''}`
+                            : `${e.vendedor || ''} | ${e.peso || '?'} kg | ${formatCurrency((e.costoTotal || e.peso * e.precioKilo) || 0)}`
+                    });
+                });
+            }
+
+            // Ventas & Muertes
+            if (activeTypes.has('venta') || activeTypes.has('muerte')) {
+                (data.salidas || []).forEach(s => {
+                    const isMuerte = s.comprador === 'MUERTE';
+                    const isTransfer = s.esTransferencia || (s.comprador && s.comprador.startsWith('TRANSFERENCIA'));
+                    const tipo = isMuerte ? 'muerte' : 'venta';
+                    if (!activeTypes.has(tipo)) return;
+                    activities.push({
+                        fecha: s.fechaSalida,
+                        tipo: tipo,
+                        tipoLabel: isMuerte ? '✝️ Muerte' : (isTransfer ? '🔀 Transferencia' : '💵 Venta'),
+                        tipoBg: isMuerte ? '#FEE2E2' : '#DBEAFE',
+                        chapeta: s.numero,
+                        detalle: isMuerte
+                            ? `Causa: ${s.causa || 'Sin especificar'}`
+                            : `${s.comprador || ''} | ${s.peso || '?'} kg | ${formatCurrency(s.costoVenta || 0)}`
+                    });
+                });
+            }
+
+            // Rotaciones
+            if (activeTypes.has('rotacion')) {
+                (data.rotaciones || []).forEach(r => {
+                    activities.push({
+                        fecha: r.fecha,
+                        tipo: 'rotacion',
+                        tipoLabel: '🔄 Rotación',
+                        tipoBg: '#D1FAE5',
+                        chapeta: r.animales ? (r.animales.length <= 3 ? r.animales.map(a => '#' + a).join(', ') : r.animales.length + ' animales') : '?',
+                        detalle: `${r.desdeNombre || 'Sin asignar'} → ${r.haciaNombre || '?'}${r.diasEnAnterior != null ? ' | ' + r.diasEnAnterior + ' días en anterior' : ''}`
+                    });
+                });
+            }
+
+            // Pesajes
+            if (activeTypes.has('peso')) {
+                (data.pesoUpdates || []).forEach(p => {
+                    const ganancia = p.pesoNuevo - (p.pesoAnterior || 0);
+                    activities.push({
+                        fecha: p.fecha,
+                        tipo: 'peso',
+                        tipoLabel: '⚖️ Pesaje',
+                        tipoBg: '#EDE9FE',
+                        chapeta: p.numero,
+                        detalle: `${p.pesoAnterior || '?'} → ${p.pesoNuevo} kg (${ganancia >= 0 ? '+' : ''}${ganancia} kg)`
+                    });
+                });
+            }
+
+            // Salud
+            if (activeTypes.has('salud')) {
+                (data.saludEventos || []).forEach(s => {
+                    const tipoSalud = { vacuna: 'Vacuna', desparasitacion: 'Desparasitación', tratamiento: 'Tratamiento', revision: 'Revisión' };
+                    activities.push({
+                        fecha: s.fecha,
+                        tipo: 'salud',
+                        tipoLabel: '🏥 ' + (tipoSalud[s.tipo] || s.tipo || 'Salud'),
+                        tipoBg: '#FCE7F3',
+                        chapeta: s.animales ? (s.animales.length <= 3 ? s.animales.map(a => '#' + a).join(', ') : s.animales.length + ' animales') : '-',
+                        detalle: `${s.observaciones || ''} ${s.veterinario ? '| Vet: ' + s.veterinario : ''}`
+                    });
+                });
+            }
+
+            // Apply date filter
+            let filtered = activities;
+            if (cutoffDate) {
+                filtered = activities.filter(a => a.fecha && new Date(a.fecha) >= cutoffDate);
+            }
+
+            // Sort by date descending
+            filtered.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+
+            // Count by type for summary
+            const counts = {};
+            filtered.forEach(a => {
+                counts[a.tipoLabel] = (counts[a.tipoLabel] || 0) + 1;
+            });
+
+            const summaryDiv = document.getElementById('raCountsSummary');
+            if (summaryDiv) {
+                summaryDiv.innerHTML = Object.entries(counts).map(([label, count]) =>
+                    `<span style="background: #F3F4F6; padding: 0.2rem 0.5rem; border-radius: 4px;">${label}: <strong>${count}</strong></span>`
+                ).join('') + `<span style="background: #E5E7EB; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">Total: ${filtered.length}</span>`;
+            }
+
+            // Take top 50
+            const recent = filtered.slice(0, 50);
+
+            const tbody = document.getElementById('fullRecentActivity');
+            if (!tbody) return;
+
+            if (recent.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding: 2rem; color: #6B7280;">No hay actividad en el período seleccionado</td></tr>';
+            } else {
+                tbody.innerHTML = recent.map(a => `
+                    <tr>
+                        <td style="font-size: 0.85rem; white-space: nowrap;">${formatDate(a.fecha)}</td>
+                        <td><span style="background: ${a.tipoBg}; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500; white-space: nowrap;">${a.tipoLabel}</span></td>
+                        <td style="font-weight: 600;">${a.chapeta}</td>
+                        <td style="font-size: 0.85rem; color: #374151;">${a.detalle}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
         function updateFilters() {
             // Vendedor filter
             const vendedores = [...new Set(data.entradas.filter(e => !e.numeroVaca).map(e => e.vendedor))];
@@ -9881,6 +10105,317 @@
             input.click();
         }
 
+        // ==================== AUTO-BACKUP SYSTEM ====================
+
+        // Create an auto-backup of all current data to localStorage
+        function createAutoBackup(reason) {
+            try {
+                const backup = {
+                    version: '3.0',
+                    backupDate: new Date().toISOString(),
+                    reason: reason || 'auto',
+                    ranches: {}
+                };
+
+                Object.keys(RANCHES).forEach(ranchId => {
+                    const ranch = RANCHES[ranchId];
+                    const ranchData = localStorage.getItem(ranch.storageKey);
+                    if (ranchData) {
+                        backup.ranches[ranchId] = {
+                            name: ranch.name,
+                            data: JSON.parse(ranchData)
+                        };
+                    }
+                });
+
+                // Generate key with timestamp
+                const now = new Date();
+                const key = `ganadoBackup_${now.toISOString().replace(/[:.]/g, '-').substring(0, 19)}`;
+                localStorage.setItem(key, JSON.stringify(backup));
+
+                // Keep only last 5 auto-backups
+                const allBackupKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('ganadoBackup_')) {
+                        allBackupKeys.push(k);
+                    }
+                }
+                allBackupKeys.sort();
+                while (allBackupKeys.length > 5) {
+                    localStorage.removeItem(allBackupKeys.shift());
+                }
+
+                console.log(`✅ Auto-backup created: ${key} (reason: ${reason})`);
+                return key;
+            } catch (e) {
+                console.error('Error creating auto-backup:', e);
+                return null;
+            }
+        }
+
+        // Get list of all auto-backups
+        function getAutoBackups() {
+            const backups = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('ganadoBackup_')) {
+                    try {
+                        const backup = JSON.parse(localStorage.getItem(key));
+                        const ranchSummaries = {};
+                        let totalAnimals = 0;
+
+                        Object.entries(backup.ranches || {}).forEach(([ranchId, ranchInfo]) => {
+                            const d = ranchInfo.data || {};
+                            const entradas = (d.entradas || []).length;
+                            const salidas = (d.salidas || []).length;
+                            const potreros = (d.potreros || []).length;
+                            const rotaciones = (d.rotaciones || []).length;
+                            const animalPotreros = Object.keys(d.animalPotreros || {}).length;
+                            const pesoUpdates = (d.pesoUpdates || []).length;
+                            const saludEventos = (d.saludEventos || []).length;
+                            totalAnimals += entradas;
+                            ranchSummaries[ranchId] = { name: ranchInfo.name, entradas, salidas, potreros, rotaciones, animalPotreros, pesoUpdates, saludEventos };
+                        });
+
+                        backups.push({
+                            key,
+                            date: backup.backupDate,
+                            reason: backup.reason || 'manual',
+                            ranches: ranchSummaries,
+                            totalAnimals
+                        });
+                    } catch (e) {
+                        console.error('Error reading backup:', key, e);
+                    }
+                }
+            }
+            backups.sort((a, b) => new Date(b.date) - new Date(a.date));
+            return backups;
+        }
+
+        // Show backup browser
+        function showBackupBrowser() {
+            const backups = getAutoBackups();
+
+            if (backups.length === 0) {
+                showToast('No hay backups automáticos guardados', 'info');
+                return;
+            }
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'backupBrowserModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #7C3AED, #A855F7);">
+                        <span>📂 Backups Guardados (${backups.length})</span>
+                        <button class="modal-close" onclick="document.getElementById('backupBrowserModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1rem;">
+                        <div style="background: #FEF3C7; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #92400E;">
+                            ⚠️ Los backups automáticos se crean antes de cada restauración. Se guardan los últimos 5.
+                        </div>
+                        ${backups.map((b, idx) => `
+                            <div style="border: 1px solid #E5E7EB; border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden;">
+                                <div style="background: #F9FAFB; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                    <div>
+                                        <strong style="font-size: 0.95rem;">📅 ${new Date(b.date).toLocaleString('es-CO')}</strong>
+                                        <span style="background: #E5E7EB; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem;">${b.reason}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button onclick="toggleBackupDetail('bkDetail${idx}')" style="padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #D1D5DB; background: white; cursor: pointer; font-size: 0.8rem;">🔍 Ver Detalle</button>
+                                        <button onclick="showSelectiveRestoreModal('${b.key}')" style="padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: #8B5CF6; color: white; cursor: pointer; font-size: 0.8rem;">🔄 Restaurar</button>
+                                        <button onclick="downloadAutoBackup('${b.key}')" style="padding: 0.4rem 0.8rem; border-radius: 6px; border: none; background: #3B82F6; color: white; cursor: pointer; font-size: 0.8rem;">💾 Descargar</button>
+                                    </div>
+                                </div>
+                                <div id="bkDetail${idx}" style="display: none; padding: 0.75rem 1rem; font-size: 0.85rem;">
+                                    ${Object.entries(b.ranches).map(([ranchId, s]) => `
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <strong>${s.name}:</strong>
+                                            <span style="color: #6B7280;">
+                                                ${s.entradas} entradas, ${s.salidas} salidas, ${s.potreros} potreros,
+                                                ${s.rotaciones} rotaciones, ${s.animalPotreros} asignaciones potrero,
+                                                ${s.pesoUpdates} pesajes, ${s.saludEventos} eventos salud
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function toggleBackupDetail(id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function downloadAutoBackup(backupKey) {
+            try {
+                const backupStr = localStorage.getItem(backupKey);
+                if (!backupStr) { showToast('Backup no encontrado', 'error'); return; }
+                const blob = new Blob([backupStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${backupKey}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('💾 Backup descargado', 'success');
+            } catch (e) {
+                showToast('Error descargando backup: ' + e.message, 'error');
+            }
+        }
+
+        // Show selective restore modal
+        function showSelectiveRestoreModal(backupKey) {
+            let backup;
+            try {
+                backup = JSON.parse(localStorage.getItem(backupKey));
+            } catch (e) {
+                showToast('Error leyendo backup', 'error');
+                return;
+            }
+
+            if (!backup || !backup.ranches) {
+                showToast('Backup inválido', 'error');
+                return;
+            }
+
+            // Build comparison between backup and current data
+            const sections = [
+                { key: 'entradas', label: '📥 Entradas (Compras + Nacimientos)', icon: '📥' },
+                { key: 'salidas', label: '📤 Salidas (Ventas + Muertes)', icon: '📤' },
+                { key: 'potreros', label: '🌿 Potreros', icon: '🌿' },
+                { key: 'rotaciones', label: '🔄 Rotaciones', icon: '🔄' },
+                { key: 'animalPotreros', label: '📍 Asignaciones de Potrero', icon: '📍', isObject: true },
+                { key: 'pesoUpdates', label: '⚖️ Pesajes', icon: '⚖️' },
+                { key: 'saludEventos', label: '🏥 Eventos de Salud', icon: '🏥' }
+            ];
+
+            // Build per-ranch comparison
+            let comparisonHtml = '';
+            Object.entries(backup.ranches).forEach(([ranchId, ranchInfo]) => {
+                const currentRanchData = getRanchData(ranchId) || {};
+                const backupData = ranchInfo.data || {};
+
+                comparisonHtml += `<h4 style="margin: 0.75rem 0 0.5rem; color: #1E40AF; border-bottom: 1px solid #DBEAFE; padding-bottom: 0.25rem;">${ranchInfo.name}</h4>`;
+                sections.forEach(s => {
+                    const backupCount = s.isObject ? Object.keys(backupData[s.key] || {}).length : (backupData[s.key] || []).length;
+                    const currentCount = s.isObject ? Object.keys(currentRanchData[s.key] || {}).length : (currentRanchData[s.key] || []).length;
+                    const diff = backupCount - currentCount;
+                    const diffLabel = diff > 0 ? `<span style="color: #059669;">+${diff}</span>` : diff < 0 ? `<span style="color: #DC2626;">${diff}</span>` : '<span style="color: #6B7280;">igual</span>';
+
+                    comparisonHtml += `
+                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; background: #F9FAFB; margin-bottom: 0.3rem;">
+                            <input type="checkbox" class="sr-section" data-ranch="${ranchId}" data-section="${s.key}">
+                            <span style="flex: 1;">${s.label}</span>
+                            <span style="color: #6B7280; font-size: 0.8rem;">Backup: <strong>${backupCount}</strong> | Actual: <strong>${currentCount}</strong> | ${diffLabel}</span>
+                        </label>
+                    `;
+                });
+            });
+
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'selectiveRestoreModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #DC2626, #EF4444);">
+                        <span>🔄 Restaurar desde Backup</span>
+                        <button class="modal-close" onclick="document.getElementById('selectiveRestoreModal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding: 1rem;">
+                        <div style="background: #DBEAFE; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #1E40AF;">
+                            📅 Backup: <strong>${new Date(backup.backupDate).toLocaleString('es-CO')}</strong>
+                            <br>Seleccione las secciones que desea restaurar. Las secciones seleccionadas <strong>reemplazarán</strong> los datos actuales.
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <button onclick="document.querySelectorAll('.sr-section').forEach(c => c.checked = true)" style="padding: 0.3rem 0.6rem; border: 1px solid #D1D5DB; border-radius: 6px; background: white; cursor: pointer; font-size: 0.8rem;">☑️ Todos</button>
+                            <button onclick="document.querySelectorAll('.sr-section').forEach(c => c.checked = false)" style="padding: 0.3rem 0.6rem; border: 1px solid #D1D5DB; border-radius: 6px; background: white; cursor: pointer; font-size: 0.8rem;">☐ Ninguno</button>
+                            <button onclick="document.querySelectorAll('.sr-section[data-section=potreros], .sr-section[data-section=rotaciones], .sr-section[data-section=animalPotreros]').forEach(c => c.checked = true)" style="padding: 0.3rem 0.6rem; border: 1px solid #D1D5DB; border-radius: 6px; background: white; cursor: pointer; font-size: 0.8rem;">🌿 Solo Potreros</button>
+                        </div>
+
+                        ${comparisonHtml}
+
+                        <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+                            <button onclick="executeSelectiveRestore('${backupKey}')" style="flex: 1; padding: 0.75rem; border-radius: 8px; border: none; background: #DC2626; color: white; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                                ⚠️ Restaurar Seleccionados
+                            </button>
+                            <button onclick="document.getElementById('selectiveRestoreModal').remove()" style="padding: 0.75rem 1.5rem; border-radius: 8px; border: 1px solid #D1D5DB; background: white; cursor: pointer; font-size: 1rem;">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Execute selective restore
+        function executeSelectiveRestore(backupKey) {
+            const selectedSections = {};
+            document.querySelectorAll('.sr-section:checked').forEach(cb => {
+                const ranchId = cb.dataset.ranch;
+                const section = cb.dataset.section;
+                if (!selectedSections[ranchId]) selectedSections[ranchId] = [];
+                selectedSections[ranchId].push(section);
+            });
+
+            const totalSelected = Object.values(selectedSections).reduce((sum, arr) => sum + arr.length, 0);
+            if (totalSelected === 0) {
+                showToast('Seleccione al menos una sección para restaurar', 'error');
+                return;
+            }
+
+            const sectionNames = [...new Set(Object.values(selectedSections).flat())];
+            if (!confirm(`⚠️ RESTAURAR SECCIONES\n\nVa a restaurar: ${sectionNames.join(', ')}\n\nSe creará un backup automático antes de restaurar.\n\n¿Continuar?`)) {
+                return;
+            }
+
+            // Create auto-backup before restoring
+            createAutoBackup('pre-selective-restore');
+
+            let backup;
+            try {
+                backup = JSON.parse(localStorage.getItem(backupKey));
+            } catch (e) {
+                showToast('Error leyendo backup', 'error');
+                return;
+            }
+
+            // Apply selected sections
+            Object.entries(selectedSections).forEach(([ranchId, sections]) => {
+                const backupRanchData = backup.ranches[ranchId]?.data;
+                if (!backupRanchData) return;
+
+                const currentRanchData = getRanchData(ranchId) || {};
+
+                sections.forEach(section => {
+                    if (backupRanchData[section] !== undefined) {
+                        currentRanchData[section] = JSON.parse(JSON.stringify(backupRanchData[section]));
+                    }
+                });
+
+                saveRanchData(ranchId, currentRanchData);
+            });
+
+            // Sync to cloud
+            if (typeof cloudSync !== 'undefined' && cloudSync.isInitialized) {
+                cloudSync.syncToCloud().catch(e => console.error('Sync error:', e));
+            }
+
+            showToast(`✅ ${totalSelected} secciones restauradas. Recargando...`, 'success');
+            document.getElementById('selectiveRestoreModal')?.remove();
+            document.getElementById('backupBrowserModal')?.remove();
+            setTimeout(() => location.reload(), 1500);
+        }
+
         // Download backup from current app data
         function downloadBackupFromApp() {
             const backup = {
@@ -9972,6 +10507,9 @@
                         input.value = '';
                         return;
                     }
+
+                    // Auto-backup before restoring
+                    createAutoBackup('pre-file-restore');
 
                     statusDiv.innerHTML = '<div style="padding: 1rem; background: #dbeafe; border-radius: 8px; color: #1e40af;">🔄 Restaurando datos...</div>';
 
@@ -10089,6 +10627,9 @@
             if (!confirm('📥 DESCARGAR DATOS DE LA NUBE\n\nEsto descargará los datos de Firebase y reemplazará los datos locales.\n\n¿Continuar?')) {
                 return;
             }
+
+            // Auto-backup before cloud download
+            createAutoBackup('pre-cloud-download');
 
             const btn = document.getElementById('forceDownloadBtn');
             const originalText = btn.innerHTML;
