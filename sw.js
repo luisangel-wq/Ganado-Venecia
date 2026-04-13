@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganado-finca-v5-20250308';
+const CACHE_NAME = 'ganado-finca-v6-20260412';
 const urlsToCache = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', event => {
@@ -27,14 +27,13 @@ self.addEventListener('fetch', event => {
   if (event.request.url.includes('generativelanguage.googleapis.com')) return;
   
   event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) return response;
-      return fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type !== 'basic') return response;
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
-        return response;
-      });
-    }).catch(() => caches.match('./index.html'))
+    fetch(event.request).then(response => {
+      if (!response || response.status !== 200 || response.type !== 'basic') return response;
+      const responseToCache = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+      return response;
+    }).catch(() => {
+      return caches.match(event.request).then(response => response || caches.match('./index.html'));
+    })
   );
 });

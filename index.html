@@ -5378,6 +5378,77 @@
                 if (!data.config.precioVenta) data.config.precioVenta = 9000;
                 if (!data.config.pesoObjetivo) data.config.pesoObjetivo = 450;
                 if (!data.config.pesoMinimo) data.config.pesoMinimo = 380;
+
+                // Clean up potrero assignments for sold/dead animals across ALL ranches
+                // First collect ALL sold animal numbers from ALL ranches
+                const allSoldForCleanup = new Set();
+                if (typeof SHARED_POTRERO_RANCHES !== 'undefined') {
+                    SHARED_POTRERO_RANCHES.forEach(rId => {
+                        try {
+                            const rData = rId === currentRanch ? data : JSON.parse(localStorage.getItem(RANCHES[rId].storageKey) || '{}');
+                            (rData.salidas || []).forEach(s => allSoldForCleanup.add(String(s.numero)));
+                        } catch (e) {}
+                    });
+                } else {
+                    (data.salidas || []).forEach(s => allSoldForCleanup.add(String(s.numero)));
+                }
+
+                let anyCleanedGlobal = false;
+
+                // Clean current ranch
+                if (data.animalPotreros && allSoldForCleanup.size > 0) {
+                    let cleaned = 0;
+                    Object.keys(data.animalPotreros).forEach(numero => {
+                        if (allSoldForCleanup.has(String(numero))) {
+                            delete data.animalPotreros[numero];
+                            cleaned++;
+                        }
+                    });
+                    if (cleaned > 0) {
+                        console.log(`🧹 Cleaned ${cleaned} sold/dead animals from potrero assignments in ${currentRanch}`);
+                        const ranch = RANCHES[currentRanch];
+                        localStorage.setItem(ranch.storageKey, JSON.stringify(data));
+                        anyCleanedGlobal = true;
+                    }
+                }
+
+                // Clean other shared ranches
+                if (typeof SHARED_POTRERO_RANCHES !== 'undefined') {
+                    SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                        if (ranchId === currentRanch) return;
+                        const otherRanch = RANCHES[ranchId];
+                        const otherDataStr = localStorage.getItem(otherRanch.storageKey);
+                        if (!otherDataStr) return;
+                        try {
+                            const otherData = JSON.parse(otherDataStr);
+                            if (!otherData.animalPotreros) return;
+                            let otherCleaned = 0;
+                            Object.keys(otherData.animalPotreros).forEach(numero => {
+                                if (allSoldForCleanup.has(String(numero))) {
+                                    delete otherData.animalPotreros[numero];
+                                    otherCleaned++;
+                                }
+                            });
+                            if (otherCleaned > 0) {
+                                console.log(`🧹 Cleaned ${otherCleaned} sold/dead animals from potrero assignments in ${ranchId}`);
+                                localStorage.setItem(otherRanch.storageKey, JSON.stringify(otherData));
+                                anyCleanedGlobal = true;
+                            }
+                        } catch (e) {
+                            console.error(`Error cleaning potrero data for ${ranchId}:`, e);
+                        }
+                    });
+                }
+
+                // Sync cleanup to cloud so dirty data doesn't come back
+                if (anyCleanedGlobal && window.cloudSync && window.cloudSync.enabled) {
+                    console.log('☁️ Syncing potrero cleanup to cloud...');
+                    setTimeout(() => {
+                        if (window.cloudSync.syncToCloud) {
+                            window.cloudSync.syncToCloud();
+                        }
+                    }, 500);
+                }
             } else {
                 // Initialize with empty data for this ranch
                 data = {
@@ -7041,8 +7112,13 @@
                     fincaDestino: esTransferencia ? fincaDestino : null
                 };
                 data.salidas.push(venta);
+
+                // Remove sold animal from potrero assignment
+                if (data.animalPotreros && data.animalPotreros[animal.numero]) {
+                    delete data.animalPotreros[animal.numero];
+                }
             });
-            
+
             saveData();
             
             // If it's a transfer, create purchase entries in destination ranch
@@ -7132,8 +7208,14 @@
             };
             
             data.salidas.push(muerte);
+
+            // Remove dead animal from potrero assignment
+            if (data.animalPotreros && data.animalPotreros[numero]) {
+                delete data.animalPotreros[numero];
+            }
+
             saveData();
-            
+
             showToast('Muerte registrada', 'success');
             hideEventForm('muerte');
         }
@@ -13900,11 +13982,12 @@
                         .fs-header {
                             background: linear-gradient(135deg, #059669, #10b981);
                             color: white; padding: 1rem;
+                            padding-top: calc(1rem + env(safe-area-inset-top, 0px));
                             display: flex; justify-content: space-between; align-items: center;
                             flex-shrink: 0;
                         }
                         .fs-header h2 { margin: 0; font-size: 1.3rem; }
-                        .fs-close { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; padding: 0 0.5rem; }
+                        .fs-close { background: none; border: none; color: white; font-size: 2rem; cursor: pointer; padding: 0.5rem; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: rgba(255,255,255,0.2); }
                         .fs-stats {
                             display: flex; gap: 1rem; padding: 0.75rem 1rem;
                             background: white; border-bottom: 1px solid #E5E7EB;
@@ -14057,7 +14140,7 @@
                             <h2>🌿 ${potrero.nombre}</h2>
                             <div style="font-size: 0.85rem; opacity: 0.9;">📍 ${RANCHES[potrero.sourceRanch]?.name || ''}</div>
                         </div>
-                        <button class="fs-close" onclick="closePotreroFullScreen()">×</button>
+                        <button class="fs-close" id="fsCloseBtn" onclick="closePotreroFullScreen()" ontouchend="event.preventDefault(); closePotreroFullScreen();">✕</button>
                     </div>
 
                     <div class="fs-stats">
@@ -14112,6 +14195,7 @@
                         <button onclick="clearFullScreenSelection()">☐ Ninguno</button>
                         <button onclick="filterFullScreenAlerts()">⚠️ Solo Alertas</button>
                         <button onclick="showAddIssueModal()">📝 Reportar Problema</button>
+                        <button onclick="closePotreroFullScreen()" style="margin-left: auto; background: #EF4444; color: white; border: none; font-weight: 600;">✕ Cerrar</button>
                     </div>
 
                     <div class="fs-content">
@@ -14328,6 +14412,8 @@
                                 <option value="">-- Seleccionar --</option>
                                 ${options}
                             </select>
+                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">📅 Fecha de rotación:</label>
+                            <input type="date" id="fsMoveFecha" value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 8px; margin-bottom: 1rem; box-sizing: border-box;">
                             <div style="display: flex; gap: 0.5rem;">
                                 <button onclick="executeFSMove()" style="flex: 1; padding: 0.75rem; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Confirmar</button>
                                 <button onclick="document.getElementById('fsMoveModal').remove()" style="padding: 0.75rem 1rem; background: #E5E7EB; border: none; border-radius: 8px; cursor: pointer;">Cancelar</button>
@@ -14360,7 +14446,7 @@
                 return;
             }
 
-            const today = new Date().toISOString().split('T')[0];
+            const fecha = document.getElementById('fsMoveFecha')?.value || new Date().toISOString().split('T')[0];
             const animalsByRanch = {};
 
             fullScreenSelectedAnimals.forEach(key => {
@@ -14388,7 +14474,7 @@
             const toPotrero = allPotreros.find(p => `${p.sourceRanch}_${p.id}` === destino);
             data.rotaciones.push({
                 id: Date.now(),
-                fecha: today,
+                fecha: fecha,
                 desdeId: currentFullScreenPotrero?.key,
                 desdeNombre: currentFullScreenPotrero?.displayName || currentFullScreenPotrero?.nombre,
                 haciaId: destino,
@@ -14398,7 +14484,7 @@
 
             saveData();
             document.getElementById('fsMoveModal')?.remove();
-            showToast(`${fullScreenSelectedAnimals.size} animales movidos a ${toPotrero?.nombre || 'destino'}`, 'success');
+            showToast(`${fullScreenSelectedAnimals.size} animales movidos a ${toPotrero?.nombre || 'destino'} (${fecha})`, 'success');
             closePotreroFullScreen();
         }
 
@@ -15196,6 +15282,18 @@
                 byRanch: {}  // { ranchId: { count: X, animales: [...] } }
             };
 
+            // First, collect ALL sold animal numbers across ALL shared ranches
+            const allSoldNumeros = new Set();
+            SHARED_POTRERO_RANCHES.forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                const ranchDataStr = localStorage.getItem(ranch.storageKey);
+                if (!ranchDataStr) return;
+                try {
+                    const ranchData = JSON.parse(ranchDataStr);
+                    (ranchData.salidas || []).forEach(s => allSoldNumeros.add(String(s.numero)));
+                } catch (e) {}
+            });
+
             // Get all shared ranches
             SHARED_POTRERO_RANCHES.forEach(ranchId => {
                 const ranch = RANCHES[ranchId];
@@ -15211,8 +15309,9 @@
                     const animalesEnPotrero = [];
                     Object.entries(animalPotreros).forEach(([numero, assignedId]) => {
                         if (potreroIdMatches(assignedId, potrero)) {
-                            // Find animal info
-                            const animal = entradas.find(a => a.numero === numero);
+                            // Skip sold/dead animals (check across ALL ranches)
+                            if (allSoldNumeros.has(String(numero))) return;
+                            const animal = entradas.find(a => String(a.numero) == String(numero));
                             if (animal) {
                                 animalesEnPotrero.push({
                                     numero: animal.numero,
