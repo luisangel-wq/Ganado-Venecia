@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore Potrero Assignments</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 2rem auto; padding: 1rem; }
+        h1 { color: #059669; }
+        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+        .success { background: #dcfce7; border-color: #22c55e; }
+        .warning { background: #fef3c7; border-color: #f59e0b; }
+        .error { background: #fee2e2; border-color: #ef4444; }
+        button { padding: 0.75rem 1.5rem; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; margin: 0.5rem 0; }
+        button:hover { background: #047857; }
+        button.danger { background: #ef4444; }
+        pre { background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.5rem; border: 1px solid #e5e7eb; text-align: left; font-size: 0.85rem; }
+        th { background: #f3f4f6; }
+    </style>
+</head>
+<body>
+    <h1>Restore Potrero Assignments</h1>
+    <p>This tool rebuilds <code>animalPotreros</code> from <code>rotaciones</code> history.</p>
+
+    <button onclick="analyzeData()">1. Analyze Current Data</button>
+    <button onclick="rebuildFromRotaciones()">2. Rebuild from Rotaciones</button>
+    <button class="danger" onclick="applyAndSync()">3. Apply & Sync to Cloud</button>
+
+    <div id="output"></div>
+
+    <script>
+        const RANCHES = {
+            la_coruna: { id: 'la_coruna', name: 'La Coruña', storageKey: 'ganadoFinca_LaCoruna' },
+            santa_catalina: { id: 'santa_catalina', name: 'Santa Catalina', storageKey: 'ganadoFinca_SantaCatalina' },
+            la_vega: { id: 'la_vega', name: 'La Vega', storageKey: 'ganadoFinca_LaVega' },
+            san_fernando: { id: 'san_fernando', name: 'San Fernando', storageKey: 'ganadoFinca_SanFernando' }
+        };
+
+        let rebuiltData = {}; // { ranchId: { animalPotreros: {...} } }
+
+        function getRanchData(ranchId) {
+            const raw = localStorage.getItem(RANCHES[ranchId].storageKey);
+            return raw ? JSON.parse(raw) : null;
+        }
+
+        function analyzeData() {
+            const out = document.getElementById('output');
+            let html = '<h2>Current Data Analysis</h2>';
+
+            ['la_coruna', 'santa_catalina'].forEach(ranchId => {
+                const data = getRanchData(ranchId);
+                if (!data) {
+                    html += `<div class="card error"><strong>${RANCHES[ranchId].name}</strong>: No data found</div>`;
+                    return;
+                }
+
+                const entradas = data.entradas || [];
+                const salidas = data.salidas || [];
+                const potreros = data.potreros || [];
+                const rotaciones = data.rotaciones || [];
+                const animalPotreros = data.animalPotreros || {};
+                const currentAssignments = Object.keys(animalPotreros).length;
+
+                // Count truly sold (non-transfer)
+                const trulySold = salidas.filter(s => !s.esTransferencia);
+                const transfers = salidas.filter(s => s.esTransferencia);
+                const inventory = entradas.filter(e => !salidas.some(s => String(s.numero) === String(e.numero) && !s.esTransferencia));
+
+                html += `<div class="card">
+                    <h3>${RANCHES[ranchId].name}</h3>
+                    <table>
+                        <tr><td>Entradas (purchases)</td><td><strong>${entradas.length}</strong></td></tr>
+                        <tr><td>Truly sold/dead</td><td><strong>${trulySold.length}</strong></td></tr>
+                        <tr><td>Transfers out</td><td><strong>${transfers.length}</strong></td></tr>
+                        <tr><td>Active inventory</td><td><strong>${inventory.length}</strong></td></tr>
+                        <tr><td>Potreros defined</td><td><strong>${potreros.length}</strong></td></tr>
+                        <tr><td>Rotation records</td><td><strong>${rotaciones.length}</strong></td></tr>
+                        <tr><td>Current animalPotreros</td><td><strong style="color: ${currentAssignments === 0 ? 'red' : 'green'};">${currentAssignments}</strong></td></tr>
+                    </table>`;
+
+                if (rotaciones.length > 0) {
+                    html += `<details><summary>Rotaciones (${rotaciones.length})</summary><pre>${JSON.stringify(rotaciones, null, 2)}</pre></details>`;
+                }
+
+                html += '</div>';
+            });
+
+            out.innerHTML = html;
+        }
+
+        function rebuildFromRotaciones() {
+            const out = document.getElementById('output');
+            let html = '<h2>Rebuild Results</h2>';
+            rebuiltData = {};
+
+            ['la_coruna', 'santa_catalina'].forEach(ranchId => {
+                const data = getRanchData(ranchId);
+                if (!data) return;
+
+                const rotaciones = (data.rotaciones || []).slice().sort((a, b) => {
+                    const dateA = new Date(a.fecha || 0);
+                    const dateB = new Date(b.fecha || 0);
+                    if (dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+                    return (a.id || 0) - (b.id || 0);
+                });
+
+                const salidas = data.salidas || [];
+                const trulySoldSet = new Set(
+                    salidas.filter(s => !s.esTransferencia).map(s => String(s.numero))
+                );
+
+                // Replay rotations to rebuild assignments
+                const newAnimalPotreros = {};
+
+                rotaciones.forEach(rot => {
+                    const animales = rot.animales || [];
+                    const destino = rot.haciaId;
+                    if (!destino) return;
+
+                    animales.forEach(numero => {
+                        const num = String(numero);
+                        // Only assign if not truly sold
+                        if (!trulySoldSet.has(num)) {
+                            newAnimalPotreros[num] = destino;
+                        }
+                    });
+                });
+
+                // Also check: any animals in current animalPotreros that rotation didn't cover
+                const currentAP = data.animalPotreros || {};
+                Object.entries(currentAP).forEach(([num, potrero]) => {
+                    if (!newAnimalPotreros[num] && !trulySoldSet.has(String(num))) {
+                        newAnimalPotreros[num] = potrero;
+                    }
+                });
+
+                rebuiltData[ranchId] = { animalPotreros: newAnimalPotreros };
+
+                const count = Object.keys(newAnimalPotreros).length;
+                html += `<div class="card ${count > 0 ? 'success' : 'warning'}">
+                    <h3>${RANCHES[ranchId].name}: ${count} animals assigned to potreros</h3>
+                    <pre>${JSON.stringify(newAnimalPotreros, null, 2)}</pre>
+                </div>`;
+            });
+
+            if (Object.keys(rebuiltData).length === 0) {
+                html += '<div class="card error">No data to rebuild. Rotaciones may be empty.</div>';
+            }
+
+            out.innerHTML = html;
+        }
+
+        function applyAndSync() {
+            if (Object.keys(rebuiltData).length === 0) {
+                alert('Run step 2 first to rebuild the data');
+                return;
+            }
+
+            const totalAnimals = Object.values(rebuiltData).reduce((sum, r) => sum + Object.keys(r.animalPotreros).length, 0);
+
+            if (!confirm(`Apply ${totalAnimals} potrero assignments and sync to cloud?\n\nThis will overwrite current animalPotreros.`)) {
+                return;
+            }
+
+            ['la_coruna', 'santa_catalina'].forEach(ranchId => {
+                if (!rebuiltData[ranchId]) return;
+                const data = getRanchData(ranchId);
+                if (!data) return;
+
+                data.animalPotreros = rebuiltData[ranchId].animalPotreros;
+                localStorage.setItem(RANCHES[ranchId].storageKey, JSON.stringify(data));
+            });
+
+            // Trigger cloud sync if available
+            if (window.cloudSync && window.cloudSync.syncToCloud) {
+                window.cloudSync.syncToCloud();
+            }
+
+            document.getElementById('output').innerHTML += '<div class="card success"><h3>Applied successfully! Reload the main app to see the changes.</h3></div>';
+        }
+    </script>
+
+    <!-- Load cloud sync for syncing -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="cloud-sync.js"></script>
+    <script src="firebase-config.js"></script>
+</body>
+</html>

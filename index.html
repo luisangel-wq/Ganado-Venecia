@@ -5379,27 +5379,17 @@
                 if (!data.config.pesoObjetivo) data.config.pesoObjetivo = 450;
                 if (!data.config.pesoMinimo) data.config.pesoMinimo = 380;
 
-                // Clean up potrero assignments for sold/dead animals across ALL ranches
-                // First collect ALL sold animal numbers from ALL ranches
-                const allSoldForCleanup = new Set();
-                if (typeof SHARED_POTRERO_RANCHES !== 'undefined') {
-                    SHARED_POTRERO_RANCHES.forEach(rId => {
-                        try {
-                            const rData = rId === currentRanch ? data : JSON.parse(localStorage.getItem(RANCHES[rId].storageKey) || '{}');
-                            (rData.salidas || []).forEach(s => allSoldForCleanup.add(String(s.numero)));
-                        } catch (e) {}
-                    });
-                } else {
-                    (data.salidas || []).forEach(s => allSoldForCleanup.add(String(s.numero)));
-                }
-
-                let anyCleanedGlobal = false;
-
-                // Clean current ranch
-                if (data.animalPotreros && allSoldForCleanup.size > 0) {
+                // Clean up potrero assignments only for animals truly sold/dead from THIS ranch
+                // (exclude transfers — those animals are still active in the destination ranch)
+                if (data.animalPotreros && data.salidas && data.salidas.length > 0) {
+                    const trulySold = new Set(
+                        data.salidas
+                            .filter(s => !s.esTransferencia)
+                            .map(s => String(s.numero))
+                    );
                     let cleaned = 0;
                     Object.keys(data.animalPotreros).forEach(numero => {
-                        if (allSoldForCleanup.has(String(numero))) {
+                        if (trulySold.has(String(numero))) {
                             delete data.animalPotreros[numero];
                             cleaned++;
                         }
@@ -5408,46 +5398,7 @@
                         console.log(`🧹 Cleaned ${cleaned} sold/dead animals from potrero assignments in ${currentRanch}`);
                         const ranch = RANCHES[currentRanch];
                         localStorage.setItem(ranch.storageKey, JSON.stringify(data));
-                        anyCleanedGlobal = true;
                     }
-                }
-
-                // Clean other shared ranches
-                if (typeof SHARED_POTRERO_RANCHES !== 'undefined') {
-                    SHARED_POTRERO_RANCHES.forEach(ranchId => {
-                        if (ranchId === currentRanch) return;
-                        const otherRanch = RANCHES[ranchId];
-                        const otherDataStr = localStorage.getItem(otherRanch.storageKey);
-                        if (!otherDataStr) return;
-                        try {
-                            const otherData = JSON.parse(otherDataStr);
-                            if (!otherData.animalPotreros) return;
-                            let otherCleaned = 0;
-                            Object.keys(otherData.animalPotreros).forEach(numero => {
-                                if (allSoldForCleanup.has(String(numero))) {
-                                    delete otherData.animalPotreros[numero];
-                                    otherCleaned++;
-                                }
-                            });
-                            if (otherCleaned > 0) {
-                                console.log(`🧹 Cleaned ${otherCleaned} sold/dead animals from potrero assignments in ${ranchId}`);
-                                localStorage.setItem(otherRanch.storageKey, JSON.stringify(otherData));
-                                anyCleanedGlobal = true;
-                            }
-                        } catch (e) {
-                            console.error(`Error cleaning potrero data for ${ranchId}:`, e);
-                        }
-                    });
-                }
-
-                // Sync cleanup to cloud so dirty data doesn't come back
-                if (anyCleanedGlobal && window.cloudSync && window.cloudSync.enabled) {
-                    console.log('☁️ Syncing potrero cleanup to cloud...');
-                    setTimeout(() => {
-                        if (window.cloudSync.syncToCloud) {
-                            window.cloudSync.syncToCloud();
-                        }
-                    }, 500);
                 }
             } else {
                 // Initialize with empty data for this ranch
@@ -15282,18 +15233,6 @@
                 byRanch: {}  // { ranchId: { count: X, animales: [...] } }
             };
 
-            // First, collect ALL sold animal numbers across ALL shared ranches
-            const allSoldNumeros = new Set();
-            SHARED_POTRERO_RANCHES.forEach(ranchId => {
-                const ranch = RANCHES[ranchId];
-                const ranchDataStr = localStorage.getItem(ranch.storageKey);
-                if (!ranchDataStr) return;
-                try {
-                    const ranchData = JSON.parse(ranchDataStr);
-                    (ranchData.salidas || []).forEach(s => allSoldNumeros.add(String(s.numero)));
-                } catch (e) {}
-            });
-
             // Get all shared ranches
             SHARED_POTRERO_RANCHES.forEach(ranchId => {
                 const ranch = RANCHES[ranchId];
@@ -15304,13 +15243,18 @@
                     const ranchData = JSON.parse(ranchDataStr);
                     const animalPotreros = ranchData.animalPotreros || {};
                     const entradas = ranchData.entradas || [];
+                    // Only filter truly sold/dead animals from THIS ranch (not transfers)
+                    const salidas = ranchData.salidas || [];
+                    const trulySold = new Set(
+                        salidas.filter(s => !s.esTransferencia).map(s => String(s.numero))
+                    );
 
                     // Find animals from this ranch in this potrero
                     const animalesEnPotrero = [];
                     Object.entries(animalPotreros).forEach(([numero, assignedId]) => {
                         if (potreroIdMatches(assignedId, potrero)) {
-                            // Skip sold/dead animals (check across ALL ranches)
-                            if (allSoldNumeros.has(String(numero))) return;
+                            // Skip truly sold/dead animals from this ranch
+                            if (trulySold.has(String(numero))) return;
                             const animal = entradas.find(a => String(a.numero) == String(numero));
                             if (animal) {
                                 animalesEnPotrero.push({
