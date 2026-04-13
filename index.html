@@ -4796,6 +4796,9 @@
             // Validate that lastRanch is a valid key in RANCHES
             currentRanch = RANCHES[lastRanch] ? lastRanch : 'la_coruna';
 
+            // Create auto-backup BEFORE loading data (protects against data loss)
+            createAutoBackup('app-start');
+
             // Apply ranch theme and load data
             applyRanchTheme();
             loadData();
@@ -10143,6 +10146,19 @@
         // Create an auto-backup of all current data to localStorage
         function createAutoBackup(reason) {
             try {
+                // Throttle app-start backups: max one every 30 minutes
+                if (reason === 'app-start') {
+                    const lastStartBackup = localStorage.getItem('ganadoBackup_lastAppStart');
+                    if (lastStartBackup) {
+                        const elapsed = Date.now() - new Date(lastStartBackup).getTime();
+                        if (elapsed < 30 * 60 * 1000) {
+                            console.log('⏭️ Skipping app-start backup (last was ' + Math.round(elapsed/60000) + 'min ago)');
+                            return null;
+                        }
+                    }
+                    localStorage.setItem('ganadoBackup_lastAppStart', new Date().toISOString());
+                }
+
                 const backup = {
                     version: '3.0',
                     backupDate: new Date().toISOString(),
@@ -10166,7 +10182,7 @@
                 const key = `ganadoBackup_${now.toISOString().replace(/[:.]/g, '-').substring(0, 19)}`;
                 localStorage.setItem(key, JSON.stringify(backup));
 
-                // Keep only last 5 auto-backups
+                // Keep only last 10 auto-backups
                 const allBackupKeys = [];
                 for (let i = 0; i < localStorage.length; i++) {
                     const k = localStorage.key(i);
@@ -10175,7 +10191,7 @@
                     }
                 }
                 allBackupKeys.sort();
-                while (allBackupKeys.length > 5) {
+                while (allBackupKeys.length > 10) {
                     localStorage.removeItem(allBackupKeys.shift());
                 }
 
@@ -12695,14 +12711,13 @@
                             const matches = potreroIdMatches(assignedId, selectedPotrero);
 
                             if (matches) {
-                                // Find animal info and check it's not sold
+                                // Find animal info and check it's not truly sold/dead (exclude transfers)
                                 const animal = entradas.find(a => a.numero === numero);
                                 if (animal) {
-                                    // Check if animal is sold
+                                    // Check if animal is truly sold/dead (not transferred)
                                     const salidas = ranchData.salidas || [];
-                                    const isSold = salidas.some(s => s.numero === numero ||
-                                        (s.animales && s.animales.includes(numero)));
-                                    if (!isSold) {
+                                    const isTrulySold = salidas.some(s => !s.esTransferencia && (String(s.numero) == String(numero)));
+                                    if (!isTrulySold) {
                                         animalesFiltrados.push({
                                             ...animal,
                                             sourceRanch: ranchId  // Track which ranch the animal is from

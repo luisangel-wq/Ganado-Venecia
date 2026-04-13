@@ -165,6 +165,11 @@ class CloudSync {
     async applyCloudDataSilent(cloudData) {
         if (!cloudData || !cloudData.ranches) return;
 
+        // Create backup before overwriting local data with cloud data
+        if (typeof createAutoBackup === 'function') {
+            createAutoBackup('pre-cloud-sync');
+        }
+
         const RANCHES = this.getRanches();
 
         Object.keys(cloudData.ranches).forEach(ranchId => {
