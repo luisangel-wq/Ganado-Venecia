@@ -28,7 +28,7 @@
     <script src="firebase-config-fallback.js"></script>
 
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=13"></script>
+    <script src="cloud-sync.js?v=14"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16984,15 +16984,17 @@
                 return;
             }
             showToast(`⏫ Subiendo ${n} foto(s)…`, 'info');
-            Promise.resolve(window.cloudSync.processPendingPhotos()).then((uploaded) => {
+            Promise.resolve(window.cloudSync.processPendingPhotos(true)).then((uploaded) => {
                 updatePendingPhotosBadge();
                 const left = countPendingPhotos();
                 if (left === 0) {
                     showToast('✅ Todas las fotos se subieron a la nube', 'success');
                 } else if (uploaded > 0) {
                     showToast(`⏳ Subieron ${uploaded}. Quedan ${left}, se reintentará automáticamente.`, 'info');
+                } else if (window.cloudSync._lastPhotoError === 'unauthorized') {
+                    // Storage is on but the rules deny writes -> the open rules aren't published
+                    showToast(`⛔ Firebase rechazó la subida (permiso). Falta PUBLICAR las reglas de Storage. Las ${left} foto(s) están seguras en el teléfono.`, 'warning');
                 } else {
-                    // Nothing uploaded despite trying -> almost always the Storage console setup
                     showToast(`⚠️ No se pudo subir. Revise que Firebase Storage esté activado (ver CONFIGURAR_FIREBASE_STORAGE). Las ${left} foto(s) están seguras en el teléfono.`, 'warning');
                 }
             }).catch(() => {

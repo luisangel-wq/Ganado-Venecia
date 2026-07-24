@@ -368,10 +368,16 @@ class CloudSync {
      * Best-effort: any failure leaves the base64 in place to retry later. No-op if Storage
      * is unavailable, so the app keeps working exactly as before until Storage is enabled.
      */
-    async processPendingPhotos() {
+    async processPendingPhotos(force) {
         if (!this.enabled || !this.storage || !this.isOnline || this._processingPhotos) return 0;
+        // Back off after a permission failure so we don't flood Storage with 403s when the
+        // rules haven't been published yet. A manual retry (tapping the badge, force=true)
+        // always tries again immediately.
+        if (!force && this._photoRetryPausedUntil && Date.now() < this._photoRetryPausedUntil) return 0;
+
         this._processingPhotos = true;
-        let uploaded = 0;
+        this._lastPhotoError = null;
+        let uploaded = 0, unauthorized = false, otherError = false;
         try {
             const RANCHES = this.getRanches();
             for (const ranchId of Object.keys(RANCHES)) {
@@ -392,22 +398,40 @@ class CloudSync {
                             changed = true;
                             uploaded++;
                         } catch (e) {
-                            // Leave base64 in place; will retry on next pass
+                            // Leave base64 in place; will retry later
+                            const code = (e && (e.code || e.message)) || '';
+                            if (String(code).indexOf('unauthorized') !== -1 || String(code).indexOf('permission') !== -1) {
+                                unauthorized = true;
+                            } else {
+                                otherError = true;
+                            }
                             console.warn(`Photo upload pending for ${ranchId}/#${numero}:`, e.message);
+                            // If the rules deny us, the rest will fail identically — stop now
+                            if (unauthorized) break;
                         }
                     }
                 }
                 if (changed) {
                     try { localStorage.setItem(key, JSON.stringify(photos)); } catch (e) { console.error(e); }
                 }
+                if (unauthorized) break; // same rules apply to every ranch; don't hammer
             }
             if (uploaded > 0) {
                 console.log(`✅ Uploaded ${uploaded} photo(s) to Firebase Storage`);
                 this._lastPhotosJson = null;      // force the (now tiny, url-only) photos to re-sync
+                this._photoRetryPausedUntil = 0;  // it works now — clear any backoff
                 this.scheduleImmediateSync();
                 if (typeof loadAnimalPhotos === 'function') loadAnimalPhotos();
                 if (typeof updateAnimalPhotosGrid === 'function') updateAnimalPhotosGrid();
                 if (typeof updateInventarioTable === 'function') updateInventarioTable();
+            }
+            if (unauthorized) {
+                this._lastPhotoError = 'unauthorized';
+                // Pause automatic retries for 5 min so we don't spam 403s. The badge tap overrides.
+                this._photoRetryPausedUntil = Date.now() + 5 * 60 * 1000;
+                console.warn('⛔ Firebase Storage denied upload (permiso/reglas). Auto-retries paused 5 min. Publish the Storage rules, then tap the 📷 badge to retry.');
+            } else if (otherError && uploaded === 0) {
+                this._lastPhotoError = 'error';
             }
             if (typeof updatePendingPhotosBadge === 'function') updatePendingPhotosBadge();
         } finally {
