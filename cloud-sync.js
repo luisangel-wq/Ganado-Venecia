@@ -127,12 +127,22 @@ class CloudSync {
                 await this.syncToCloud();
             }
 
+            // Recover work saved while offline in a PREVIOUS session (e.g. photos taken in
+            // the ranch, app closed before signal). The merge above already pushes local-only
+            // data up, but force a sync too if the pending flag survived a restart.
+            if (localStorage.getItem('cloudSync_pendingUpload') === 'true' && this.isOnline) {
+                console.log('📤 Pending offline work detected from a previous session — uploading...');
+                this._lastPhotosJson = null; // ensure photos re-upload
+                this.syncToCloud();
+            }
+
             // Setup REAL-TIME listener for live updates
             this.setupRealtimeListener();
 
-            // Set up periodic backup sync every 60 seconds
+            // Set up periodic backup sync every 60 seconds. If we're online with pending
+            // offline work, this also acts as a retry until it succeeds.
             this.syncInterval = setInterval(() => {
-                if (!this.pendingChanges) {
+                if (this.isOnline && (!this.pendingChanges || localStorage.getItem('cloudSync_pendingUpload') === 'true')) {
                     this.syncToCloud();
                 }
             }, 60000);
@@ -290,7 +300,12 @@ class CloudSync {
             let anyCloudMissing = false;     // we have data cloud lacks -> push merged superset up
             let currentRanchChanged = false; // current ranch gained remote data -> refresh UI
 
-            Object.keys(cloudData.ranches).forEach(ranchId => {
+            // Reconcile EVERY known ranch (local ∪ cloud), not just the ranches the cloud
+            // already knows about. This is what recovers photos/records created OFFLINE:
+            // on the next reconcile the merge sees the cloud is missing them and pushes up.
+            const cloudRanches = cloudData.ranches || {};
+            const ranchIds = new Set(Object.keys(RANCHES).concat(Object.keys(cloudRanches)));
+            ranchIds.forEach(ranchId => {
                 const ranch = RANCHES[ranchId];
                 if (!ranch) return;
                 let localRanch = null;
@@ -299,7 +314,10 @@ class CloudSync {
                     localRanch = s ? JSON.parse(s) : null;
                 } catch (e) { localRanch = null; }
 
-                const { merged, localChanged, cloudChanged } = this._mergeRanch(localRanch, cloudData.ranches[ranchId]);
+                // Nothing here at all -> skip (avoids creating empty ranch entries)
+                if (!localRanch && !cloudRanches[ranchId]) return;
+
+                const { merged, localChanged, cloudChanged } = this._mergeRanch(localRanch, cloudRanches[ranchId]);
 
                 if (localChanged) {
                     writes.push({ storageKey: ranch.storageKey, value: JSON.stringify(merged) });
@@ -308,20 +326,25 @@ class CloudSync {
                 if (cloudChanged) anyCloudMissing = true;
             });
 
-            // Merge photos (map keyed by animal number). Bias to local so a freshly taken photo isn't lost.
-            if (cloudData.photos) {
-                Object.keys(cloudData.photos).forEach(ranchId => {
-                    const photosKey = 'animalPhotos_' + ranchId;
-                    let localPhotos = {};
-                    try {
-                        const s = localStorage.getItem(photosKey);
-                        localPhotos = s ? JSON.parse(s) : {};
-                    } catch (e) { localPhotos = {}; }
-                    const m = this._mergeMap(localPhotos, cloudData.photos[ranchId], 1, 0);
-                    if (m.localChanged) writes.push({ storageKey: photosKey, value: JSON.stringify(m.result) });
-                    if (m.cloudChanged) anyCloudMissing = true;
-                });
-            }
+            // Merge photos (map keyed by animal number) for EVERY ranch. Bias to local so a
+            // freshly taken photo isn't lost, and so offline photos are detected as missing
+            // from the cloud and get pushed up on reconnect.
+            const cloudPhotos = cloudData.photos || {};
+            const photoRanchIds = new Set(Object.keys(RANCHES).concat(Object.keys(cloudPhotos)));
+            photoRanchIds.forEach(ranchId => {
+                const photosKey = 'animalPhotos_' + ranchId;
+                let localPhotos = {};
+                try {
+                    const s = localStorage.getItem(photosKey);
+                    localPhotos = s ? JSON.parse(s) : {};
+                } catch (e) { localPhotos = {}; }
+                const cloudRanchPhotos = cloudPhotos[ranchId];
+                // Skip if there's nothing on either side
+                if ((!localPhotos || !Object.keys(localPhotos).length) && !cloudRanchPhotos) return;
+                const m = this._mergeMap(localPhotos, cloudRanchPhotos, 1, 0);
+                if (m.localChanged) writes.push({ storageKey: photosKey, value: JSON.stringify(m.result) });
+                if (m.cloudChanged) anyCloudMissing = true;
+            });
 
             // Back up once, only if we're actually about to change local data
             if (writes.length && typeof createAutoBackup === 'function') {
@@ -470,39 +493,54 @@ class CloudSync {
         if (this.offlineQueue.length > 5) {
             this.offlineQueue.shift();
         }
+        // Persist a flag so we still know to upload even if the app is closed and reopened
+        // (the in-memory queue does not survive a restart; the flag + reopen-merge do).
+        try { localStorage.setItem('cloudSync_pendingUpload', 'true'); } catch (e) {}
         this.updateSyncIndicator('offline', 'Guardado local');
     }
 
     /**
-     * Flush offline queue when back online
+     * Reconcile with the cloud after coming back online.
+     *
+     * IMPORTANT: never blindly .set() our snapshot here — while we were offline in the
+     * ranch, another family device may have added animals/photos, and a full overwrite
+     * would erase them. Instead we DOWNLOAD the cloud, MERGE it with our local data
+     * (grow-only union, so both sides survive), then push the merged superset up. This
+     * is what uploads the photos taken offline while preserving everyone else's work.
      */
     async flushOfflineQueue() {
-        if (this.offlineQueue.length === 0) {
-            // No queue, just do a normal sync
-            await this.syncToCloud();
-            return;
-        }
+        // Drop the fragile in-memory queue; the merge below is the reliable path and it
+        // also recovers work from sessions that were closed while offline.
+        this.offlineQueue = [];
+        // Force photos to re-upload on the next sync (offline photos must reach the cloud)
+        this._lastPhotosJson = null;
 
-        console.log(`📤 Flushing ${this.offlineQueue.length} queued syncs...`);
+        console.log('📤 Reconnected — reconciling with cloud (merge, then upload)...');
+        this.updateSyncIndicator('syncing', 'Sincronizando...');
 
-        // Upload the latest data (most recent queue item)
-        const latest = this.offlineQueue[this.offlineQueue.length - 1];
-        if (latest && latest.data) {
-            try {
-                await this.db.ref(`users/${this.userId}`).set(latest.data);
-                this.lastSync = latest.data.lastModified;
-                localStorage.setItem('cloudSync_lastSync', this.lastSync);
-                this.offlineQueue = [];
-                this.pendingChanges = false;
-                this.updateSyncIndicator('synced', 'Sincronizado');
+        try {
+            const snapshot = await this.db.ref(`users/${this.userId}`).once('value');
+            const cloudData = snapshot.val();
 
-                if (typeof showToast === 'function') {
-                    showToast('☁️ Cambios guardados en la nube', 'success');
-                }
-            } catch (error) {
-                console.error('Error flushing offline queue:', error);
-                this.updateSyncIndicator('error', 'Error al sincronizar');
+            if (cloudData) {
+                // Merge cloud into local (keeps both sides; schedules a push if we have extra)
+                await this.applyCloudDataSilent(cloudData);
             }
+
+            // Guarantee our offline changes (photos included) reach the cloud now
+            const ok = await this.syncToCloud();
+
+            if (ok) {
+                localStorage.removeItem('cloudSync_pendingUpload');
+                this.updateSyncIndicator('synced', 'Sincronizado');
+                if (typeof showToast === 'function') {
+                    showToast('☁️ Fotos y cambios sincronizados', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Error reconciling on reconnect:', error);
+            this.updateSyncIndicator('error', 'Error al sincronizar');
+            // Leave the pending flag set so we retry on the next online event / periodic sync
         }
     }
 
@@ -636,6 +674,8 @@ class CloudSync {
             this.lastSync = allData.lastModified;
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
             this.pendingChanges = false;
+            // Everything (including offline work) is now in the cloud
+            try { localStorage.removeItem('cloudSync_pendingUpload'); } catch (e) {}
 
             console.log('☁️ Saved to cloud at', this.lastSync);
             this.updateSyncIndicator('synced', 'Guardado ☁️');

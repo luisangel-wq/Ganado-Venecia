@@ -17457,7 +17457,12 @@
 
                                 if (saved === assignments.filter((_, i) => document.getElementById(`photoAssign_${i}`)?.value).length) {
                                     updateAllViews();
-                                    showToast(`✅ ${saved} foto(s) guardadas exitosamente`, 'success');
+                                    const offline = window.cloudSync && window.cloudSync.enabled && !window.cloudSync.isOnline;
+                                    if (offline) {
+                                        showToast(`✅ ${saved} foto(s) guardadas en el teléfono. Se subirán solas cuando haya internet.`, 'success');
+                                    } else {
+                                        showToast(`✅ ${saved} foto(s) guardadas y sincronizando…`, 'success');
+                                    }
                                     document.getElementById('photoAssignModal')?.remove();
                                 }
                             } catch (saveError) {
