@@ -69,6 +69,7 @@ class CloudSync {
             console.log('📴 Offline - changes will be queued');
             this.isOnline = false;
             this.updateSyncIndicator('offline', 'Sin conexión');
+            if (typeof updatePendingPhotosBadge === 'function') updatePendingPhotosBadge();
         });
 
         // Warn before page close if there are pending changes
@@ -396,6 +397,7 @@ class CloudSync {
                 if (typeof updateAnimalPhotosGrid === 'function') updateAnimalPhotosGrid();
                 if (typeof updateInventarioTable === 'function') updateInventarioTable();
             }
+            if (typeof updatePendingPhotosBadge === 'function') updatePendingPhotosBadge();
         } finally {
             this._processingPhotos = false;
         }

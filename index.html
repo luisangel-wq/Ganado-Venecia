@@ -28,7 +28,7 @@
     <script src="firebase-config-fallback.js"></script>
 
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=11"></script>
+    <script src="cloud-sync.js?v=12"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2115,6 +2115,12 @@
                 <span id="syncStatusDot" class="sync-dot"></span>
                 <span id="syncStatusText" class="sync-text">Conectando...</span>
             </div>
+            <!-- Pending photos badge: photos saved on the phone, waiting for internet to upload -->
+            <div id="photoPendingBadge" class="photo-pending-badge" onclick="retryPendingPhotos()" title="Fotos guardadas en el teléfono, esperando internet para subir. Toque para reintentar." style="display:none;">
+                <span>📷</span>
+                <span id="photoPendingCount">0</span>
+                <span class="badge-label">por subir</span>
+            </div>
             <style>
                 .sync-indicator {
                     display: flex;
@@ -2135,6 +2141,27 @@
                 }
                 .sync-icon { font-size: 1rem; }
                 .sync-text { color: white; }
+
+                /* Pending-photos badge (amber) */
+                .photo-pending-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    margin-left: 6px;
+                    background: #f59e0b;
+                    color: #fff;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                    animation: pulse 2s infinite;
+                }
+                @media (max-width: 768px) {
+                    .photo-pending-badge { padding: 3px 8px; margin-left: 4px; }
+                    .photo-pending-badge .badge-label { display: none; }
+                }
 
                 /* Mobile: Only show the dot */
                 @media (max-width: 768px) {
@@ -7264,6 +7291,7 @@
             refreshPerformanceAnalytics(); // Update performance analytics dashboard
             updateCriaTabVisibility(); // Show/hide Cría tab based on ranch
             if (currentRanch === 'san_fernando') updateCriaViews(); // Update breeding module
+            updatePendingPhotosBadge(); // Refresh "photos waiting to upload" badge
         }
         
         function updateSummary() {
@@ -16906,6 +16934,60 @@
             return pd.url || pd.photo || pd.dataUrl || null;
         }
 
+        // ==================== PENDING-PHOTOS BADGE ====================
+        // Counts photos saved on THIS phone that still hold the image locally (base64) and
+        // have not been uploaded to Firebase Storage yet (no `url`). This is the "offline
+        // backlog" the user sees in the header so they know when to reconnect.
+        function countPendingPhotos() {
+            let count = 0;
+            try {
+                Object.keys(RANCHES).forEach(ranchId => {
+                    const raw = localStorage.getItem('animalPhotos_' + ranchId);
+                    if (!raw) return;
+                    const photos = JSON.parse(raw);
+                    Object.keys(photos).forEach(k => {
+                        const pd = photos[k];
+                        if (pd && (pd.photo || pd.dataUrl) && !pd.url) count++;
+                    });
+                });
+            } catch (e) { /* ignore parse errors */ }
+            return count;
+        }
+
+        function updatePendingPhotosBadge() {
+            const badge = document.getElementById('photoPendingBadge');
+            if (!badge) return;
+            const n = countPendingPhotos();
+            const countEl = document.getElementById('photoPendingCount');
+            if (countEl) countEl.textContent = n;
+            badge.style.display = n > 0 ? 'flex' : 'none';
+        }
+
+        // Tapping the badge: retry the upload now (or explain we're waiting for internet)
+        function retryPendingPhotos() {
+            const n = countPendingPhotos();
+            if (n === 0) { updatePendingPhotosBadge(); return; }
+            if (!window.cloudSync || !window.cloudSync.enabled) {
+                showToast(`📷 ${n} foto(s) guardadas en el teléfono.`, 'info');
+                return;
+            }
+            if (!window.cloudSync.isOnline) {
+                showToast(`📷 ${n} foto(s) esperando internet. Se subirán solas al reconectar.`, 'info');
+                return;
+            }
+            if (!window.cloudSync.storage) {
+                showToast(`📷 ${n} foto(s) guardadas. Firebase Storage aún no está activado.`, 'warning');
+                return;
+            }
+            showToast(`⏫ Subiendo ${n} foto(s)…`, 'info');
+            Promise.resolve(window.cloudSync.processPendingPhotos()).then(() => {
+                updatePendingPhotosBadge();
+                const left = countPendingPhotos();
+                if (left === 0) showToast('✅ Todas las fotos se subieron a la nube', 'success');
+                else showToast(`⏳ Quedan ${left} foto(s) por subir. Se reintentará automáticamente.`, 'info');
+            });
+        }
+
         function saveAnimalPhotos() {
             try {
                 const photosJson = JSON.stringify(animalPhotos);
@@ -16939,6 +17021,9 @@
 
                 // Also update inventory views in case photos affect animal display
                 updateInventarioTable();
+
+                // Refresh the "photos waiting to upload" badge
+                updatePendingPhotosBadge();
             } catch (error) {
                 console.error('Error saving photos:', error);
                 if (error.name === 'QuotaExceededError') {
