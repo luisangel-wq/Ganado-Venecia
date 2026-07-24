@@ -14,6 +14,8 @@ class CloudSync {
         this.enabled = false;
         this.userId = null;
         this.db = null;
+        this.storage = null;          // Firebase Storage handle (null = base64 fallback)
+        this._processingPhotos = false; // guard for the background photo uploader
         this.lastSync = null;
         this.syncInProgress = false;
         this.firebaseConfig = null;
@@ -98,6 +100,16 @@ class CloudSync {
 
             this.db = firebase.database();
 
+            // Firebase Storage for photos (optional). If the SDK/bucket isn't available,
+            // this.storage stays null and photos gracefully fall back to base64-in-DB.
+            try {
+                this.storage = (typeof firebase.storage === 'function') ? firebase.storage() : null;
+                if (this.storage) console.log('🗄️ Firebase Storage available for photos');
+            } catch (e) {
+                console.warn('Firebase Storage not available, photos will use base64 fallback:', e.message);
+                this.storage = null;
+            }
+
             // Get or create user ID (use family ID if set)
             this.userId = localStorage.getItem('cloudSync_userId');
             if (!this.userId) {
@@ -139,12 +151,17 @@ class CloudSync {
             // Setup REAL-TIME listener for live updates
             this.setupRealtimeListener();
 
+            // Migrate legacy base64 photos to Storage + upload any offline captures (background)
+            this.processPendingPhotos();
+
             // Set up periodic backup sync every 60 seconds. If we're online with pending
-            // offline work, this also acts as a retry until it succeeds.
+            // offline work, this also acts as a retry until it succeeds. Also retries any
+            // photos still waiting to reach Storage.
             this.syncInterval = setInterval(() => {
                 if (this.isOnline && (!this.pendingChanges || localStorage.getItem('cloudSync_pendingUpload') === 'true')) {
                     this.syncToCloud();
                 }
+                this.processPendingPhotos();
             }, 60000);
 
             this.updateSyncIndicator('synced', 'Sincronizado');
@@ -284,6 +301,107 @@ class CloudSync {
         return { merged, localChanged, cloudChanged };
     }
 
+    // ==================== FIREBASE STORAGE FOR PHOTOS ====================
+    // Photos used to be stored as base64 inside the Realtime DB, which made every sync
+    // re-upload megabytes. Now the image bytes live in Firebase Storage and the DB carries
+    // only a tiny download URL. Base64 is kept locally until the upload succeeds (so capture
+    // works OFFLINE); a background pass uploads pending/legacy photos whenever we're online.
+
+    /** Merge photo maps, preferring an UPLOADED record (has url) over a base64-only one. */
+    _mergePhotos(localMap, cloudMap) {
+        localMap = (localMap && typeof localMap === 'object') ? localMap : {};
+        cloudMap = (cloudMap && typeof cloudMap === 'object') ? cloudMap : {};
+        const result = {};
+        let localChanged = false, cloudChanged = false;
+        const keys = new Set(Object.keys(localMap).concat(Object.keys(cloudMap)));
+        keys.forEach(k => {
+            const l = localMap[k], c = cloudMap[k];
+            if (l && !c) { result[k] = l; cloudChanged = true; }
+            else if (!l && c) { result[k] = c; localChanged = true; }
+            else {
+                // both present: a cloud record that has been uploaded (url) wins over a
+                // local base64-only copy, so we adopt the URL instead of re-uploading.
+                const lUp = !!(l && l.url), cUp = !!(c && c.url);
+                if (cUp && !lUp) { result[k] = c; localChanged = true; }
+                else if (lUp && !cUp) { result[k] = l; cloudChanged = true; }
+                else if (this._sig(l) !== this._sig(c)) { result[k] = l; cloudChanged = true; } // bias local
+                else { result[k] = l; }
+            }
+        });
+        return { result, localChanged, cloudChanged };
+    }
+
+    /** Upload one base64 photo to Storage; returns {url, path}. Throws if Storage unusable. */
+    async uploadPhoto(ranchId, numero, dataUrl) {
+        if (!this.storage) throw new Error('storage-unavailable');
+        const safe = String(numero).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const path = `photos/${this.userId}/${ranchId}/${safe}.jpg`;
+        const ref = this.storage.ref(path);
+        await ref.putString(dataUrl, 'data_url');
+        const url = await ref.getDownloadURL();
+        return { url, path };
+    }
+
+    /** Delete a photo object from Storage (best-effort). */
+    async deletePhotoFromStorage(path) {
+        if (!this.storage || !path) return;
+        try { await this.storage.ref(path).delete(); }
+        catch (e) { console.warn('Could not delete photo from Storage:', e.message); }
+    }
+
+    /**
+     * Background pass: upload every base64 photo that has no url yet (offline captures +
+     * legacy photos being migrated) to Storage, replace base64 with the url, and re-sync.
+     * Best-effort: any failure leaves the base64 in place to retry later. No-op if Storage
+     * is unavailable, so the app keeps working exactly as before until Storage is enabled.
+     */
+    async processPendingPhotos() {
+        if (!this.enabled || !this.storage || !this.isOnline || this._processingPhotos) return 0;
+        this._processingPhotos = true;
+        let uploaded = 0;
+        try {
+            const RANCHES = this.getRanches();
+            for (const ranchId of Object.keys(RANCHES)) {
+                const key = 'animalPhotos_' + ranchId;
+                let photos;
+                try { photos = JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { continue; }
+                let changed = false;
+                for (const numero of Object.keys(photos)) {
+                    const pd = photos[numero];
+                    const base64 = pd && (pd.photo || pd.dataUrl);
+                    if (pd && base64 && !pd.url) {
+                        try {
+                            const { url, path } = await this.uploadPhoto(ranchId, numero, base64);
+                            pd.url = url;
+                            pd.path = path;
+                            delete pd.photo;
+                            delete pd.dataUrl;
+                            changed = true;
+                            uploaded++;
+                        } catch (e) {
+                            // Leave base64 in place; will retry on next pass
+                            console.warn(`Photo upload pending for ${ranchId}/#${numero}:`, e.message);
+                        }
+                    }
+                }
+                if (changed) {
+                    try { localStorage.setItem(key, JSON.stringify(photos)); } catch (e) { console.error(e); }
+                }
+            }
+            if (uploaded > 0) {
+                console.log(`✅ Uploaded ${uploaded} photo(s) to Firebase Storage`);
+                this._lastPhotosJson = null;      // force the (now tiny, url-only) photos to re-sync
+                this.scheduleImmediateSync();
+                if (typeof loadAnimalPhotos === 'function') loadAnimalPhotos();
+                if (typeof updateAnimalPhotosGrid === 'function') updateAnimalPhotosGrid();
+                if (typeof updateInventarioTable === 'function') updateInventarioTable();
+            }
+        } finally {
+            this._processingPhotos = false;
+        }
+        return uploaded;
+    }
+
     /**
      * Apply cloud data by MERGING it into local (grow-only union) — never overwrites.
      * Additions/edits from any device survive. If we hold records the cloud lacks,
@@ -341,7 +459,7 @@ class CloudSync {
                 const cloudRanchPhotos = cloudPhotos[ranchId];
                 // Skip if there's nothing on either side
                 if ((!localPhotos || !Object.keys(localPhotos).length) && !cloudRanchPhotos) return;
-                const m = this._mergeMap(localPhotos, cloudRanchPhotos, 1, 0);
+                const m = this._mergePhotos(localPhotos, cloudRanchPhotos);
                 if (m.localChanged) writes.push({ storageKey: photosKey, value: JSON.stringify(m.result) });
                 if (m.cloudChanged) anyCloudMissing = true;
             });
@@ -527,6 +645,9 @@ class CloudSync {
                 await this.applyCloudDataSilent(cloudData);
             }
 
+            // Upload any photos captured offline to Storage now that we're back online
+            await this.processPendingPhotos();
+
             // Guarantee our offline changes (photos included) reach the cloud now
             const ok = await this.syncToCloud();
 
@@ -571,7 +692,22 @@ class CloudSync {
             const photos = localStorage.getItem(photosKey);
             if (photos) {
                 try {
-                    allData.photos[ranchId] = JSON.parse(photos);
+                    const parsed = JSON.parse(photos);
+                    // Strip the heavy base64 blob from records that already live in Storage
+                    // (they carry a `url`). Records still awaiting upload keep their base64 so
+                    // they continue to sync as before — no regression if Storage is unavailable.
+                    const cleaned = {};
+                    Object.keys(parsed).forEach(numero => {
+                        const pd = parsed[numero];
+                        if (pd && pd.url && (pd.photo || pd.dataUrl)) {
+                            const copy = {};
+                            Object.keys(pd).forEach(f => { if (f !== 'photo' && f !== 'dataUrl') copy[f] = pd[f]; });
+                            cleaned[numero] = copy;
+                        } else {
+                            cleaned[numero] = pd;
+                        }
+                    });
+                    allData.photos[ranchId] = cleaned;
                 } catch (e) {
                     console.error(`Error parsing photos for ranch ${ranchId}:`, e);
                 }

@@ -20,6 +20,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
@@ -27,7 +28,7 @@
     <script src="firebase-config-fallback.js"></script>
 
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=10"></script>
+    <script src="cloud-sync.js?v=11"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7330,7 +7331,7 @@
                 // Use shared potreros for La Coruña and Santa Catalina
                 const allPotreros = usesSharedPotreros() ? getSharedPotreros() : (data.potreros || []);
                 const potrero = data.animalPotreros[animal.numero] ? allPotreros.find(p => p.id === data.animalPotreros[animal.numero]) : null;
-                const hasPhoto = !!animalPhotos[animal.numero]?.photo;
+                const hasPhoto = !!getPhotoSrc(animalPhotos[animal.numero]);
 
                 // Check for manual weight updates from Progreso
                 // Sort by date descending, then by id descending (for same-day updates)
@@ -10599,7 +10600,7 @@
                         const normalizedKey = backupKeyMapping[key] || key;
                         if (RANCHES[normalizedKey]) {
                             const animals = ranchData.data?.entradas?.length || 0;
-                            const photos = ranchData.animalPhotos ? Object.keys(ranchData.animalPhotos).filter(k => ranchData.animalPhotos[k]?.photo).length : 0;
+                            const photos = ranchData.animalPhotos ? Object.keys(ranchData.animalPhotos).filter(k => { const p = ranchData.animalPhotos[k]; return p && (p.photo || p.url || p.dataUrl); }).length : 0;
                             totalAnimals += animals;
                             totalPhotos += photos;
                             ranchNames.push(`${RANCHES[normalizedKey].name}: ${animals} animales, ${photos} fotos`);
@@ -11496,10 +11497,10 @@
         function getSessionPhotoDataUrl(foto, sesion) {
             if (foto && foto.dataUrl) return foto.dataUrl;
             if (foto && foto.fromAnimalPhotos && foto.chapeta) {
-                return animalPhotos[foto.chapeta]?.photo || null;
+                return getPhotoSrc(animalPhotos[foto.chapeta]);
             }
             if (sesion && sesion.photoRef && sesion.photoRef.chapeta) {
-                return animalPhotos[sesion.photoRef.chapeta]?.photo || null;
+                return getPhotoSrc(animalPhotos[sesion.photoRef.chapeta]);
             }
             return null;
         }
@@ -15561,7 +15562,7 @@
             const fotoSesiones = (data.fotoSesiones || [])
                 .filter(f => f.numero === numero)
                 .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-            const mainPhoto = animalPhotos[numero]?.photo || null;
+            const mainPhoto = getPhotoSrc(animalPhotos[numero]);
             const mainPhotoDate = animalPhotos[numero]?.dateAdded || null;
             
             // Check retiro status
@@ -16897,6 +16898,14 @@
             }
         }
         
+        // Resolve the displayable image source for a photo record. Migrated photos live in
+        // Firebase Storage (url); freshly captured / offline / legacy photos are base64 (photo).
+        function getPhotoSrc(pd) {
+            if (!pd) return null;
+            if (typeof pd === 'string') return pd;
+            return pd.url || pd.photo || pd.dataUrl || null;
+        }
+
         function saveAnimalPhotos() {
             try {
                 const photosJson = JSON.stringify(animalPhotos);
@@ -16915,6 +16924,11 @@
                 // lost before ever syncing). saveData() does this; saveAnimalPhotos() must too.
                 if (window.cloudSync && window.cloudSync.enabled) {
                     window.cloudSync.scheduleImmediateSync();
+                    // Upload the new photo to Firebase Storage in the background (when online),
+                    // then it re-syncs as a tiny URL. Offline, it stays base64 and uploads later.
+                    if (typeof window.cloudSync.processPendingPhotos === 'function') {
+                        window.cloudSync.processPendingPhotos();
+                    }
                 }
 
                 // Force reload photos from storage to ensure sync
@@ -16954,7 +16968,7 @@
                 return `
                     <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='translateY(0)'">
                         <div style="position: relative; padding-top: 100%; background: #f5f5f5; cursor: pointer;" onclick="viewAnimalPhotoLarge('${chapeta}')">
-                            <img src="${photoData.photo}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Animal ${chapeta}">
+                            <img src="${getPhotoSrc(photoData)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="Animal ${chapeta}">
                             ${animal ? '' : '<div style="position: absolute; top: 8px; right: 8px; background: rgba(255,152,0,0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">⚠️ No en inventario</div>'}
                         </div>
                         <div style="padding: 1rem;">
@@ -17490,7 +17504,13 @@
         
         function deleteAnimalPhoto(chapeta) {
             if (!confirm(`¿Eliminar foto del animal #${chapeta}?`)) return;
-            
+
+            // Also remove the underlying file from Firebase Storage (best-effort)
+            const pd = animalPhotos[chapeta];
+            if (pd && pd.path && window.cloudSync && typeof window.cloudSync.deletePhotoFromStorage === 'function') {
+                window.cloudSync.deletePhotoFromStorage(pd.path);
+            }
+
             delete animalPhotos[chapeta];
             saveAnimalPhotos();
             updateAllViews();

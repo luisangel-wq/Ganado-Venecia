@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// Firebase Storage rules for Ganado-Venecia photos.
+// The app uses a shared family ID and no Firebase Authentication (same model as the
+// Realtime Database), so the photos path is open. Anyone with a photo URL can view it.
+// If you later add Firebase Auth, tighten `if true` to `if request.auth != null`.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Animal photos live under photos/<familyId>/<ranch>/<numero>.jpg
+    match /photos/{allPaths=**} {
+      allow read, write: if true;
+    }
+    // Everything else stays locked
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
