@@ -332,14 +332,26 @@ class CloudSync {
         return { result, localChanged, cloudChanged };
     }
 
+    /** Reject a promise if it doesn't settle in `ms` — prevents an upload from hanging forever. */
+    _withTimeout(promise, ms, label) {
+        return new Promise((resolve, reject) => {
+            const t = setTimeout(() => reject(new Error((label || 'operation') + '-timeout')), ms);
+            Promise.resolve(promise).then(
+                v => { clearTimeout(t); resolve(v); },
+                e => { clearTimeout(t); reject(e); }
+            );
+        });
+    }
+
     /** Upload one base64 photo to Storage; returns {url, path}. Throws if Storage unusable. */
     async uploadPhoto(ranchId, numero, dataUrl) {
         if (!this.storage) throw new Error('storage-unavailable');
         const safe = String(numero).replace(/[^a-zA-Z0-9_-]/g, '_');
         const path = `photos/${this.userId}/${ranchId}/${safe}.jpg`;
         const ref = this.storage.ref(path);
-        await ref.putString(dataUrl, 'data_url');
-        const url = await ref.getDownloadURL();
+        // Hard time limits so a misconfigured bucket / bad connection can't freeze the badge.
+        await this._withTimeout(ref.putString(dataUrl, 'data_url'), 25000, 'upload');
+        const url = await this._withTimeout(ref.getDownloadURL(), 15000, 'get-url');
         return { url, path };
     }
 

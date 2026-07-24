@@ -28,7 +28,7 @@
     <script src="firebase-config-fallback.js"></script>
 
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=12"></script>
+    <script src="cloud-sync.js?v=13"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2205,7 +2205,7 @@
                     <div>Valor Inventario</div>
                 </div>
             </div>
-            <div class="app-version-badge" id="appVersionHeader">v2.2 · 2026-04-12</div>
+            <div class="app-version-badge" id="appVersionHeader">v2.3 · 2026-07-24</div>
         </div>
     </header>
     
@@ -4753,8 +4753,8 @@
         }
 
         // App version info (update when publishing)
-        const APP_VERSION = '2.2';
-        const APP_BUILD_DATE = '2026-04-12';
+        const APP_VERSION = '2.3';
+        const APP_BUILD_DATE = '2026-07-24';
         
         // ==================== DATA STORAGE ====================
         let data = {
@@ -16976,15 +16976,28 @@
                 return;
             }
             if (!window.cloudSync.storage) {
-                showToast(`📷 ${n} foto(s) guardadas. Firebase Storage aún no está activado.`, 'warning');
+                showToast(`📷 ${n} foto(s) guardadas. Firebase Storage aún no está activado en la consola.`, 'warning');
+                return;
+            }
+            if (window.cloudSync._processingPhotos) {
+                showToast(`⏫ Subiendo en segundo plano… espera unos segundos.`, 'info');
                 return;
             }
             showToast(`⏫ Subiendo ${n} foto(s)…`, 'info');
-            Promise.resolve(window.cloudSync.processPendingPhotos()).then(() => {
+            Promise.resolve(window.cloudSync.processPendingPhotos()).then((uploaded) => {
                 updatePendingPhotosBadge();
                 const left = countPendingPhotos();
-                if (left === 0) showToast('✅ Todas las fotos se subieron a la nube', 'success');
-                else showToast(`⏳ Quedan ${left} foto(s) por subir. Se reintentará automáticamente.`, 'info');
+                if (left === 0) {
+                    showToast('✅ Todas las fotos se subieron a la nube', 'success');
+                } else if (uploaded > 0) {
+                    showToast(`⏳ Subieron ${uploaded}. Quedan ${left}, se reintentará automáticamente.`, 'info');
+                } else {
+                    // Nothing uploaded despite trying -> almost always the Storage console setup
+                    showToast(`⚠️ No se pudo subir. Revise que Firebase Storage esté activado (ver CONFIGURAR_FIREBASE_STORAGE). Las ${left} foto(s) están seguras en el teléfono.`, 'warning');
+                }
+            }).catch(() => {
+                updatePendingPhotosBadge();
+                showToast(`⚠️ No se pudo subir ahora. Las fotos están seguras en el teléfono y se reintentará.`, 'warning');
             });
         }
 
