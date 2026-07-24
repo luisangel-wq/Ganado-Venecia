@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ganado-finca-v6-20260412';
+const CACHE_NAME = 'ganado-finca-v7-20260724';
 const urlsToCache = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', event => {

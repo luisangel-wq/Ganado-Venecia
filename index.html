@@ -27,7 +27,7 @@
     <script src="firebase-config-fallback.js"></script>
 
     <!-- Cloud Sync Module (v7 = force download on button click) -->
-    <script src="cloud-sync.js?v=9"></script>
+    <script src="cloud-sync.js?v=10"></script>
     
     <!-- Google Fonts - Professional Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5691,6 +5691,29 @@
             showNotification('✅ Datos de San Fernando eliminados', 'success');
         }
 
+        // Stamp records + ranch so cloud-sync can merge safely across devices.
+        // Every save marks this device's records as the latest version; the merge
+        // engine unions records by key, so additions are never lost and the most
+        // recently saved copy wins per-record conflicts (last-edit-wins).
+        function stampForSync() {
+            try {
+                const now = Date.now();
+                const keyedArrays = ['entradas', 'salidas', 'saludEventos', 'potreros',
+                    'rotaciones', 'pesoUpdates', 'fotoSesiones', 'servicios',
+                    'diagnosticos', 'toros', 'semenInventario'];
+                keyedArrays.forEach(name => {
+                    if (Array.isArray(data[name])) {
+                        data[name].forEach(rec => {
+                            if (rec && typeof rec === 'object') rec._ts = now;
+                        });
+                    }
+                });
+                data.lastModified = new Date().toISOString();
+            } catch (e) {
+                console.error('stampForSync error:', e);
+            }
+        }
+
         function saveData() {
             const ranch = RANCHES[currentRanch];
 
@@ -5700,6 +5723,9 @@
                 currentRanch = 'la_coruna';
                 return saveData();
             }
+
+            // Stamp records + ranch timestamp so cloud-sync merges safely across devices
+            stampForSync();
 
             localStorage.setItem(ranch.storageKey, JSON.stringify(data));
 
@@ -7066,6 +7092,29 @@
                 return;
             }
             
+            // For transfers, pre-compute the next consecutive chapeta in the destination ranch
+            // so we can record the destination number on each source salida (for traceability)
+            // and assign sequential numbers in the destination below.
+            let destinoData = null;
+            let destinoRanch = null;
+            let nextDestNumero = null;
+            const transferNumeroMap = {}; // origin numero -> destination numero
+            if (esTransferencia && fincaDestino) {
+                destinoRanch = RANCHES[fincaDestino];
+                destinoData = JSON.parse(localStorage.getItem(destinoRanch.storageKey) || '{"entradas":[],"salidas":[],"config":{},"potreros":[],"rotaciones":[],"animalPotreros":{},"saludEventos":[],"pesoUpdates":[],"weatherHistory":[],"fotoSesiones":[]}');
+                if (!destinoData.entradas) destinoData.entradas = [];
+
+                // Compute next consecutive chapeta in destination based on its own entradas
+                const destNumeros = destinoData.entradas
+                    .map(e => parseInt(e.numero))
+                    .filter(n => !isNaN(n) && n > 0);
+                nextDestNumero = destNumeros.length === 0 ? 1 : Math.max(...destNumeros) + 1;
+
+                currentVenta.animales.forEach((animal, idx) => {
+                    transferNumeroMap[animal.numero] = nextDestNumero + idx;
+                });
+            }
+
             // Save all animals to salidas in CURRENT ranch
             currentVenta.animales.forEach(animal => {
                 const venta = {
@@ -7077,7 +7126,8 @@
                     costoVenta: animal.costoVenta,
                     gananciaDay: animal.gdp,
                     esTransferencia: esTransferencia,
-                    fincaDestino: esTransferencia ? fincaDestino : null
+                    fincaDestino: esTransferencia ? fincaDestino : null,
+                    numeroDestino: esTransferencia ? transferNumeroMap[animal.numero] : null
                 };
                 data.salidas.push(venta);
 
@@ -7088,23 +7138,21 @@
             });
 
             saveData();
-            
+
             // If it's a transfer, create purchase entries in destination ranch
+            // using the new consecutive chapeta computed above (NOT the origin number).
             if (esTransferencia && fincaDestino) {
-                const destinoRanch = RANCHES[fincaDestino];
-                const destinoData = JSON.parse(localStorage.getItem(destinoRanch.storageKey) || '{"entradas":[],"salidas":[],"config":{},"potreros":[],"rotaciones":[],"animalPotreros":{},"saludEventos":[],"pesoUpdates":[],"weatherHistory":[],"fotoSesiones":[]}');
-                
-                if (!destinoData.entradas) destinoData.entradas = [];
-                
                 const precioTransfer = currentVenta.precioKilo || 0;
-                
+                const transferLote = `TRANSFER-${currentRanch.toUpperCase()}-${new Date().getTime()}`;
+
                 currentVenta.animales.forEach(animal => {
                     // Find original animal data to get complete info
                     const originalAnimal = data.entradas.find(e => e.numero === animal.numero);
-                    
+                    const numeroDestino = transferNumeroMap[animal.numero];
+
                     const compra = {
-                        numero: animal.numero,
-                        lote: `TRANSFER-${currentRanch.toUpperCase()}-${new Date().getTime()}`,
+                        numero: String(numeroDestino),
+                        lote: transferLote,
                         vendedor: `Transferencia desde ${RANCHES[currentRanch].name}`,
                         raza: originalAnimal?.raza || animal.raza || 'No especificada',
                         sexo: originalAnimal?.sexo || animal.sexo || 'MACHO',
@@ -7114,12 +7162,13 @@
                         numeroVaca: null,
                         costoTotal: animal.pesoVenta * precioTransfer,
                         esTransferencia: true,
-                        fincaOrigen: currentRanch
+                        fincaOrigen: currentRanch,
+                        numeroOrigen: animal.numero
                     };
-                    
+
                     destinoData.entradas.push(compra);
                 });
-                
+
                 // Save to destination ranch
                 localStorage.setItem(destinoRanch.storageKey, JSON.stringify(destinoData));
             }
@@ -12666,6 +12715,9 @@
                 }
             });
 
+            // Sort alphabetically by potrero name (natural order so numbers sort correctly)
+            combinedPotreros.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { numeric: true, sensitivity: 'base' }));
+
             console.log('All shared potreros:', combinedPotreros.length, combinedPotreros.map(p => p.displayName));
             return combinedPotreros;
         }
@@ -16857,13 +16909,20 @@
                 
                 localStorage.setItem('animalPhotos_' + currentRanch, photosJson);
                 console.log(`✅ Photos saved successfully (${sizeKB} KB, ${Object.keys(animalPhotos).length} animals)`);
-                
+
+                // 🔄 Trigger cloud sync so the photo reaches other devices (photos were
+                // previously only uploaded on the 60s background sync, so they could be
+                // lost before ever syncing). saveData() does this; saveAnimalPhotos() must too.
+                if (window.cloudSync && window.cloudSync.enabled) {
+                    window.cloudSync.scheduleImmediateSync();
+                }
+
                 // Force reload photos from storage to ensure sync
                 loadAnimalPhotos();
-                
+
                 // Update the photos grid display
                 updateAnimalPhotosGrid();
-                
+
                 // Also update inventory views in case photos affect animal display
                 updateInventarioTable();
             } catch (error) {

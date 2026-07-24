@@ -159,48 +159,195 @@ class CloudSync {
         }
     }
 
+    // ==================== MERGE ENGINE (grow-only union, prevents data loss) ====================
+    // Instead of overwriting local data with cloud data (which silently erased records
+    // added on another device), we UNION them: records are matched by a stable key
+    // (animal number / record id), additions from every device are kept, and genuine
+    // per-record conflicts are resolved by the newest _ts (last edit wins). Because
+    // "sold/dead" is itself an added `salidas` record, a union never resurrects a sold
+    // animal. The merge is commutative and idempotent, so all devices converge.
+
+    /** Deterministic JSON of a value, ignoring internal _-prefixed keys (for content compare & tie-breaks). */
+    _sig(v) {
+        const norm = (x) => {
+            if (x === null || typeof x !== 'object') return x;
+            if (Array.isArray(x)) return x.map(norm);
+            const out = {};
+            Object.keys(x).filter(k => k.charAt(0) !== '_').sort().forEach(k => { out[k] = norm(x[k]); });
+            return out;
+        };
+        try { return JSON.stringify(norm(v)); } catch (e) { return String(v); }
+    }
+
+    /** Effective timestamp of a record: its own _ts, else the owning ranch's lastModified. */
+    _ts(rec, fallbackMs) {
+        return (rec && typeof rec._ts === 'number') ? rec._ts : fallbackMs;
+    }
+
+    /** Winner for a conflicting key: newer _ts wins; ties broken deterministically by content so all devices agree. */
+    _pick(localRec, cloudRec, localMs, cloudMs) {
+        const tl = this._ts(localRec, localMs);
+        const tc = this._ts(cloudRec, cloudMs);
+        if (tc > tl) return cloudRec;
+        if (tl > tc) return localRec;
+        return this._sig(localRec) <= this._sig(cloudRec) ? localRec : cloudRec;
+    }
+
+    /** Union-merge two arrays by keyField (or by content when no key). */
+    _mergeArray(localArr, cloudArr, keyField, localMs, cloudMs) {
+        localArr = Array.isArray(localArr) ? localArr : [];
+        cloudArr = Array.isArray(cloudArr) ? cloudArr : [];
+        const keyOf = (r) => (keyField && r && r[keyField] != null) ? 'k:' + String(r[keyField]) : 'j:' + this._sig(r);
+        const map = new Map();
+        const order = [];
+        localArr.forEach(r => { const k = keyOf(r); if (!map.has(k)) { order.push(k); map.set(k, r); } });
+        cloudArr.forEach(r => {
+            const k = keyOf(r);
+            if (!map.has(k)) { order.push(k); map.set(k, r); }
+            else { map.set(k, this._pick(map.get(k), r, localMs, cloudMs)); }
+        });
+        const result = order.map(k => map.get(k));
+        const sig = (arr) => arr.map(r => keyOf(r) + '=' + this._sig(r)).sort().join('|');
+        const rSig = sig(result);
+        return { result, localChanged: rSig !== sig(localArr), cloudChanged: rSig !== sig(cloudArr) };
+    }
+
+    /** Union-merge two plain objects (maps like animalPotreros / config / photos). */
+    _mergeMap(localMap, cloudMap, localMs, cloudMs) {
+        localMap = (localMap && typeof localMap === 'object') ? localMap : {};
+        cloudMap = (cloudMap && typeof cloudMap === 'object') ? cloudMap : {};
+        const result = {};
+        Object.keys(localMap).forEach(k => { result[k] = localMap[k]; });
+        Object.keys(cloudMap).forEach(k => {
+            if (!(k in result)) { result[k] = cloudMap[k]; }
+            else if (this._sig(result[k]) !== this._sig(cloudMap[k])) {
+                if (cloudMs > localMs) result[k] = cloudMap[k];
+                else if (localMs > cloudMs) { /* keep local */ }
+                else result[k] = (this._sig(result[k]) <= this._sig(cloudMap[k])) ? result[k] : cloudMap[k];
+            }
+        });
+        const sig = (o) => Object.keys(o).sort().map(k => k + '=' + this._sig(o[k])).join('|');
+        const rSig = sig(result);
+        return { result, localChanged: rSig !== sig(localMap), cloudChanged: rSig !== sig(cloudMap) };
+    }
+
+    _ranchMs(ranch) {
+        return (ranch && ranch.lastModified) ? (new Date(ranch.lastModified).getTime() || 0) : 0;
+    }
+
+    /** Merge one ranch's data object (local + cloud) into a union. Returns {merged, localChanged, cloudChanged}. */
+    _mergeRanch(localRanch, cloudRanch) {
+        const ARRAY_KEYS = {
+            entradas: 'numero', salidas: 'numero', saludEventos: 'id', potreros: 'id',
+            rotaciones: 'id', pesoUpdates: 'id', fotoSesiones: 'id', servicios: 'id',
+            diagnosticos: 'id', toros: 'id', semenInventario: 'id', weatherHistory: null, inventario: null
+        };
+        localRanch = (localRanch && typeof localRanch === 'object') ? localRanch : {};
+        cloudRanch = (cloudRanch && typeof cloudRanch === 'object') ? cloudRanch : {};
+        const localMs = this._ranchMs(localRanch);
+        const cloudMs = this._ranchMs(cloudRanch);
+        const merged = {};
+        let localChanged = false, cloudChanged = false;
+        const keys = new Set(Object.keys(localRanch).concat(Object.keys(cloudRanch)));
+        keys.forEach(key => {
+            const lv = localRanch[key];
+            const cv = cloudRanch[key];
+            let m;
+            if (key === 'animalPotreros' || key === 'config') {
+                m = this._mergeMap(lv, cv, localMs, cloudMs);
+            } else if (Array.isArray(lv) || Array.isArray(cv) || (key in ARRAY_KEYS)) {
+                m = this._mergeArray(lv, cv, (key in ARRAY_KEYS) ? ARRAY_KEYS[key] : null, localMs, cloudMs);
+            } else {
+                // scalar / misc field: keep whichever exists, newer ranch wins on conflict
+                if (lv === undefined) { merged[key] = cv; localChanged = true; return; }
+                if (cv === undefined) { merged[key] = lv; cloudChanged = true; return; }
+                if (this._sig(lv) === this._sig(cv)) { merged[key] = lv; return; }
+                if (cloudMs > localMs) { merged[key] = cv; localChanged = true; }
+                else if (localMs > cloudMs) { merged[key] = lv; cloudChanged = true; }
+                else { merged[key] = lv; }
+                return;
+            }
+            merged[key] = m.result;
+            if (m.localChanged) localChanged = true;
+            if (m.cloudChanged) cloudChanged = true;
+        });
+        return { merged, localChanged, cloudChanged };
+    }
+
     /**
-     * Apply cloud data silently (without reload) - for initial load
+     * Apply cloud data by MERGING it into local (grow-only union) — never overwrites.
+     * Additions/edits from any device survive. If we hold records the cloud lacks,
+     * the merged superset is pushed back up so every device converges.
      */
     async applyCloudDataSilent(cloudData) {
         if (!cloudData || !cloudData.ranches) return;
+        if (this._merging) return; // guard against re-entrant merges
+        this._merging = true;
 
-        // Create backup before overwriting local data with cloud data
-        if (typeof createAutoBackup === 'function') {
-            createAutoBackup('pre-cloud-sync');
-        }
+        try {
+            const RANCHES = this.getRanches();
+            const writes = [];               // pending localStorage writes (applied after backup)
+            let anyCloudMissing = false;     // we have data cloud lacks -> push merged superset up
+            let currentRanchChanged = false; // current ranch gained remote data -> refresh UI
 
-        const RANCHES = this.getRanches();
-
-        Object.keys(cloudData.ranches).forEach(ranchId => {
-            const ranch = RANCHES[ranchId];
-            if (ranch) {
+            Object.keys(cloudData.ranches).forEach(ranchId => {
+                const ranch = RANCHES[ranchId];
+                if (!ranch) return;
+                let localRanch = null;
                 try {
-                    localStorage.setItem(ranch.storageKey, JSON.stringify(cloudData.ranches[ranchId]));
-                    console.log(`✅ Loaded: ${ranch.name}`);
-                } catch (e) {
-                    console.error(`Error saving data for ${ranchId}:`, e);
-                }
-            }
-        });
+                    const s = localStorage.getItem(ranch.storageKey);
+                    localRanch = s ? JSON.parse(s) : null;
+                } catch (e) { localRanch = null; }
 
-        if (cloudData.photos) {
-            Object.keys(cloudData.photos).forEach(ranchId => {
-                const photosKey = 'animalPhotos_' + ranchId;
-                try {
-                    localStorage.setItem(photosKey, JSON.stringify(cloudData.photos[ranchId]));
-                } catch (e) {
-                    console.error(`Error saving photos for ${ranchId}:`, e);
+                const { merged, localChanged, cloudChanged } = this._mergeRanch(localRanch, cloudData.ranches[ranchId]);
+
+                if (localChanged) {
+                    writes.push({ storageKey: ranch.storageKey, value: JSON.stringify(merged) });
+                    if (typeof currentRanch !== 'undefined' && currentRanch === ranchId) currentRanchChanged = true;
                 }
+                if (cloudChanged) anyCloudMissing = true;
             });
+
+            // Merge photos (map keyed by animal number). Bias to local so a freshly taken photo isn't lost.
+            if (cloudData.photos) {
+                Object.keys(cloudData.photos).forEach(ranchId => {
+                    const photosKey = 'animalPhotos_' + ranchId;
+                    let localPhotos = {};
+                    try {
+                        const s = localStorage.getItem(photosKey);
+                        localPhotos = s ? JSON.parse(s) : {};
+                    } catch (e) { localPhotos = {}; }
+                    const m = this._mergeMap(localPhotos, cloudData.photos[ranchId], 1, 0);
+                    if (m.localChanged) writes.push({ storageKey: photosKey, value: JSON.stringify(m.result) });
+                    if (m.cloudChanged) anyCloudMissing = true;
+                });
+            }
+
+            // Back up once, only if we're actually about to change local data
+            if (writes.length && typeof createAutoBackup === 'function') {
+                createAutoBackup('pre-cloud-merge');
+            }
+            writes.forEach(w => {
+                try { localStorage.setItem(w.storageKey, w.value); } catch (e) { console.error('Error writing merged data:', e); }
+            });
+
+            this.lastSync = cloudData.lastModified || this.lastSync;
+            if (this.lastSync) localStorage.setItem('cloudSync_lastSync', this.lastSync);
+
+            // Refresh the on-screen ranch if it gained remote data
+            if (currentRanchChanged) {
+                if (typeof loadData === 'function') loadData();
+                if (typeof updateAllViews === 'function') updateAllViews();
+                if (typeof showToast === 'function') showToast('☁️ Actualización sincronizada', 'info');
+            }
+
+            // Push the merged superset up so the cloud (and other devices) catch up
+            if (anyCloudMissing) {
+                this.scheduleImmediateSync();
+            }
+        } finally {
+            this._merging = false;
         }
-
-        this.lastSync = cloudData.lastModified;
-        localStorage.setItem('cloudSync_lastSync', this.lastSync);
-
-        // Reload data in UI if available
-        if (typeof loadData === 'function') loadData();
-        if (typeof updateAllViews === 'function') updateAllViews();
     }
 
     /**
@@ -215,32 +362,22 @@ class CloudSync {
         console.log('👂 Setting up real-time Firebase listener...');
 
         this.realtimeListener = this.db.ref(`users/${this.userId}`).on('value', (snapshot) => {
-            // Skip if we just uploaded (to prevent echo)
-            if (this.suppressNextUpdate) {
-                this.suppressNextUpdate = false;
-                return;
-            }
-
             const cloudData = snapshot.val();
             if (!cloudData) return;
 
-            const cloudTime = cloudData.lastModified ? new Date(cloudData.lastModified).getTime() : 0;
-            const localTime = this.lastSync ? new Date(this.lastSync).getTime() : 0;
-            const cloudDeviceId = cloudData.deviceId;
-            const myDeviceId = this.getDeviceId();
+            // Reset the (now advisory) echo flag but don't rely on it — a single boolean
+            // can swallow a real update when device writes interleave. Instead, skip only
+            // the echo of OUR OWN last write (identified by deviceId); that merge would be
+            // a pure no-op anyway. Everything from another device is merged.
+            this.suppressNextUpdate = false;
+            if (cloudData.deviceId && cloudData.deviceId === this.getDeviceId()) return;
 
-            // Only apply if:
-            // 1. Data is from another device
-            // 2. Cloud timestamp is newer than our last sync
-            // 3. We don't have pending local changes
-            if (cloudDeviceId !== myDeviceId && cloudTime > localTime && !this.pendingChanges) {
-                console.log('🔄 Real-time update from another device!');
-                this.applyCloudDataSilent(cloudData);
-
-                if (typeof showToast === 'function') {
-                    showToast('☁️ Actualización de otro dispositivo', 'info');
-                }
-            }
+            // MERGE (never overwrite) cloud data into local. The merge is grow-only and
+            // commutative, so it is always safe to run — even with pending local changes.
+            // This is what guarantees additions from any device are never lost. If nothing
+            // changed locally the merge is a cheap no-op.
+            console.log('🔄 Real-time update — merging with local data');
+            this.applyCloudDataSilent(cloudData);
         }, (error) => {
             console.error('Real-time listener error:', error);
         });
@@ -475,11 +612,26 @@ class CloudSync {
 
             const allData = this.collectAllData();
 
+            // Only re-upload the heavy photo blobs when they actually changed. Photos are
+            // base64 and dominate payload size; re-sending the whole library on every weight
+            // edit / animal add was the cause of slow syncs. We use update() (top-level
+            // shallow merge) so omitting `photos` leaves the cloud copy untouched.
+            const payload = {
+                ranches: allData.ranches,
+                lastModified: allData.lastModified,
+                deviceId: allData.deviceId
+            };
+            const photosJson = JSON.stringify(allData.photos || {});
+            if (photosJson !== this._lastPhotosJson) {
+                payload.photos = allData.photos;
+                this._lastPhotosJson = photosJson;
+            }
+
             // Suppress real-time listener to prevent echo
             this.suppressNextUpdate = true;
 
-            // Upload to Firebase
-            await this.db.ref(`users/${this.userId}`).set(allData);
+            // Upload to Firebase (merge top-level keys; untouched keys like photos are preserved)
+            await this.db.ref(`users/${this.userId}`).update(payload);
 
             this.lastSync = allData.lastModified;
             localStorage.setItem('cloudSync_lastSync', this.lastSync);
